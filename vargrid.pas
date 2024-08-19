@@ -129,9 +129,9 @@ type
     procedure DoOnCellAttributes(ACol, ARow, ADataCol: integer; AState: TGridDrawState; var CellAttribs: TCellAttributes);
     procedure HeaderClick(IsColumn: Boolean; index: Integer); override;
     procedure AutoAdjustColumn(aCol: Integer); override;
-    procedure VisualChange; override;
     procedure DrawColumnText(aCol,aRow: Integer; aRect: TRect; aState:TGridDrawState); override;
     procedure DblClick; override;
+    procedure VisualChange; override;
     procedure Click; override;
     procedure GetCheckBoxState(const aCol, aRow:Integer; var aState:TCheckboxState); override;
     procedure SetCheckboxState(const aCol, aRow:Integer; const aState: TCheckboxState); override;
@@ -149,6 +149,7 @@ type
     procedure DoEditorHide; override;
 
   public
+    procedure VisualChangeNew;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function EditorByStyle(Style: TColumnButtonStyle): TWinControl; override;
@@ -170,6 +171,7 @@ type
     property Row: integer read GetRow write SetRow;
     property FirstVisibleColumn: integer read FFirstVisibleColumn;
   published
+    property RowCount;
     property Align;
     property AlternateColor;
     property Anchors;
@@ -191,7 +193,6 @@ type
     property ParentFont;
     property ParentShowHint default false;
     property PopupMenu;
-    property RowCount;
     property ScrollBars;
     property ShowHint default True;
     property TabOrder;
@@ -414,9 +415,11 @@ end;
 
 procedure TVarGrid.SetSortColumn(const AValue: integer);
 begin
+//  if FItems.Count=0 then exit;
   if FSortColumn=AValue then exit;
   FSortColumn:=AValue;
   if FSortColumn >= 0 then
+
     Options:=Options + [goHeaderPushedLook, goHeaderHotTracking]
   else
     Options:=Options - [goHeaderPushedLook, goHeaderHotTracking];
@@ -903,6 +906,7 @@ var
   i, r: integer;
 begin
   inherited UTF8KeyPress(UTF8Key);
+  exit;
   if UTF8Key = #0 then
     exit;
   FSearchTimer.Enabled:=False;
@@ -977,12 +981,18 @@ begin
   end;
   ColumnFromGridColumn(aCol).Width:=wd;
 end;
+procedure TVarGrid.VisualChangeNew;
+begin
+  VisualChange;
+end;
 
 procedure TVarGrid.VisualChange;
+var i:integer;
 begin
   inherited VisualChange;
+  if Images <> nil then i:=Images.Height;
   if HandleAllocated then
-    DefaultRowHeight:=Canvas.TextHeight('Xy') + 5;
+    DefaultRowHeight:=Max(Canvas.TextHeight('Xy') + 5,i);
   UpdateColumnsMap;
 end;
 

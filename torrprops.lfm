@@ -41,7 +41,7 @@ inherited TorrPropsForm: TTorrPropsForm
   end
   object Page: TPageControl[1]
     Left = 8
-    Height = 220
+    Height = 240
     Top = 8
     Width = 501
     ActivePage = tabGeneral
@@ -188,6 +188,15 @@ inherited TorrPropsForm: TTorrPropsForm
         MinValue = 1
         TabOrder = 8
         Value = 1
+      end
+      object cbSequentialDownload: TCheckBox
+        Left = 10
+        Height = 17
+        Top = 193
+        Width = 71
+        AllowGrayed = False
+        Caption = 'Sequential Download'
+        TabOrder = 9
       end
     end
     object tabAdvanced: TTabSheet

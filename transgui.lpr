@@ -55,12 +55,9 @@ begin
 
   if not CheckAppParams then exit;
 
+//  Application.Scaled:=True;
+  Application.Title:='';
   Application.Initialize;
   Application.CreateForm(TMainForm, MainForm);
-  
-{$ifdef windows}
-  Application.MainFormOnTaskBar:=true;  // make taskbar button follow main form monitor
-{$endif}
-
   Application.Run;
 end.

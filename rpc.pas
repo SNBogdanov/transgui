@@ -35,8 +35,7 @@ unit rpc;
 interface
 
 uses
-  Classes, SysUtils, Forms, httpsend, syncobjs, fpjson, jsonparser, ssl_openssl,
-  ZStream, jsonscanner;
+  Classes, SysUtils, Forms, httpsend, syncobjs, fpjson, jsonparser, variants, ssl_openssl;
 
 resourcestring
   sTransmissionAt = 'Transmission%s at %s:%s';
@@ -126,6 +125,8 @@ type
     RequestFullInfo: boolean;
     ReconnectAllowed: boolean;
     RequestStartTime: TDateTime;
+    IncompleteDir: string;
+    ForceRequest: integer;
 
     constructor Create;
     destructor Destroy; override;
@@ -140,6 +141,8 @@ type
     function SendRequest(req: TJSONObject; ReturnArguments: boolean = True; ATimeOut: integer = -1): TJSONObject;
     function RequestInfo(TorrentId: integer; const Fields: array of const; const ExtraFields: array of string): TJSONObject;
     function RequestInfo(TorrentId: integer; const Fields: array of const): TJSONObject;
+    function RequestInfos(TorrentIds: variant; const Fields: array of const; const ExtraFields: array of string): TJSONObject;
+    function RequestInfos(TorrentIds: variant; const Fields: array of const): TJSONObject;
 
     property Status: string read GetStatus write SetStatus;
     property InfoStatus: string read GetInfoStatus write SetInfoStatus;
@@ -156,27 +159,6 @@ var
 implementation
 
 uses Main, ssl_openssl_lib, synafpc, blcksock;
-
-function TranslateTableToObjects(reply: TJSONObject) : TJSONObject;
-var
-  array_tor, fields, out_torrents : TJSONArray;
-  object_tor : TJSONObject;
-  i, j : integer;
-begin
-  fields:=reply.Arrays['torrents'].Arrays[0];
-  out_torrents:=TJSONArray.Create;
-  for i:=1 to reply.Arrays['torrents'].Count - 1 do
-  begin
-    array_tor:=reply.Arrays['torrents'].Arrays[i];
-    object_tor:=TJSONObject.Create;
-    for j:=0 to fields.Count - 1 do
-      object_tor.Add(fields.Items[j].AsString, array_tor.Items[j].Clone);
-
-    out_torrents.Add(object_tor);
-  end;
-  Result:=TJSONObject.Create(['torrents', out_torrents]);
-  reply.Free;
-end;
 
 { TRpcThread }
 
@@ -195,9 +177,12 @@ begin
     t:=Now - 1;
     tt:=Now;
     while not Terminated do begin
-      if Now - t >= RefreshInterval then begin
+      if (Now - t >= RefreshInterval) or (FRpc.ForceRequest>0) then begin
         FRpc.RefreshNow:=FRpc.RefreshNow + [rtTorrents, rtDetails];
         t:=Now;
+
+        if FRpc.ForceRequest>0 then
+        FRpc.ForceRequest:=FRpc.ForceRequest-1;
       end;
       if Now - tt >= RefreshInterval*5 then begin
         Include(FRpc.RefreshNow, rtSession);
@@ -331,7 +316,7 @@ end;
 procedure TRpcThread.CheckStatusHandler(Data: PtrInt);
 begin
   if csDestroying in MainForm.ComponentState then exit;
-  MainForm.CheckStatus;
+  MainForm.CheckStatus(True);
 end;
 
 procedure TRpcThread.GetSessionInfo;
@@ -346,6 +331,11 @@ begin
     if args <> nil then
     try
       FRpc.FConnected:=True;
+      FRpc.IncompleteDir:='';
+      if args.IndexOfName('incomplete-dir-enabled') >=0 then
+         if args.Booleans['incomplete-dir-enabled'] then
+            if args.IndexOfName('incomplete-dir') >=0 then
+               FRpc.IncompleteDir:=args.Strings['incomplete-dir'];
       if args.IndexOfName('rpc-version') >= 0 then
         FRpc.FRPCVersion := args.Integers['rpc-version']
       else
@@ -370,6 +360,22 @@ begin
           else begin
             args.Floats['download-dir-free-space']:=-1;
             FRpc.Status:='';
+          end;
+          if FRpc.IncompleteDir <> '' then
+          begin
+            req.Free;
+            req:=TJSONObject.Create;
+            req.Add('method', 'free-space');
+            args2:=TJSONObject.Create;
+            args2.Add('path', FRpc.IncompleteDir);
+            req.Add('arguments', args2);
+            args2:=FRpc.SendRequest(req);
+            if args2 <> nil then
+              args.Floats['incomplete-dir-free-space']:=args2.Floats['size-bytes']
+            else begin
+              args.Floats['incomplete-dir-free-space']:=-1;
+              FRpc.Status:='';
+            end;
           end;
         finally
           args2.Free;
@@ -542,7 +548,7 @@ begin
                                     'maxConnectedPeers', 'nextAnnounceTime', 'dateCreated', 'creator', 'eta', 'peersSendingToUs',
                                     'seeders','peersGettingFromUs','leechers', 'uploadRatio', 'addedDate', 'doneDate',
                                     'activityDate', 'downloadLimited', 'uploadLimited', 'downloadDir', 'id', 'pieces',
-                                    'trackerStats', 'secondsDownloading', 'secondsSeeding', 'magnetLink', 'isPrivate', 'labels']);
+                                    'trackerStats', 'secondsDownloading', 'secondsSeeding', 'magnetLink', 'isPrivate', 'labels','sequentialDownload']);
   try
     if args <> nil then begin
       t:=args.Arrays['torrents'];
@@ -601,6 +607,7 @@ begin
   FMainThreadId:=GetCurrentThreadId;
   FLock:=TCriticalSection.Create;
   HttpLock:=TCriticalSection.Create;
+  ForceRequest:=0;
   RefreshNow:=[];
   CreateHttp;
 end;
@@ -652,55 +659,6 @@ begin
   CreateHttp;
 end;
 
-type TGzipDecompressionStream=class(TDecompressionStream)
-public
-  constructor create(Asource:TStream);
-end;
-
-constructor TGzipDecompressionStream.create(Asource:TStream);
-var gzHeader:array[1..10] of byte;
-begin
-  {
-    paszlib is based on a relatively old zlib version that didn't implement
-    reading the gzip header. we "implement" this ourselves by skipping the first
-    10 bytes which is just enough for the data Transmission sends.
-  }
-  inherited create(Asource, True);
-  Asource.Read(gzHeader,sizeof(gzHeader));
-end;
-
-function DecompressGzipContent(source: TStream): TMemoryStream;
-var
-  buf : array[1..16384] of byte;
-  numRead : integer;
-  decomp : TGzipDecompressionStream;
-begin
-  decomp:=TGzipDecompressionStream.create(source);
-  Result:=TMemoryStream.create;
-  repeat
-    numRead:=decomp.read(buf,sizeof(buf));
-    Result.Write(buf,numRead);
-  until numRead < sizeof(buf);
-  Result.Position:=0;
-  decomp.Free;
-end;
-
-function CreateJsonParser(serverResp : THTTPSend): TJSONParser;
-var decompressed : TMemoryStream;
-begin
-  if serverResp.Headers.IndexOf('Content-Encoding: gzip') <> -1 then
-  begin
-    { need to fully decompress as the parser relies on a working Seek() }
-    decompressed:=DecompressGzipContent(serverResp.Document);
-    Result:=TJSONParser.Create(decompressed, [joUTF8]);
-    decompressed.Free;
-  end
-  else
-  begin
-    Result:=TJSONParser.Create(serverResp.Document, [joUTF8]);
-  end;
-end;
-
 function TRpc.SendRequest(req: TJSONObject; ReturnArguments: boolean; ATimeOut: integer): TJSONObject;
 var
   obj: TJSONData;
@@ -728,7 +686,6 @@ begin
       Http.Document.Write(PChar(s)^, Length(s));
       s:='';
       Http.Headers.Clear;
-      Http.Headers.Add('Accept-Encoding: gzip');
       Http.MimeType:='application/json';
       if XTorrentSession <> '' then
         Http.Headers.Add(XTorrentSession);
@@ -823,7 +780,7 @@ begin
           break;
         end;
         Http.Document.Position:=0;
-        jp:=CreateJsonParser(Http);
+        jp:=TJSONParser.Create(Http.Document);
         HttpLock.Leave;
         locked:=False;
         RequestStartTime:=0;
@@ -884,15 +841,6 @@ begin
   until i >= RetryCnt;
 end;
 
-procedure DeleteIfRpcLessThan(Fields: TStringList; Field: string; RpcVer: integer; NeededRpcVer: integer);
-var
-  idx: integer;
-begin
-  idx := Fields.IndexOf(Field);
-  if (idx <> -1) and (RpcVer < NeededRpcVer) then
-    Fields.Delete(idx);
-end;
-
 function TRpc.RequestInfo(TorrentId: integer; const Fields: array of const; const ExtraFields: array of string): TJSONObject;
 var
   req, args: TJSONObject;
@@ -914,23 +862,54 @@ begin
          sl.Add(String(Fields[i].VAnsiString));
     sl.AddStrings(ExtraFields);
     sl.Sort;
-
-    DeleteIfRpcLessThan(sl, 'labels', FRPCVersion, 16);
-
     for i:=sl.Count-2 downto 0 do
       if (sl[i]=sl[i+1]) then
         sl.Delete(i+1);
     for i:=0 to sl.Count-1 do
       _fields.Add(sl[i]);
     args.Add('fields', _fields);
-    if FRPCVersion >= 16 then
-      args.Add('format', 'table');
-
     req.Add('arguments', args);
-    if FRPCVersion >= 16 then
-      Result:=TranslateTableToObjects(SendRequest(req))
-    else
-      Result:=SendRequest(req);
+    Result:=SendRequest(req);
+  finally
+    sl.Free;
+    req.Free;
+  end;
+end;
+function TRpc.RequestInfos(TorrentIds: variant; const Fields: array of const): TJSONObject;
+begin
+  Result:=RequestInfos(TorrentIds, Fields, []);
+end;
+function TRpc.RequestInfos(TorrentIds: variant; const Fields: array of const; const ExtraFields: array of string): TJSONObject;
+var
+  req, args: TJSONObject;
+  _fields,ids: TJSONArray;
+  i: integer;
+  sl: TStringList;
+begin
+  Result:=nil;
+  req:=TJSONObject.Create;
+  sl:=TStringList.Create;
+  try
+    req.Add('method', 'torrent-get');
+    args:=TJSONObject.Create;
+    ids:=TJSONArray.Create;
+    for i:=VarArrayLowBound(TorrentIds, 1) to VarArrayHighBound(TorrentIds, 1) do
+      ids.Add(integer(TorrentIds[i]));
+    args.Add('ids', ids);
+    _fields:=TJSONArray.Create;
+    for i:=Low(Fields) to High(Fields) do
+      if (Fields[i].VType=vtAnsiString) then
+         sl.Add(String(Fields[i].VAnsiString));
+    sl.AddStrings(ExtraFields);
+    sl.Sort;
+    for i:=sl.Count-2 downto 0 do
+      if (sl[i]=sl[i+1]) then
+        sl.Delete(i+1);
+    for i:=0 to sl.Count-1 do
+      _fields.Add(sl[i]);
+    args.Add('fields', _fields);
+    req.Add('arguments', args);
+    Result:=SendRequest(req);
   finally
     sl.Free;
     req.Free;

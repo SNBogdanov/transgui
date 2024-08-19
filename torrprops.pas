@@ -44,6 +44,7 @@ type
   TTorrPropsForm = class(TBaseForm)
     Buttons: TButtonPanel;
     cbIdleSeedLimit: TCheckBox;
+    cbSequentialDownload: TCheckBox;
     cbMaxDown: TCheckBox;
     cbMaxUp: TCheckBox;
     cbSeedRatio: TCheckBox;

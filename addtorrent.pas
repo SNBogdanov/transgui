@@ -120,6 +120,7 @@ type
     FFiles: TVarList;
     FTorrentId: integer;
     FLastFileCount: integer;
+    LastFilterIdx:integer;
     FCommonPathLen: integer;
     FHasDone: boolean;
     FHasPriority: boolean;
@@ -149,10 +150,11 @@ type
     destructor Destroy; override;
     function IsFolder(ARow: integer): boolean;
     procedure CollapseAll;
-    procedure FillTree(ATorrentId: integer; files, priorities, wanted: TJSONArray);
+    procedure FillTree(ATorrentId: integer; files, priorities, wanted: TJSONArray;RebuildTree:boolean);
     procedure SetStateAll(AState: TCheckBoxState);
     procedure EnsureRowVisible(ARow: integer);
     function GetFullPath(ARow: integer; AbsolutePath: boolean = True): string;
+    function GetIncompleteFullPath(ARow: integer; AbsolutePath: boolean = True): string;
     function UpdateSummary: TFolderInfo;
     procedure Clear;
     property Grid: TVarGrid read FGrid;
@@ -173,10 +175,11 @@ const
   idxFileDone      = 2;
   idxFileProgress  = 3;
   idxFilePriority  = 4;
-  idxFileId        = -1;
-  idxFileFullPath  = -2;
-  idxFileLevel     = -3;
-  idxFileIndex     = -4;
+  idxFileId        = -4;
+  idxFileId1       = 5;
+  idxFileFullPath  = -1;
+  idxFileLevel     = -2;
+  idxFileIndex     = -3;
 
   FilesExtraColumns = 4;
 
@@ -240,7 +243,7 @@ begin
   end;
 end;
 
-procedure TFilesTree.FillTree(ATorrentId: integer; files, priorities, wanted: TJSONArray);
+procedure TFilesTree.FillTree(ATorrentId: integer; files, priorities, wanted: TJSONArray;RebuildTree:boolean);
 
   procedure _AddFolders(list: TVarList; const path: string; var idx: integer; cnt, level: integer);
   var
@@ -297,8 +300,9 @@ begin
   end;
   FHasDone:=FGrid.Columns.Count > idxFileDone;
   FHasPriority:=FHasDone and (priorities <> nil) and (wanted <> nil);
-  FullRefresh:=(FTorrentId <> ATorrentId) or (FLastFileCount <> files.Count);
+  FullRefresh:=(FTorrentId <> ATorrentId) or (FLastFileCount <> files.Count) or RebuildTree;
   FLastFileCount:=files.Count;
+
   FTorrentId:=ATorrentId;
   FIsPlain:=FGrid.SortColumn <> idxFileName;
   FFiles.BeginUpdate;
@@ -337,10 +341,11 @@ begin
         end;
       SetRowOption(row, roTag, True);
       FFiles[idxFileId, row]:=i;
+      if FFiles.ColCnt>5 Then FFiles[idxFileId1, row]:=i;
 
       s:=UTF8Encode(f.Strings['name']);
       s:=ExcludeInvalidChar(s); // petrov - Exclude prohibited characters
-
+      ss:=UTF8Decode(ExtractFilePath(s));
       FFiles[idxFileFullPath, row]:=UTF8Decode(ExtractFilePath(s));
       if FCommonPathLen > 0 then
         s:=Copy(s, FCommonPathLen + 1, MaxInt);
@@ -451,6 +456,22 @@ function TFilesTree.GetFullPath(ARow: integer; AbsolutePath: boolean): string;
 begin
   if AbsolutePath then begin
     Result:=FDownloadDir;
+    if Copy(Result, Length(Result), 1) <> RemotePathDelimiter then
+      Result:=Result + RemotePathDelimiter;
+  end
+  else
+    Result:='';
+    Result:=Result + UTF8Encode(widestring(FFiles[idxFileFullPath, ARow]));
+
+  if IsFolder(ARow) then
+      Result:=Copy(Result, 1, Length(Result) - 1)
+  else
+      Result:=Result + UTF8Encode(widestring(FFiles[idxFileName, ARow]));
+end;
+function TFilesTree.GetIncompleteFullPath(ARow: integer; AbsolutePath: boolean): string;
+begin
+  if AbsolutePath then begin
+    Result:=RpcObj.IncompleteDir;
     if Copy(Result, Length(Result), 1) <> RemotePathDelimiter then
       Result:=Result + RemotePathDelimiter;
   end
@@ -745,16 +766,32 @@ begin
 end;
 
 function TFilesTree.DoCompareVarRows(Sender: TVarList; Row1, Row2: PVariant; DescendingSort: boolean): integer;
+var
+v:variant;
 begin
   if FGrid.SortColumn <> idxFileName then begin
-    Result:=(integer(VarIsEmpty(Sender.GetRowItem(Row1, idxFileId))) and 1) - (integer(VarIsEmpty(Sender.GetRowItem(Row2, idxFileId))) and 1);
+//    Result:=(integer(VarIsEmpty(Sender.GetRowItem(Row1, idxFileId))) and 1) - (integer(VarIsEmpty(Sender.GetRowItem(Row2, idxFileId))) and 1);
+    Result:=CompareVariants(Sender.GetRowItem(Row1, FGrid.SortColumn), Sender.GetRowItem(Row2, FGrid.SortColumn));
+    if FGrid.SortColumn = idxFilePriority then
+      Result:=-Result;
+    if DescendingSort then
+      Result:=-Result;
+    if Result <> 0 then
+      exit;
+    Result:=CompareVariants(Sender.GetRowItem(Row1, idxFileFullPath), Sender.GetRowItem(Row2, idxFileFullPath));
+    if DescendingSort then
+      Result:=-Result;
     exit;
   end;
 
   Result:=CompareVariants(Sender.GetRowItem(Row1, idxFileFullPath), Sender.GetRowItem(Row2, idxFileFullPath));
+  if DescendingSort then
+    Result:=-Result;
   if Result <> 0 then
     exit;
   Result:=(integer(VarIsEmpty(Sender.GetRowItem(Row2, idxFileId))) and 1) - (integer(VarIsEmpty(Sender.GetRowItem(Row1, idxFileId))) and 1);
+  if DescendingSort then
+    Result:=-Result;
   if Result <> 0 then
     exit;
   Result:=CompareVariants(Sender.GetRowItem(Row1, idxFileName), Sender.GetRowItem(Row2, idxFileName));
@@ -843,7 +880,7 @@ begin
     v:=Sender.Items[idxFileName, i];
     if VarIsEmpty(v) or VarIsNull(v) or (IsPlain and IsFolder(i)) then
       continue;
-    if Pos(s, Trim(LazUTF8.UTF8UpperCase((widestring(v))))) > 0 then begin
+    if Pos(s, UTF8Trim(LazUTF8.UTF8UpperCase((widestring(v))))) > 0 then begin
       ARow:=i;
       EnsureRowVisible(ARow);
       break;

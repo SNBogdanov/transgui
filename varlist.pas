@@ -264,6 +264,7 @@ end;
 function CompareVariants(const v1, v2: variant): integer;
 var
   v1e, v2e: boolean;
+  d1,d2:double;
 begin
   v1e:=VarIsNull(v1) or VarIsEmpty(v1);
   v2e:=VarIsNull(v2) or VarIsEmpty(v2);
@@ -276,14 +277,37 @@ begin
   if not v1e and v2e then
     Result:=1
   else
-    case VarType(v1) of
+  begin
+      case VarType(v1) of
+      varInteger,varsmallint,varshortint,varbyte,varword,varlongword,varint64,varqword:
+        begin
+          d1:=Int64(v1);
+        end;
+      varDouble,varSingle,varDate:
+        begin
+        d1:=double(v1);
+        Result:=Sign(double(v1) - double(v2));
+        end
+      else
+        Result:=AnsiCompareText(v1, v2);
+        exit;
+      end;
+    case VarType(v2) of
     varInteger,varsmallint,varshortint,varbyte,varword,varlongword,varint64,varqword:
-      Result:=Int64(v1) - Int64(v2);
+      begin
+        d2:=Int64(v2);
+        Result:=Sign(d1-d2);
+      end;
     varDouble,varSingle,varDate:
-      Result:=Sign(double(v1) - double(v2));
+      begin
+      d2:=double(v2);
+      Result:=Sign(d1-d2);
+      end
     else
       Result:=AnsiCompareText(v1, v2);
     end;
+  end;
+
 end;
 
 var

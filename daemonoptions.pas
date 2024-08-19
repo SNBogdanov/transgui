@@ -157,7 +157,7 @@ begin
     if res = nil then
       MainForm.CheckStatus(False)
     else
-      if res.Objects['arguments'].Booleans['port-is-open'] then
+      if res.Objects['arguments'].Integers['port-is-open'] <> 0 then
         MessageDlg(sPortTestSuccess, mtInformation, [mbOk], 0)
       else
         MessageDlg(sPortTestFailed, mtError, [mbOK], 0);
