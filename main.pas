@@ -779,6 +779,7 @@ type
     procedure CenterReconnectWindow;
     procedure ProcessPieces(const Pieces: string; PieceCount: integer; const Done: double);
     function ExecRemoteFile(const FileName: string; SelectFile: boolean;TorrentId:integer; Userdef: boolean= false): boolean;
+    function ExecRemoteFileArray(const FileName: string; SelectFile: boolean;Ids:variant; Userdef: boolean= false): boolean;
     function GetSelectedTorrents: variant;
     function GetDisplayedTorrents: variant;
     procedure FillDownloadDirs(CB: TComboBox; const CurFolderParam: string);
@@ -6164,6 +6165,8 @@ var
   Labels,Paths: TStringList;
   v: variant;
   FieldExists: array of boolean;
+  LabelList:array of AnsiString;
+  LL:string;
 //  req, args, args2: TJSONObject;
 begin
   if gTorrents.Tag <> 0 then exit;
@@ -6554,7 +6557,12 @@ begin
                 continue;
       end;
       if (LabelFilter <> '') and (LabelFilter <> 'Not Set') and not VarIsEmpty(FTorrents[idxLabels, i]) then begin
-        if not AnsiContainsStr(String(FTorrents[idxLabels, i]), LabelFilter) then
+        //setlength(LabelList,VarArrayHighBound(FTorrents[idxLabels, i],1)-VarArrayLowBound(FTorrents[idxLabels, i],1));
+
+        LL:=ReplaceStr(String(FTorrents[idxLabels, i]),' ','');
+        LabelList:=SplitString(LL,',');
+
+        if  not AnsiMatchText(LabelFilter,LabelList) then
           continue;
       end;
 
@@ -7713,6 +7721,25 @@ begin
     bmp.Free;
   end;
 end;
+function TMainForm.ExecRemoteFileArray(const FileName: string; SelectFile: boolean;Ids:variant; Userdef: boolean): boolean;
+var
+  p: string;
+  s:string;
+  i:integer;
+begin
+  s:='';
+  for i:=VarArrayLowBound(Ids, 1) to VarArrayHighBound(Ids, 1) do
+    begin
+      if i = VarArrayLowBound(Ids, 1) then
+      s:=VarToStr( Ids[i])
+      else
+      s:=s+','+VarToStr( Ids[i]) ;
+
+    end;
+  p:=Format(FUserDefinedMenuParam, [RpcObj.Url,'"'+s+'"' ]);
+  s:=FUserDefinedMenuEx;
+  Result:=OpenURL(s, p);
+end;
 
 function TMainForm.ExecRemoteFile(const FileName: string; SelectFile: boolean;TorrentId:integer; Userdef: boolean): boolean;
 
@@ -7726,7 +7753,7 @@ function TMainForm.ExecRemoteFile(const FileName: string; SelectFile: boolean;To
 {$ifdef mswindows}
 if Userdef then
               begin
-                    p:=Format(FUserDefinedMenuParam, [s,RpcObj.Url,TorrentId ]);
+                    p:=Format(FUserDefinedMenuParam, [s,RpcObj.Url,TorrentId.ToString() ]);
                     s:=FUserDefinedMenuEx;
               end
               else
@@ -7756,7 +7783,7 @@ if Userdef then
     end else begin
         if Userdef then
                       begin
-                            p := Format(FUserDefinedMenuParam, [RpcObj.Url,TorrentId]);
+                            p := Format(FUserDefinedMenuParam, [RpcObj.Url,TorrentId.ToString()]);
                             s := FUserDefinedMenuEx;
                       end ;
     end;
@@ -8513,6 +8540,9 @@ var
   sel: boolean;
   i,Torrent:integer;
   files: TJSONArray;
+  TorrentIds:variant;
+  ids:array of integer;
+  Count:integer;
 begin
   if gTorrents.Items.Count = 0 then
     exit;
@@ -8522,6 +8552,14 @@ begin
     sel:=False;
 //    gTorrents.RemoveSelection;
 //    res:=RpcObj.RequestInfo(gTorrents.Items[idxTorrentId, gTorrents.Row], ['files', 'downloadDir']);
+    TorrentIds:=GetSelectedTorrents();
+    if UserDef Then
+      begin
+          ExecRemoteFileArray(p, sel,TorrentIds, Userdef);
+          gTorrents.RemoveSelection;
+          AppNormal;
+          exit;
+      end;
     for i:=0 to gTorrents.Items.Count - 1 do
     begin
       if (not gTorrents.RowSelected[i]) and (i <> gTorrents.Row) then
