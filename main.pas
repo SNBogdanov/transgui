@@ -6163,10 +6163,11 @@ var
   DownCnt, SeedCnt, CompletedCnt, ActiveCnt, StoppedCnt, ErrorCnt, WaitingCnt, ft: integer;
   IsActive: boolean;
   Labels,Paths: TStringList;
+  alabels: TStringList;
+  slabels: TStringList;
+
   v: variant;
   FieldExists: array of boolean;
-  LabelList:array of AnsiString;
-  LL:string;
 //  req, args, args2: TJSONObject;
 begin
   if gTorrents.Tag <> 0 then exit;
@@ -6467,8 +6468,10 @@ begin
     if FieldExists[idxLabels] then begin
       a := t.Arrays['labels'];
       s := '';
+      alabels:=TStringList.Create;
       for j:=0 to a.Count-1 do begin
         ss := UTF8Encode(widestring(a.Strings[j]));
+        alabels.Add(ss);
         if j > 0 then s := s + ', ';
         s := s + ss;
         p := Labels.IndexOf(ss);
@@ -6485,6 +6488,13 @@ begin
           Labels.AddObject(ss, TObject(1))
         else
           Labels.Objects[p]:=TObject(PtrInt(Labels.Objects[p]) + 1);
+      end;
+      alabels.Sort;
+      s := '';
+      for j:=0 to alabels.Count-1 do begin
+        ss := alabels[j];
+        if j > 0 then s := s + ', ';
+        s := s + ss;
       end;
 
       FTorrents[idxLabels, row] := s;
@@ -6557,13 +6567,19 @@ begin
                 continue;
       end;
       if (LabelFilter <> '') and (LabelFilter <> 'Not Set') and not VarIsEmpty(FTorrents[idxLabels, i]) then begin
-        //setlength(LabelList,VarArrayHighBound(FTorrents[idxLabels, i],1)-VarArrayLowBound(FTorrents[idxLabels, i],1));
+          slabels:=TStringList.Create();
+          SplitRegExpr(',', String(FTorrents[idxLabels, i]), slabels);
+          slabels.Sort;
+          alabels:=TStringList.Create();
+          for s in slabels do begin
+            if trim(s) <> '' then
+               alabels.Add(trim(s));
+          end;
 
-        LL:=ReplaceStr(String(FTorrents[idxLabels, i]),' ','');
-        LabelList:=SplitString(LL,',');
-
-        if  not AnsiMatchText(LabelFilter,LabelList) then
+        if alabels.indexof(LabelFilter)=-1 then
+        begin
           continue;
+          end;
       end;
 
       case FilterIdx of
@@ -6991,6 +7007,7 @@ var
   s: string;
   tr: string;
   f: double;
+  alabels:TStringList;
   ja: TJSONArray;
 begin
   if (gTorrents.Items.Count = 0) or (t = nil) then begin
@@ -7204,11 +7221,15 @@ begin
   if t.IndexOfName('labels') >= 0 then begin
     ja:=t.Arrays['labels'];
     s:='';
-    for i:=0 to ja.Count-1 do begin
+    alabels:=TStringList.Create;
+    for i:=0 to ja.Count-1 do
+      alabels.Add(ja.Strings[i]);
+    alabels.Sort;
+    for i:=0 to alabels.Count -1 do begin
       if i > 0 then begin
         s := s + ', ';
       end;
-      s := s + ja.Strings[i];
+      s := s + alabels[i];
     end;
     txLabels.Caption := s;
   end;

@@ -697,7 +697,7 @@ begin
               Bottom:=Top;
             if Top>Bottom then
               Top:=Bottom;
-
+            Top:=(Top + Bottom - Canvas.TextHeight(ca.Text)) div 2 ;
             if (Left <> Right) and (Top <> Bottom) then begin
               if Canvas.TextStyle.Alignment <> taLeftJustify then begin
                 i:=Canvas.TextWidth(ca.Text);

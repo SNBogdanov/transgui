@@ -672,7 +672,7 @@ begin
     FRpcPath:=DefaultRpcPath;
   Status:='';
   Result:=nil;
-  RetryCnt:=2;
+  RetryCnt:=3;
   i:=0;
   repeat
     Inc(i);
@@ -700,6 +700,7 @@ begin
         if FMainThreadId <> GetCurrentThreadId then
           ReconnectAllowed:=True;
         Status:=Http.Sock.LastErrorDesc;
+        continue;
         break;
       end
       else begin
@@ -717,6 +718,7 @@ begin
               Status:='Session ID error.';
             end;
             continue;
+
           end;
         end;
 
