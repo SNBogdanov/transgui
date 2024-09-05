@@ -4161,13 +4161,17 @@ begin
     torid:=RpcObj.CurTorrentId;
     tText:=UTF8Encode(widestring(lvTrackers.Items[idxTrackersListName, lvTrackers.Row]));
     if (pos('http://plab.site/',tText) >0) Then
+//    if (pos('http://',tText) >0) Then
       begin
         tText:=StringReplace(tText,'http://plab.site/','http://plab.site1/',[]);
+//        tText:=StringReplace(tText,'http://','https://',[]);
       end
     else
       begin
         if pos('http://plab.site1/',tText) >0 Then
-        tText:=StringReplace(tText,'http://plab.site1/','http://plab.site/',[])
+//        if pos('https://',tText) >0 Then
+          tText:=StringReplace(tText,'http://plab.site1/','http://plab.site/',[])
+//          tText:=StringReplace(tText,'https://','http://',[])
         else
         begin
           AppNormal;
@@ -5806,6 +5810,8 @@ begin
   if lvTrackers.Items.Count > 0 Then
   begin
     acReplaceTracker.Visible:=acAddTracker.Visible and (
+//    (pos('http://',lvTrackers.Items[idxTrackersListName, lvTrackers.Row]) >0) or
+//    (pos('https://',lvTrackers.Items[idxTrackersListName, lvTrackers.Row]) >0));
     (pos('http://plab.site/',lvTrackers.Items[idxTrackersListName, lvTrackers.Row]) >0) or
     (pos('http://plab.site1/',lvTrackers.Items[idxTrackersListName, lvTrackers.Row]) >0));
   end
@@ -8751,6 +8757,7 @@ end;
 
 initialization
   {$I main.lrs}
+
 
 finalization
   try
