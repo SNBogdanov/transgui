@@ -700,7 +700,7 @@ begin
         if FMainThreadId <> GetCurrentThreadId then
           ReconnectAllowed:=True;
         Status:=Http.Sock.LastErrorDesc;
-        continue;
+       // continue;
         break;
       end
       else begin

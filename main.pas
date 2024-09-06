@@ -6054,15 +6054,15 @@ var
       args2.Add('path', FreeSpacePaths.Keys[i]);
       req.Add('arguments', args2);
       try
-  //    args2:=RpcObj.SendRequest(req,True,20000);
-            args2:=RpcObj.SendRequest(req);
+      args2:=RpcObj.SendRequest(req,True,20000);
+            //args2:=RpcObj.SendRequest(req);
       if args2 <> nil then
         FreeSpacePaths[FreeSpacePaths.Keys[i]]:='('+Format(SFreeSpace, [GetHumanSize(args2.Floats['size-bytes'])])+')';
       finally
         args2.Free;
         RpcObj.Status:='';
         req.Free;
-        CheckStatus(False);
+        CheckStatus(True);
       end;
     end;
 
@@ -6749,7 +6749,7 @@ begin
     if lvFilter.Row >= StatusFiltersCount then
       lvFilterClick(nil);
 
-  CheckStatus(False);
+  CheckStatus(True);
 
   s := GetHumanSize(FCurDownSpeedLimit*1024,2,'');
   if s = '' then s := Format(SUnlimited,[]) else s := s + Format(sPerSecond,[]);
