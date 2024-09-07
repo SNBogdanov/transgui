@@ -940,6 +940,8 @@ var
   i: integer;
 begin
   inherited HeaderClick(IsColumn, index);
+  if FItems.Count = 0 then
+    exit;
   if IsColumn and (FSortColumn >= 0) then begin
     fGridState:=gsNormal;
     i:=ColToDataCol(index);
