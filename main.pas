@@ -4277,7 +4277,7 @@ begin
     args:=RpcObj.RequestInfos(TorrentIds, ['downloadLimit','sequentialDownload', 'downloadLimitMode', 'downloadLimited', 'uploadLimit', 'uploadLimitMode', 'uploadLimited',
                                   'name', 'maxConnectedPeers', 'seedRatioMode', 'seedRatioLimit', 'seedIdleLimit', 'seedIdleMode', 'trackers']);
     if args = nil then begin
-      CheckStatus(False);
+      CheckStatus(True);
       exit;
     end;
     try
@@ -4550,7 +4550,7 @@ begin
         args:=nil;
         args:=RpcObj.SendRequest(req, False);
         if args = nil then begin
-          CheckStatus(False);
+          CheckStatus(True);
           exit;
         end;
         args.Free;
