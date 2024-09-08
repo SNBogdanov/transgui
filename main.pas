@@ -6799,6 +6799,11 @@ begin
 {$endif LCLcarbon}
   finally
     Paths.Free;
+
+    for I := 0 to Labels.Count-1 do
+      if Labels.Objects[I] <> nil then
+        CountData(Labels.Objects[I]).Free;
+
     Labels.Free;
   end;
   DetailsUpdated;
