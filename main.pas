@@ -6576,7 +6576,10 @@ begin
     for i:=0 to FTorrents.Count - 1 do begin
       IsActive:=(FTorrents[idxDownSpeed, i] <> 0) or (FTorrents[idxUpSpeed, i] <> 0);
       if IsActive then
+      begin
         Inc(ActiveCnt);
+        ActiveSize:=ActiveSize+FTorrents[idxSize,i];
+      end;
 
       j:=FTorrents[idxStatus, i];
       AllSize:=AllSize+FTorrents[idxSize,i];
