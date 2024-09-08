@@ -173,7 +173,11 @@ type
     Txt: string;
     Lst: TDate;
   end;
-
+  CountData = class
+    public
+      Count:integer;
+      Size:double;
+  end;
 
   { TProgressImage }
 
@@ -6173,6 +6177,7 @@ var
   slabels: TStringList;
 
   v: variant;
+  w:CountData;
   FieldExists: array of boolean;
 //  req, args, args2: TJSONObject;
 begin
@@ -6482,18 +6487,38 @@ begin
         s := s + ss;
         p := Labels.IndexOf(ss);
         if p < 0 then
-          Labels.AddObject(ss, TObject(1))
+        begin
+          w:=CountData.Create;
+          w.Count:=1;
+          w.Size:=t.floats['totalSize'];
+          Labels.AddObject(ss, TObject(w));
+        end
         else
-          Labels.Objects[p]:=TObject(PtrInt(Labels.Objects[p]) + 1);
+        Begin
+            w:=CountData(Labels.Objects[p]);
+            w.Count:=w.Count+1;
+            w.Size:=w.Size+t.floats['totalSize'];
+            Labels.Objects[p]:=TObject(w);
+        end;
       end;
       if a.Count = 0 then
       begin
         ss:='Not Set';
         p := Labels.IndexOf(ss);
         if p < 0 then
-          Labels.AddObject(ss, TObject(1))
+        begin
+          w:=CountData.Create;
+          w.Count:=1;
+          w.Size:=t.floats['totalSize'];
+          Labels.AddObject(ss, TObject(w));
+        end
         else
-          Labels.Objects[p]:=TObject(PtrInt(Labels.Objects[p]) + 1);
+        begin
+          w:=CountData(Labels.Objects[p]);
+          w.Count:=w.Count+1;
+          w.Size:=w.Size+t.floats['totalSize'];
+          Labels.Objects[p]:=TObject(w);
+        end;
       end;
       alabels.Sort;
       s := '';
@@ -6710,7 +6735,9 @@ begin
       Inc(j);
 
       for i:=0 to Labels.Count - 1 do begin
-        lvFilter.Items[0, j]:=UTF8Decode(Format('%s (%d)', [Labels[i], ptruint(Labels.Objects[i])]));
+        w:=CountData(Labels.Objects[i]);
+
+        lvFilter.Items[0, j]:=UTF8Decode(Format('%s (%d) (%s)', [Labels[i], w.Count,Format(sTotalSize,[GetHumanSize(w.Size, 0, '?')])]));
         lvFilter.Items[-1, j]:=UTF8Decode(Labels[i]);
         lvFilter.Items[-2, j]:=2;
         if Labels[i] = LabelFilter then
