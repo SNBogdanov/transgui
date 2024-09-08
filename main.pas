@@ -6171,6 +6171,7 @@ var
   TrackerFilter, PathFilter, LabelFilter: string;
   UpSpeed, DownSpeed: double;
   DownCnt, SeedCnt, CompletedCnt, ActiveCnt, StoppedCnt, ErrorCnt, WaitingCnt, ft: integer;
+  DownSize,SeedSize,CompletedSize,ActiveSize,StoppedSize,ErrorSize,WaitingSize,AllSize:double;
   IsActive: boolean;
   Labels,Paths: TStringList;
   alabels: TStringList;
@@ -6243,6 +6244,14 @@ begin
   StoppedCnt:=0;
   ErrorCnt:=0;
   WaitingCnt:=0;
+  DownSize:=0;
+  SeedSize:=0;
+  CompletedSize:=0;
+  ActiveSize:=0;
+  StoppedSize:=0;
+  ErrorSize:=0;
+  WaitingSize:=0;
+  AllSize:=0;
 
   FilterIdx:=lvFilter.Row;
   if VarIsNull(lvFilter.Items[0, FilterIdx]) then
@@ -6458,9 +6467,21 @@ begin
       s:=UTF8Encode(widestring(FTorrents[idxPath, row]));
       j:=Paths.IndexOf(s);
       if j < 0 then
-        Paths.AddObject(s, TObject(1))
+      begin
+        w:=CountData.Create;
+        w.Count:=1;
+        w.Size:=t.floats['totalSize'];
+
+        Paths.AddObject(s, TObject(w))
+      end
       else
-        Paths.Objects[j]:=TObject(PtrInt(Paths.Objects[j]) + 1);
+        Begin
+            w:=CountData(Paths.Objects[j]);
+            w.Count:=w.Count+1;
+            w.Size:=w.Size+t.floats['totalSize'];
+            Paths.Objects[j]:=TObject(w);
+        end;
+
     end;
 
     if FieldExists[idxPriority] then
@@ -6558,26 +6579,46 @@ begin
         Inc(ActiveCnt);
 
       j:=FTorrents[idxStatus, i];
+      AllSize:=AllSize+FTorrents[idxSize,i];
       if j = TR_STATUS_DOWNLOAD then
-        Inc(DownCnt)
+      begin
+        Inc(DownCnt);
+        DownSize:=DownSize+FTorrents[idxSize,i];
+      end
       else
       if j = TR_STATUS_SEED then begin
         Inc(SeedCnt);
+        SeedSize:=SeedSize+FTorrents[idxSize,i];
         Inc(CompletedCnt);
+        CompletedSize:=CompletedSize+FTorrents[idxSize,i];
       end
       else
       if j = TR_STATUS_FINISHED then
+      begin
         Inc(CompletedCnt);
+        CompletedSize:=CompletedSize+FTorrents[idxSize,i];
+      end;
 
       if (j = TR_STATUS_CHECK) or (j = TR_STATUS_CHECK_WAIT) or (j = TR_STATUS_DOWNLOAD_WAIT) then
+      begin
         inc(WaitingCnt);
+        WaitingSize:=WaitingSize+FTorrents[idxSize,i];
+
+      end;
 
       StateImg:=FTorrents[idxStateImg, i];
       if StateImg in [imgStopped, imgDone] then
-        Inc(StoppedCnt)
+      begin
+        Inc(StoppedCnt);
+        StoppedSize:=StoppedSize+FTorrents[idxSize,i];
+
+      end
       else
         if StateImg in [imgDownError, imgSeedError, imgError] then
+        begin
           Inc(ErrorCnt);
+          ErrorSize:=ErrorSize+FTorrents[idxSize,i];
+        end;
 
       if not VarIsEmpty(FTorrents[idxTracker, i]) then begin
         s:=UTF8Encode(widestring(FTorrents[idxTracker, i]));
@@ -6680,14 +6721,14 @@ begin
   Application.ProcessMessages;
   AppBusy;
   try
-    lvFilter.Items[0, 0]:=UTF8Decode(Format('%s (%d)', [SAll, list.Count]));
-    lvFilter.Items[0, 1]:=UTF8Decode(Format('%s (%d)', [SDownloading, DownCnt]));
-    lvFilter.Items[0, 2]:=UTF8Decode(Format('%s (%d)', [SCompleted, CompletedCnt]));
-    lvFilter.Items[0, 3]:=UTF8Decode(Format('%s (%d)', [SActive, ActiveCnt]));
-    lvFilter.Items[0, 4]:=UTF8Decode(Format('%s (%d)', [SInactive, FTorrents.Count - ActiveCnt - StoppedCnt]));
-    lvFilter.Items[0, 5]:=UTF8Decode(Format('%s (%d)', [sStopped, StoppedCnt]));
-    lvFilter.Items[0, 6]:=UTF8Decode(Format('%s (%d)', [sErrorState, ErrorCnt]));
-    lvFilter.Items[0, 7]:=UTF8Decode(Format('%s (%d)', [sWaiting, WaitingCnt]));
+    lvFilter.Items[0, 0]:=UTF8Decode(Format('%s (%d) (%s)', [SAll, list.Count,Format(sTotalSize,[GetHumanSize(AllSize, 0, '?')])]));
+    lvFilter.Items[0, 1]:=UTF8Decode(Format('%s (%d) (%s)', [SDownloading, DownCnt,Format(sTotalSize,[GetHumanSize(DownSize, 0, '?')])]));
+    lvFilter.Items[0, 2]:=UTF8Decode(Format('%s (%d) (%s)', [SCompleted, CompletedCnt,Format(sTotalSize,[GetHumanSize(CompletedSize, 0, '?')])]));
+    lvFilter.Items[0, 3]:=UTF8Decode(Format('%s (%d) (%s)', [SActive, ActiveCnt,Format(sTotalSize,[GetHumanSize(ActiveSize, 0, '?')])]));
+    lvFilter.Items[0, 4]:=UTF8Decode(Format('%s (%d) (%s)', [SInactive, FTorrents.Count - ActiveCnt - StoppedCnt,Format(sTotalSize,[GetHumanSize(AllSize-ActiveSize-StoppedSize, 0, '?')])]));
+    lvFilter.Items[0, 5]:=UTF8Decode(Format('%s (%d) (%s)', [sStopped, StoppedCnt,Format(sTotalSize,[GetHumanSize(StoppedSize, 0, '?')])]));
+    lvFilter.Items[0, 6]:=UTF8Decode(Format('%s (%d) (%s)', [sErrorState, ErrorCnt,Format(sTotalSize,[GetHumanSize(ErrorSize, 0, '?')])]));
+    lvFilter.Items[0, 7]:=UTF8Decode(Format('%s (%d) (%s)', [sWaiting, WaitingCnt,Format(sTotalSize,[GetHumanSize(WaitingSize, 0, '?')])]));
 
     j:=StatusFiltersCount;
 
@@ -6717,9 +6758,11 @@ begin
           if ExtractFileName(UTF8Encode(widestring(lvFilter.Items[-1, row]))) = s
             then begin
             s:=Paths[i];
-            lvFilter.Items[0, row]:=UTF8Decode(Format('%s (%d) %s', [UTF8Encode(widestring(lvFilter.Items[-1, row])), ptruint(Paths.Objects[row - StatusFiltersCount - 1]),FreeSpacePaths[Paths[row - StatusFiltersCount - 1]]]));
+            w:=CountData(Paths.Objects[row - StatusFiltersCount - 1]);
+            lvFilter.Items[0, row]:=UTF8Decode(Format('%s (%d) (%s) %s', [UTF8Encode(widestring(lvFilter.Items[-1, row])), w.Count,Format(sTotalSize,[GetHumanSize(w.Size, 0, '?')]),FreeSpacePaths[Paths[row - StatusFiltersCount - 1]]]));
           end;
-        lvFilter.Items[ 0, j]:=UTF8Decode(Format('%s (%d) %s', [s, ptruint(Paths.Objects[i]),FreeSpacePaths[Paths[i]]]));
+        w:=CountData(Paths.Objects[i]);
+        lvFilter.Items[ 0, j]:=UTF8Decode(Format('%s (%d) (%s) %s', [s, w.Count,Format(sTotalSize,[GetHumanSize(w.Size, 0, '?')]),FreeSpacePaths[Paths[i]]]));
         lvFilter.Items[-1, j]:=UTF8Decode(Paths[i]);
         lvFilter.Items[-2, j]:=1;
         if Paths[i] = PathFilter then
