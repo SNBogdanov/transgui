@@ -3987,6 +3987,7 @@ begin
     finally
       req.Free;
       AppNormal;
+      alabels.Free;
     end;
     if args = nil then
       CheckStatus(False)
@@ -6548,7 +6549,7 @@ begin
         if j > 0 then s := s + ', ';
         s := s + ss;
       end;
-
+      alabels.Free;
       FTorrents[idxLabels, row] := s;
     end;
 
@@ -6651,10 +6652,12 @@ begin
                alabels.Add(trim(s));
           end;
 
-        if alabels.indexof(LabelFilter)=-1 then
-        begin
-          continue;
+          if alabels.indexof(LabelFilter)=-1 then
+          begin
+            alabels.Free;
+            continue;
           end;
+          alabels.Free;
       end;
 
       case FilterIdx of
@@ -6844,13 +6847,18 @@ begin
         [RpcObj.InfoStatus, LineEnding, DownCnt, SeedCnt, LineEnding, StatusBar.Panels[1].Text, StatusBar.Panels[2].Text]);
 {$endif LCLcarbon}
   finally
-    Paths.Free;
+
 
     for I := 0 to Labels.Count-1 do
       if Labels.Objects[I] <> nil then
         CountData(Labels.Objects[I]).Free;
 
     Labels.Free;
+    for I := 0 to Paths.Count-1 do
+      if Paths.Objects[I] <> nil then
+        CountData(Paths.Objects[I]).Free;
+
+    Paths.Free;
   end;
   DetailsUpdated;
 end;
@@ -7316,6 +7324,8 @@ begin
       s := s + alabels[i];
     end;
     txLabels.Caption := s;
+    alabels.Free;
+
   end;
   DetailsUpdated;
 end;
