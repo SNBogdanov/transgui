@@ -3988,6 +3988,7 @@ begin
       req.Free;
       AppNormal;
       alabels.Free;
+      slabels.Free;
     end;
     if args = nil then
       CheckStatus(False)
@@ -6658,6 +6659,7 @@ begin
             continue;
           end;
           alabels.Free;
+          slabels.Free;
       end;
 
       case FilterIdx of
