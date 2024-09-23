@@ -3987,7 +3987,7 @@ begin
     finally
       req.Free;
       AppNormal;
-      alabels.Free;
+//      alabels.Free;
       slabels.Free;
     end;
     if args = nil then
@@ -6656,6 +6656,7 @@ begin
           if alabels.indexof(LabelFilter)=-1 then
           begin
             alabels.Free;
+            slabels.Free;
             continue;
           end;
           alabels.Free;
