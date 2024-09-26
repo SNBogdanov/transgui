@@ -220,9 +220,13 @@ type
     acAddTorrent: TAction;
     acExport: TAction;
     acImport: TAction;
-    acStopTorrent: TAction;
-    acRemoveTorrent: TAction;
     acStartTorrent: TAction;
+    acForceStartTorrent: TAction;
+    acStopTorrent: TAction;
+    acStartTorrentFilter: TAction;
+    acForceStartTorrentFilter: TAction;
+    acStopTorrentFilter: TAction;
+    acRemoveTorrent: TAction;
     acSetHighPriority: TAction;
     acSetNormalPriority: TAction;
     acSetLowPriority: TAction;
@@ -253,7 +257,6 @@ type
     acNewConnection: TAction;
     acDisconnect: TAction;
     acAltSpeed: TAction;
-    acForceStartTorrent: TAction;
     acQMoveTop: TAction;
     acQMoveUp: TAction;
     acQMoveDown: TAction;
@@ -573,7 +576,6 @@ type
     procedure acEditTrackerExecute(Sender: TObject);
     procedure acFilterPaneExecute(Sender: TObject);
     procedure acFolderGroupingExecute(Sender: TObject);
-    procedure acForceStartTorrentExecute(Sender: TObject);
     procedure acHideAppExecute(Sender: TObject);
     procedure acInfoPaneExecute(Sender: TObject);
     procedure acLabelGroupingExecute(Sender: TObject);
@@ -608,11 +610,15 @@ type
     procedure acShowAppExecute(Sender: TObject);
     procedure acShowCountryFlagExecute(Sender: TObject);
     procedure acStartAllTorrentsExecute(Sender: TObject);
-    procedure acStartTorrentExecute(Sender: TObject);
     procedure acStatusBarExecute(Sender: TObject);
     procedure acStatusBarSizesExecute(Sender: TObject);
     procedure acStopAllTorrentsExecute(Sender: TObject);
     procedure acStopTorrentExecute(Sender: TObject);
+    procedure acStartTorrentExecute(Sender: TObject);
+    procedure acForceStartTorrentExecute(Sender: TObject);
+    procedure acStopTorrentFilterExecute(Sender: TObject);
+    procedure acStartTorrentFilterExecute(Sender: TObject);
+    procedure acForceStartTorrentFilterExecute(Sender: TObject);
     procedure gTorrentsMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
     procedure gTorrentsMouseUp(Sender: TObject; Button: TMouseButton;
@@ -785,6 +791,7 @@ type
     function ExecRemoteFile(const FileName: string; SelectFile: boolean;TorrentId:integer; Userdef: boolean= false): boolean;
     function ExecRemoteFileArray(const FileName: string; SelectFile: boolean;Ids:variant; Userdef: boolean= false): boolean;
     function GetSelectedTorrents: variant;
+    function GetFilteredTorrents: variant;
     function GetDisplayedTorrents: variant;
     procedure FillDownloadDirs(CB: TComboBox; const CurFolderParam: string);
     procedure SaveDownloadDirs(CB: TComboBox; const CurFolderParam: string);
@@ -2080,9 +2087,29 @@ begin
   RpcObj.RefreshNow:=RpcObj.RefreshNow + [rtTorrents];
 end;
 
+procedure TMainForm.acStartTorrentExecute(Sender: TObject);
+begin
+  TorrentAction(GetSelectedTorrents, 'torrent-start');
+end;
+procedure TMainForm.acStopTorrentExecute(Sender: TObject);
+begin
+  TorrentAction(GetSelectedTorrents, 'torrent-stop');
+end;
 procedure TMainForm.acForceStartTorrentExecute(Sender: TObject);
 begin
   TorrentAction(GetSelectedTorrents, 'torrent-start-now');
+end;
+procedure TMainForm.acStartTorrentFilterExecute(Sender: TObject);
+begin
+  TorrentAction(GetFilteredTorrents, 'torrent-start');
+end;
+procedure TMainForm.acStopTorrentFilterExecute(Sender: TObject);
+begin
+  TorrentAction(GetFilteredTorrents, 'torrent-stop');
+end;
+procedure TMainForm.acForceStartTorrentFilterExecute(Sender: TObject);
+begin
+  TorrentAction(GetFilteredTorrents, 'torrent-start-now');
 end;
 
 procedure TMainForm.acHideAppExecute(Sender: TObject);
@@ -4057,10 +4084,6 @@ begin
   TorrentAction(NULL, 'torrent-start');
 end;
 
-procedure TMainForm.acStartTorrentExecute(Sender: TObject);
-begin
-  TorrentAction(GetSelectedTorrents, 'torrent-start');
-end;
 
 procedure TMainForm.acStatusBarExecute(Sender: TObject);
 begin
@@ -4098,10 +4121,6 @@ begin
   TorrentAction(NULL, 'torrent-stop');
 end;
 
-procedure TMainForm.acStopTorrentExecute(Sender: TObject);
-begin
-  TorrentAction(GetSelectedTorrents, 'torrent-stop');
-end;
 
 procedure TMainForm.gTorrentsMouseMove(Sender: TObject; Shift: TShiftState; X,
   Y: Integer);
@@ -5782,6 +5801,9 @@ begin
   acStartTorrent.Enabled:=e and (gTorrents.Items.Count > 0);
   acForceStartTorrent.Enabled:=acStartTorrent.Enabled and (RpcObj.RPCVersion >= 14);
   acStopTorrent.Enabled:=e and (gTorrents.Items.Count > 0);
+  acStartTorrentFilter.Enabled:=e and (gTorrents.Items.Count > 0);
+  acForceStartTorrentFilter.Enabled:=acStartTorrent.Enabled and (RpcObj.RPCVersion >= 14);
+  acStopTorrentFilter.Enabled:=e and (gTorrents.Items.Count > 0);
   acVerifyTorrent.Enabled:=e and (gTorrents.Items.Count > 0);
   acRemoveTorrent.Enabled:=e and (gTorrents.Items.Count > 0) and not edSearch.Focused;
   acRemoveTorrentAndData.Enabled:=acRemoveTorrent.Enabled and (RpcObj.RPCVersion >= 4);
@@ -7970,6 +7992,25 @@ begin
   MessageDlg(sNoPathMapping, mtInformation, [mbOK], 0);
 end;
 
+function TMainForm.GetFilteredTorrents: variant;
+var
+i, j: integer;
+begin
+  with gTorrents do begin
+    if Items.Count = 0 then begin
+      Result:=Unassigned;
+      exit;
+    end;
+    Result:=VarArrayCreate([0, gTorrents.Items.Count - 1], varinteger);
+    j:=0;
+    for i:=0 to gTorrents.Items.Count - 1 do
+      begin
+        Result[j]:=Items[idxTorrentId, i];
+        Inc(j);
+      end;
+    exit;
+  end;
+end;
 function TMainForm.GetSelectedTorrents: variant;
 var
   i, j: integer;
