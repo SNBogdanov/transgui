@@ -384,3 +384,5 @@ Set labels=Установить метку
 Change tracker=Поменять трекер
 Sequential Download=Последовательная загрузка
 Labels=Метки
+Filtered Torrents=Отфильтрованные торренты
+Big Toolbar=Большие значки

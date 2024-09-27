@@ -5739,6 +5739,8 @@ inherited MainForm: TMainForm
     object MenuItem193: TMenuItem
         Caption = '-'
     end
+      object miFiltered: TMenuItem
+        Caption = 'Filtered Torrents'
       object MenuItem201: TMenuItem
         Action = acStartTorrentFilter
         Bitmap.Data = {
@@ -5858,6 +5860,7 @@ inherited MainForm: TMainForm
           16FFA35317FFFF00FF00FF00FF00FF00FF00FF00FF00FF00FF00
         }
         OnClick=acStopTorrentFilterExecute
+      end
       end
   end
   object OpenDialog1: TOpenDialog[27]
