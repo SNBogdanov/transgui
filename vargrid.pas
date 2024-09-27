@@ -560,7 +560,7 @@ begin
     if VarIsNull(v) or VarIsEmpty(v) then
       s:= ''
     else
-      s:= LazUTF8.UTF8UpperCase(UTF8Encode(widestring(v)));
+      s:= LazUTF8.UTF8UpperCase(UTF8Encode(widestring(v){%H-}));
     if Copy(s, 1, Length(ss)) = ss then begin
       Result:=i;
       break;
@@ -633,7 +633,7 @@ begin
               det:=ThemeServices.GetElementDetails(ttGlyphOpened)
             else
               det:=ThemeServices.GetElementDetails(ttGlyphClosed);
-            sz:=ThemeServices.GetDetailSize(det);
+            sz:=ThemeServices.GetDetailSizeForPPI(det,96);
             with R do begin
               Left:=(Left + Right - sz.cx) div 2;
               Top:=(Top + Bottom - sz.cy) div 2;
@@ -1008,7 +1008,7 @@ begin
     if FSortColumn = ColToDataCol(aCol) then begin
       R.Right:=R.Left + R.Bottom - R.Top;
       InflateRect(R, -5, -5);
-      OffsetRect(R, -3, 0);
+      Types.OffsetRect(R, -3, 0);
       Dec(R.Bottom, 2);
       aRect.Left:=R.Right + 2;
     end;

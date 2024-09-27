@@ -120,7 +120,7 @@ type
     FFiles: TVarList;
     FTorrentId: integer;
     FLastFileCount: integer;
-    LastFilterIdx:integer;
+//    LastFilterIdx:integer;
     FCommonPathLen: integer;
     FHasDone: boolean;
     FHasPriority: boolean;
@@ -766,8 +766,8 @@ begin
 end;
 
 function TFilesTree.DoCompareVarRows(Sender: TVarList; Row1, Row2: PVariant; DescendingSort: boolean): integer;
-var
-v:variant;
+//var
+//v:variant;
 begin
   if FGrid.SortColumn <> idxFileName then begin
 //    Result:=(integer(VarIsEmpty(Sender.GetRowItem(Row1, idxFileId))) and 1) - (integer(VarIsEmpty(Sender.GetRowItem(Row2, idxFileId))) and 1);

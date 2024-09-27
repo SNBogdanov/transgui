@@ -44,7 +44,7 @@ uses
   fpjson, jsonparser, ExtCtrls, rpc, syncobjs, variants, varlist, IpResolver,
   zipper, ResTranslator, VarGrid, StrUtils, LCLProc, Grids, Buttons, BaseForm,
   utils, AddTorrent, Types, LazFileUtils, LazUTF8, StringToVK, passwcon,
-  GContnrs, lineinfo, RegExpr,fgl;
+  GContnrs,  RegExpr,fgl;
 
 const
   AppName = 'Transmission Remote GUI';
@@ -1569,7 +1569,7 @@ begin
 
 
   {$if FPC_FULlVERSION>=30101}
-  AllowReuseOfLineInfoData:=false;
+//  AllowReuseOfLineInfoData:=false;
   {$endif}
   FAppProps := TApplicationProperties.Create(Self);
   FAppProps.OnException := @_onException;
@@ -2288,7 +2288,7 @@ end;
 procedure TMainForm.acOpenFileExecute(Sender: TObject);
 var UserDef: boolean;
     s:string;
-    b:boolean;
+//    b:boolean;
 begin
   if gTorrents.Items.Count = 0 then
     exit;
@@ -2448,7 +2448,7 @@ var
   TempBmp1: TBitmap;
   TempImgList: TImageList;
   Res:TCustomImageListResolution;
-  R:TCustomImageListResolutionEnumerator;
+//  R:TCustomImageListResolutionEnumerator;
 begin
   try
     if ImgListOut = nil Then
@@ -2456,7 +2456,7 @@ begin
     TempImgList := TImageList.Create(nil);
     TempBmp1 := TBitmap.Create;
     TempBmp1.PixelFormat := pf32bit;
-    R:=ImgList.Resolutions;
+//    R:=ImgList.Resolutions;
     for I:=0 to ImgList.ResolutionCount-1 do begin
       Res:=ImgList.ResolutionByIndex[I];
       if Res.Width <NewWidth Then
@@ -3942,8 +3942,8 @@ var
   args: TJSONObject;
   a: TJSONArray;
   t:TJSONObject;
-  t1:TDateTime;
-  ok:boolean;
+  //t1:TDateTime;
+  //ok:boolean;
 begin
   if gTorrents.Items.Count = 0 then
     exit;
@@ -4378,7 +4378,7 @@ begin
         Trackers:=t.Arrays['trackers'];
         for i:=0 to Trackers.Count - 1 do begin
           tr:=Trackers[i] as TJSONObject;
-            trlist.AddObject(UTF8Decode(tr.Strings['announce']), TObject(PtrUInt(tr.Integers['id'])));
+            trlist.AddObject(AnsiString(UTF8Decode(tr.Strings['announce'])), TObject(PtrUInt(tr.Integers['id'])));
         end;
         edTrackers.Lines.Assign(trlist);
       end
@@ -5431,8 +5431,8 @@ begin
 end;
 
 procedure TMainForm.TrayIconDblClick(Sender: TObject);
-var
-  a:TWindowState;
+//var
+//  a:TWindowState;
 begin
 {$ifndef darwin}
 //  acShowApp.Execute;
@@ -5961,11 +5961,11 @@ end;
 
 //----------------------------------------------------------------
 function ExcludeInvalidChar (path: string): string;
-var
-  s_old: string;
-  l_old: integer;
+//var
+  //s_old: string;
+ // l_old: integer;
 begin
-  s_old := path;
+//  s_old := path;
 //path  := StringReplace(path, ':', '_', [rfReplaceAll, rfIgnoreCase]);
   path  := StringReplace(path, '*', '_', [rfReplaceAll, rfIgnoreCase]);
   path  := StringReplace(path, '?', '_', [rfReplaceAll, rfIgnoreCase]);
@@ -5976,10 +5976,10 @@ begin
   path  := StringReplace(path, '~', '_', [rfReplaceAll, rfIgnoreCase]);
 //path  := StringReplace(path, '..','_', [rfReplaceAll, rfIgnoreCase]); bag
 
-  l_old := 0;
-  if path <> s_old then begin
-    l_old :=1;
-  end;
+//  l_old := 0;
+//  if path <> s_old then begin
+//    l_old :=1;
+//  end;
 
   Result:= path;
 end;
@@ -5995,7 +5995,7 @@ function TMainForm.GetTorrentError(t: TJSONObject; Status: integer): string;
 var
   i: integer;
   stats: TJSONArray;
-  err, gerr: widestring;
+  err, gerr:UTF8String;
   NoTrackerError: boolean;
 begin
   Result:='';
@@ -6104,7 +6104,7 @@ var
 
 procedure TMainForm.FillTorrentsList(list: TJSONArray);
 var
-  i, j,l,c, p, row, crow, id, StateImg: integer;
+  i, j,c, p, row, crow, id, StateImg: integer;
   t: TJSONObject;
   a: TJSONArray;
   f: double;
@@ -8059,7 +8059,7 @@ var
   ids, cidx: variant;
   TotalSize, TotalDownloaded, TotalSizeToDownload, TorrentDownloaded, TorrentSizeToDownload: Int64;
   i: Integer;
-  a, b, c, d: Int64;
+  //a, b, c, d: Int64;
 begin
     try
     if gTorrents.Items.Count > 0 then
@@ -8700,8 +8700,8 @@ var
   i,Torrent:integer;
   files: TJSONArray;
   TorrentIds:variant;
-  ids:array of integer;
-  Count:integer;
+//  ids:array of integer;
+//  Count:integer;
 begin
   if gTorrents.Items.Count = 0 then
     exit;
@@ -8714,7 +8714,7 @@ begin
     TorrentIds:=GetSelectedTorrents();
     if UserDef Then
       begin
-          ExecRemoteFileArray(p, sel,TorrentIds, Userdef);
+          ExecRemoteFileArray('', sel,TorrentIds, Userdef);
           gTorrents.RemoveSelection;
           AppNormal;
           exit;

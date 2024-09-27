@@ -9,7 +9,7 @@ inherited MainForm: TMainForm
   ActiveControl = panTop
   AllowDropFiles = True
   Caption = ' '
-  ClientHeight = 966
+  ClientHeight = 996
   ClientWidth = 1920
   Constraints.MinHeight = 450
   Constraints.MinWidth = 450
@@ -26,18 +26,18 @@ inherited MainForm: TMainForm
   OnWindowStateChange = FormWindowStateChange
   object panTop: TPanel[0]
     Left = 0
-    Height = 405
+    Height = 435
     Top = 28
     Width = 1920
     Align = alClient
     BevelOuter = bvNone
-    ClientHeight = 405
+    ClientHeight = 435
     ClientWidth = 1920
     Constraints.MinHeight = 120
     TabOrder = 0
     object HSplitter: TSplitter
       Left = 195
-      Height = 405
+      Height = 435
       Top = 0
       Width = 8
       AutoSnap = False
@@ -46,19 +46,20 @@ inherited MainForm: TMainForm
     end
     object panFilter: TPanel
       Left = 0
-      Height = 405
+      Height = 435
       Top = 0
       Width = 195
       Align = alLeft
       BevelOuter = bvNone
-      ClientHeight = 405
+      ClientHeight = 435
       ClientWidth = 195
       TabOrder = 2
       object lvFilter: TVarGrid
         Left = 0
-        Height = 266
+        Height = 296
         Top = 0
         Width = 195
+        RowCount = 1
         Align = alClient
         Columns = <        
           item
@@ -72,7 +73,6 @@ inherited MainForm: TMainForm
         FixedRows = 0
         Options = [goColSizing, goColMoving, goRowSelect, goThumbTracking, goDblClickAutoSize]
         PopupMenu = pmFilter
-        RowCount = 1
         ScrollBars = ssAutoVertical
         TabOrder = 1
         OnClick = lvFilterClick
@@ -83,20 +83,20 @@ inherited MainForm: TMainForm
       end
       object panSearch: TPanel
         Left = 0
-        Height = 135
-        Top = 268
+        Height = 35
+        Top = 298
         Width = 195
         Align = alBottom
         AutoSize = True
         BorderSpacing.Top = 2
         BorderSpacing.Bottom = 2
         BevelOuter = bvNone
-        ClientHeight = 135
+        ClientHeight = 35
         ClientWidth = 195
         TabOrder = 0
         object imgSearch: TImage
           Left = 24
-          Height = 135
+          Height = 35
           Top = 0
           Width = 24
           Align = alLeft
@@ -105,7 +105,7 @@ inherited MainForm: TMainForm
         end
         object SearchToolbar1: TToolBar
           Left = 0
-          Height = 135
+          Height = 35
           Top = 0
           Width = 24
           Align = alLeft
@@ -121,17 +121,17 @@ inherited MainForm: TMainForm
         end
         object edSearch: TEdit
           Left = 48
-          Height = 135
+          Height = 35
           Top = 0
           Width = 123
           Align = alClient
+          TabOrder = 1
           OnChange = edSearchChange
           OnKeyDown = edSearchKeyDown
-          TabOrder = 1
         end
         object SearchToolbar: TToolBar
           Left = 171
-          Height = 135
+          Height = 35
           Top = 0
           Width = 24
           Align = alRight
@@ -151,21 +151,20 @@ inherited MainForm: TMainForm
     end
     object gTorrents: TVarGrid
       Left = 203
-      Height = 405
+      Height = 435
       Top = 0
       Width = 1717
+      RowCount = 1
       Align = alClient
       Columns = <      
         item
           MinSize = 15
           MaxSize = 300
           Title.Caption = 'Name'
-          Layout=tlCenter
           Width = 300
         end      
         item
           Alignment = taRightJustify
-          Layout=tlCenter
           MinSize = 15
           MaxSize = 300
           Title.Caption = 'Size'
@@ -173,21 +172,18 @@ inherited MainForm: TMainForm
         end      
         item
           Alignment = taCenter
-          Layout=tlCenter
           MinSize = 15
           MaxSize = 300
           Title.Caption = 'Done'
         end      
         item
           MinSize = 15
-          Layout=tlCenter
           MaxSize = 300
           Title.Caption = 'Status'
           Width = 105
         end      
         item
           Alignment = taRightJustify
-          Layout=tlCenter
           MinSize = 15
           MaxSize = 300
           Title.Caption = 'Seeds'
@@ -195,7 +191,6 @@ inherited MainForm: TMainForm
         end      
         item
           Alignment = taRightJustify
-          Layout=tlCenter
           MinSize = 15
           MaxSize = 300
           Title.Caption = 'Peers'
@@ -353,7 +348,6 @@ inherited MainForm: TMainForm
       FixedCols = 0
       Options = [goFixedVertLine, goFixedHorzLine, goColSizing, goColMoving, goRowSelect, goThumbTracking, goDblClickAutoSize, goHeaderHotTracking, goHeaderPushedLook]
       PopupMenu = pmTorrents
-      RowCount = 1
       TabOrder = 0
       OnClick = gTorrentsClick
       OnDblClick = gTorrentsDblClick
@@ -376,7 +370,7 @@ inherited MainForm: TMainForm
   object StatusBar: TStatusBar[1]
     Left = 0
     Height = 36
-    Top = 930
+    Top = 960
     Width = 1920
     Panels = <    
       item
@@ -409,7 +403,7 @@ inherited MainForm: TMainForm
   object PageInfo: TPageControl[2]
     Left = 0
     Height = 489
-    Top = 441
+    Top = 471
     Width = 1920
     ActivePage = tabTrackers
     Align = alBottom
@@ -1017,6 +1011,7 @@ inherited MainForm: TMainForm
         Height = 451
         Top = 0
         Width = 1912
+        RowCount = 1
         Align = alClient
         Columns = <        
           item
@@ -1045,7 +1040,6 @@ inherited MainForm: TMainForm
         FixedCols = 0
         Options = [goFixedVertLine, goFixedHorzLine, goColSizing, goColMoving, goRowSelect, goThumbTracking, goDblClickAutoSize, goHeaderHotTracking, goHeaderPushedLook]
         PopupMenu = pmTrackers
-        RowCount = 1
         TabOrder = 0
         OnDblClick = lvTrackersDblClick
         OnKeyDown = lvTrackersKeyDown
@@ -1064,6 +1058,7 @@ inherited MainForm: TMainForm
         Height = 451
         Top = 0
         Width = 1912
+        RowCount = 1
         Align = alClient
         Columns = <        
           item
@@ -1121,7 +1116,6 @@ inherited MainForm: TMainForm
         FixedCols = 0
         Options = [goFixedVertLine, goFixedHorzLine, goColSizing, goColMoving, goRowSelect, goThumbTracking, goDblClickAutoSize, goHeaderHotTracking, goHeaderPushedLook]
         PopupMenu = pmPeers
-        RowCount = 1
         TabOrder = 0
         Images = imgFlags
         SortColumn = 0
@@ -1139,6 +1133,7 @@ inherited MainForm: TMainForm
         Height = 451
         Top = 0
         Width = 1912
+        RowCount = 1
         Align = alClient
         Columns = <        
           item
@@ -1185,7 +1180,6 @@ inherited MainForm: TMainForm
         FixedCols = 0
         Options = [goFixedVertLine, goFixedHorzLine, goColSizing, goColMoving, goRowSelect, goThumbTracking, goDblClickAutoSize, goHeaderHotTracking, goHeaderPushedLook]
         PopupMenu = pmFiles
-        RowCount = 1
         TabOrder = 0
         OnDblClick = lvFilesDblClick
         OnKeyDown = lvFilesKeyDown
@@ -1209,6 +1203,7 @@ inherited MainForm: TMainForm
         Height = 426
         Top = 25
         Width = 1912
+        RowCount = 1
         Align = alClient
         Columns = <        
           item
@@ -1235,7 +1230,6 @@ inherited MainForm: TMainForm
           end>
         FixedCols = 0
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goThumbTracking, goDblClickAutoSize]
-        RowCount = 1
         TabOrder = 0
         HideSelection = True
       end
@@ -1254,7 +1248,7 @@ inherited MainForm: TMainForm
     Cursor = crVSplit
     Left = 0
     Height = 8
-    Top = 433
+    Top = 463
     Width = 1920
     Align = alBottom
     AutoSnap = False
@@ -1421,6 +1415,7 @@ inherited MainForm: TMainForm
     ClientWidth = 242
     Color = clInfoBk
     Font.Color = clInfoText
+    ParentBackground = False
     ParentColor = False
     ParentFont = False
     TabOrder = 5
@@ -5725,8 +5720,9 @@ inherited MainForm: TMainForm
     Top = 168
   end
   object pmFilter: TPopupMenu[26]
+    Images = ImageList16
     Left = 60
-    Top = 392
+    Top = 136
     object MenuItem90: TMenuItem
       Action = acFolderGrouping
     end
@@ -5737,10 +5733,10 @@ inherited MainForm: TMainForm
       Action = acTrackerGrouping
     end
     object MenuItem193: TMenuItem
-        Caption = '-'
+      Caption = '-'
     end
-      object miFiltered: TMenuItem
-        Caption = 'Filtered Torrents'
+    object miFiltered: TMenuItem
+      Caption = 'Filtered Torrents'
       object MenuItem201: TMenuItem
         Action = acStartTorrentFilter
         Bitmap.Data = {
@@ -5779,7 +5775,7 @@ inherited MainForm: TMainForm
           FF00FF00FF00FF00FF00FF00FF00AF5A12FFB3611BFFB2611FFFA95B1EFFAC59
           16FFA35317FFFF00FF00FF00FF00FF00FF00FF00FF00FF00FF00
         }
-        OnClick=acStartTorrentFilterExecute
+        OnClick = acStartTorrentFilterExecute
       end
       object MenuItem202: TMenuItem
         Action = acForceStartTorrentFilter
@@ -5819,7 +5815,7 @@ inherited MainForm: TMainForm
           FF00FF00FF00FF00FF00FF00FF001F7DDEFF1F84ECFF1F86F0FF1F81E6FF1F7E
           E0FF1F7AD8FFFF00FF00FF00FF00FF00FF00FF00FF00FF00FF00
         }
-        OnClick=acForceStartTorrentFilterExecute
+        OnClick = acForceStartTorrentFilterExecute
       end
       object MenuItem203: TMenuItem
         Action = acStopTorrentFilter
@@ -5859,9 +5855,9 @@ inherited MainForm: TMainForm
           FF00FF00FF00FF00FF00FF00FF00AF5A12FFB3611BFFB36220FFAA5C1FFFAC59
           16FFA35317FFFF00FF00FF00FF00FF00FF00FF00FF00FF00FF00
         }
-        OnClick=acStopTorrentFilterExecute
+        OnClick = acStopTorrentFilterExecute
       end
-      end
+    end
   end
   object OpenDialog1: TOpenDialog[27]
     Left = 400

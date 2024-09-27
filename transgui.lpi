@@ -223,7 +223,11 @@
       <CompilerMessages>
         <IgnoredMessages idx6058="True"/>
       </CompilerMessages>
-      <CustomOptions Value="-Sa -CX -XX"/>
+      <CustomOptions Value="-Sa
+-CX
+-XX
+-gl"/>
+      <CompilerPath Value=" $(CompPath)"/>
       <ExecuteBefore>
         <ShowAllMessages Value="True"/>
       </ExecuteBefore>
