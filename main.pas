@@ -269,12 +269,18 @@ type
     acBigToolbar: TAction;
     acSetLabels: TAction;
     acLabelGrouping: TAction;
+    acFilterTorrentProps: TAction;
     ActionList2: TActionList;
     ImageList32: TImageList;
     MenuItem103: TMenuItem;
     MenuItem104: TMenuItem;
     MenuItem105: TMenuItem;
     MenuItem106: TMenuItem;
+    MenuItem108: TMenuItem;
+    MenuItem193: TMenuItem;
+    MenuItem201: TMenuItem;
+    MenuItem202: TMenuItem;
+    MenuItem203: TMenuItem;
     MenuItem206: TMenuItem;
     MenuItem107: TMenuItem;
     MenuShow: TAction;
@@ -294,9 +300,11 @@ type
     ApplicationProperties: TApplicationProperties;
     MenuItem501: TMenuItem;
     MenuItem502: TMenuItem;
+    miFiltered: TMenuItem;
     SearchToolbar: TToolBar;
     SearchToolbar1: TToolBar;
     Separator1: TMenuItem;
+    tbSearch: TToolButton;
     tbSearchCancel: TToolButton;
     LocalWatchTimer: TTimer;
     ToolButton10: TToolButton;
@@ -567,6 +575,7 @@ type
     procedure acAdvEditTrackersExecute(Sender: TObject);
     procedure acAltSpeedExecute(Sender: TObject);
     procedure acBigToolbarExecute(Sender: TObject);
+    procedure acFilterTorrentPropsExecute(Sender: TObject);
     procedure ScaleImageList(ImgList: TImageList; var ImgListOut: TImageList; NewWidth: Integer);
     procedure acCheckNewVersionExecute(Sender: TObject);
     procedure acConnectExecute(Sender: TObject);
@@ -757,7 +766,7 @@ type
     procedure DoCreateOutZipStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
     procedure DoDisconnect;
     procedure DoOpenFlagsZip(Sender: TObject; var AStream: TStream);
-    procedure TorrentProps(PageNo: integer);
+    procedure TorrentProps(PageNo: integer;filtered:boolean = False);
     procedure ShowConnOptions(NewConnection: boolean);
     procedure SaveColumns(LV: TVarGrid; const AName: string; FullInfo: boolean = True);
     procedure LoadColumns(LV: TVarGrid; const AName: string; FullInfo: boolean = True);
@@ -2524,6 +2533,13 @@ begin
   Ini.WriteBool('MainForm', 'BigToolbar', acBigToolbar.Checked);
 end;
 
+procedure TMainForm.acFilterTorrentPropsExecute(Sender: TObject);
+begin
+TorrentProps(0,True);
+end;
+
+
+
 procedure TMainForm.acCheckNewVersionExecute(Sender: TObject);
 begin
   Application.ProcessMessages;
@@ -4268,7 +4284,7 @@ begin
   TorrentProps(0);
 end;
 
-procedure TMainForm.TorrentProps(PageNo: integer);
+procedure TMainForm.TorrentProps(PageNo: integer;filtered:boolean=false);
 const
   TR_RATIOLIMIT_GLOBAL    = 0; // follow the global settings
   TR_RATIOLIMIT_SINGLE    = 1; // override the global settings, seeding until a certain ratio
@@ -4298,6 +4314,9 @@ begin
     Page.ActivePageIndex:=PageNo;
     gTorrents.Tag:=1;
     gTorrents.EnsureSelectionVisible;
+    if filtered then
+    TorrentIds:=GetFilteredTorrents
+    else
     TorrentIds:=GetSelectedTorrents;
     args:=RpcObj.RequestInfos(TorrentIds, ['downloadLimit','sequentialDownload', 'downloadLimitMode', 'downloadLimited', 'uploadLimit', 'uploadLimitMode', 'uploadLimited',
                                   'name', 'maxConnectedPeers', 'seedRatioMode', 'seedRatioLimit', 'seedIdleLimit', 'seedIdleMode', 'trackers']);
@@ -4309,8 +4328,10 @@ begin
       t:=args.Arrays['torrents'].Objects[0];
       c1:=args.Arrays['torrents'].Count;
 
-      if gTorrents.SelCount > 1 then
-        s:=Format(sSeveralTorrents, [gTorrents.SelCount])
+//      if gTorrents.SelCount > 1 then
+//        s:=Format(sSeveralTorrents, [gTorrents.SelCount])
+      if c1 > 1 then
+          s:=Format(sSeveralTorrents, [c1])
       else
         s:=UTF8Encode(t.Strings['name']);
 
@@ -5802,6 +5823,7 @@ begin
   acForceStartTorrent.Enabled:=acStartTorrent.Enabled and (RpcObj.RPCVersion >= 14);
   acStopTorrent.Enabled:=e and (gTorrents.Items.Count > 0);
   acStartTorrentFilter.Enabled:=e and (gTorrents.Items.Count > 0);
+  acFilterTorrentProps.Enabled:=e and (gTorrents.Items.Count > 0);
   acForceStartTorrentFilter.Enabled:=acStartTorrent.Enabled and (RpcObj.RPCVersion >= 14);
   acStopTorrentFilter.Enabled:=e and (gTorrents.Items.Count > 0);
   acVerifyTorrent.Enabled:=e and (gTorrents.Items.Count > 0);
