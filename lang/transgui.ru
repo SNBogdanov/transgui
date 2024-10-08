@@ -387,3 +387,4 @@ Labels=Метки
 Filtered Torrents=Отфильтрованные торренты
 Big Toolbar=Большие значки
 Sequential download=Последовательная закачка
+Delete file=Удалить файл

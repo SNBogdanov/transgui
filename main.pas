@@ -1777,7 +1777,7 @@ begin
       iTag:=1001;
       j:= 1;
       repeat
-            MenuCaption := Ini.ReadString('UserTorrentMenu','Caption'+IntToStr(j),'nocaption');
+            MenuCaption := TranslateString(Ini.ReadString('UserTorrentMenu','Caption'+IntToStr(j),'nocaption'),True);
             inc(J);
       until MenuCaption = 'nocaption';
       dec(j);
@@ -1793,7 +1793,7 @@ begin
           for i := 1 to j-1 do
             begin
                 MI := TMenuItem.Create(Self);
-                MI.Caption:= Ini.ReadString('UserTorrentMenu','Caption'+IntToStr(i),'');
+                MI.Caption:= TranslateString(Ini.ReadString('UserTorrentMenu','Caption'+IntToStr(i),''),True);
                 if MI.Caption <> '-' then
                 begin
                   MI.Tag:= iTag;//1000+i;
@@ -1827,7 +1827,7 @@ begin
       iTag:=2001;
       j:= 1;
       repeat
-            MenuCaption := Ini.ReadString('UserFileMenu','Caption'+IntToStr(j),'nocaption');
+            MenuCaption := TranslateString(Ini.ReadString('UserFileMenu','Caption'+IntToStr(j),'nocaption'),True);
             inc(J);
       until MenuCaption = 'nocaption';
       dec(j);
@@ -1843,7 +1843,7 @@ begin
           for i := 1 to j-1 do
             begin
                 MI := TMenuItem.Create(Self);
-                MI.Caption:= Ini.ReadString('UserFileMenu','Caption'+IntToStr(i),'');
+                MI.Caption:= TranslateString(Ini.ReadString('UserFileMenu','Caption'+IntToStr(i),''),True);
                 if MI.Caption <> '-' then
                 begin
                   MI.Tag:= iTag;//1000+i;
