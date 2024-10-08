@@ -58,14 +58,17 @@ type
     btBrowse: TButton;
     Buttons: TButtonPanel;
     cbStartTorrent: TCheckBox;
+    cbSequentialDownload: TCheckBox;
     cbDestFolder: TComboBox;
     edSaveAs: TEdit;
+    edLabel: TEdit;
     edExtension: TEdit;
     gbSaveAs: TGroupBox;
     gbContents: TGroupBox;
     edPeerLimit: TSpinEdit;
     DiskSpaceTimer: TTimer;
     txSaveAs: TLabel;
+    txLabel: TLabel;
     txSaveAs1: TLabel;
     txSize: TLabel;
     txDiskSpace: TLabel;
@@ -77,9 +80,11 @@ type
     procedure btSelectNoneClick(Sender: TObject);
     procedure cbDestFolderChange(Sender: TObject);
     procedure cbStartTorrentChange(Sender: TObject);
+    procedure cbSequentialDownloadChange(Sender: TObject);
     procedure DelButtonClick(Sender: TObject);
     procedure DiskSpaceTimerTimer(Sender: TObject);
     procedure edSaveAsChange(Sender: TObject);
+    procedure edLabelChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure OKButtonClick(Sender: TObject);
@@ -1086,6 +1091,18 @@ begin
       Buttons.OKButton.Font.Style:= []
     end;
 end;
+procedure TAddTorrentForm.cbSequentialDownloadChange(Sender: TObject);
+begin
+    Ini.WriteBool('Interface', 'SequentialDownload', cbSequentialDownload.Checked);
+    if (cbSequentialDownload.Checked = false) then begin
+      cbSequentialDownload.Font.Style:= [fsbold];
+      Buttons.OKButton.Font.Style:= [fsbold]
+    end
+    else begin
+      cbSequentialDownload.Font.Style:= [];
+      Buttons.OKButton.Font.Style:= []
+    end;
+end;
 
 procedure TAddTorrentForm.DelButtonClick(Sender: TObject);
 var
@@ -1137,6 +1154,10 @@ end;
 procedure TAddTorrentForm.edSaveAsChange(Sender: TObject);
 begin
   Caption:=OrigCaption + ' - ' + edSaveAs.Text;
+end;
+procedure TAddTorrentForm.edLabelChange(Sender: TObject);
+begin
+//     Ini.WriteString('Interface', 'Label', edLabel.Text);
 end;
 
 procedure TAddTorrentForm.TreeStateChanged(Sender: TObject);
@@ -1301,6 +1322,12 @@ begin
   Buttons.OKButton.ModalResult:=mrNone;
   bidiMode := GetBiDi();
   cbStartTorrent.Checked := Ini.ReadBool('Interface', 'StartTorrentOnAdd', true);
+  cbSequentialDownload.Checked := Ini.ReadBool('Interface', 'SequentialDownload', true);
+//  edLabel.Text:=Ini.ReadString('Interface', 'Label', '');
+  if RpcObj.RPCVersion < 18 Then
+     cbSequentialDownload.Visible:=false
+  else
+    cbSequentialDownload.Visible:=true;
   if (cbStartTorrent.Checked = false) then begin
     cbStartTorrent.Font.Style:= [fsbold];
     Buttons.OKButton.Font.Style:= [fsbold]

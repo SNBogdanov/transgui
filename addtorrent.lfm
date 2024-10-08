@@ -1,16 +1,16 @@
 inherited AddTorrentForm: TAddTorrentForm
   Left = 494
-  Height = 457
+  Height = 836
   Top = 276
-  Width = 508
+  Width = 1000
   HorzScrollBar.Page = 505
   VertScrollBar.Page = 404
   VertScrollBar.Range = 92
   AutoSize = True
   BorderIcons = [biSystemMenu]
   Caption = 'Add new torrent'
-  ClientHeight = 457
-  ClientWidth = 508
+  ClientHeight = 836
+  ClientWidth = 1000
   Constraints.MinHeight = 300
   Constraints.MinWidth = 470
   OnCreate = FormCreate
@@ -18,116 +18,144 @@ inherited AddTorrentForm: TAddTorrentForm
   Position = poMainFormCenter
   object gbSaveAs: TGroupBox[0]
     Left = 8
-    Height = 176
+    Height = 216
     Top = 8
-    Width = 492
+    Width = 984
     Align = alTop
     BorderSpacing.Left = 8
     BorderSpacing.Top = 8
     BorderSpacing.Right = 8
     Caption = ' '
-    ClientHeight = 156
-    ClientWidth = 488
+    ClientHeight = 186
+    ClientWidth = 980
     TabOrder = 0
     object txDestFolder: TLabel
       Left = 10
-      Height = 15
+      Height = 25
       Top = 0
-      Width = 97
+      Width = 146
       Caption = 'Destination folder:'
       ParentColor = False
     end
     object txPeerLimit: TLabel
-      Left = 344
-      Height = 15
-      Top = 131
-      Width = 53
+      Left = 808
+      Height = 25
+      Top = 168
+      Width = 76
       Alignment = taRightJustify
       Anchors = [akTop, akRight]
       Caption = 'Peer limit:'
       ParentColor = False
     end
     object cbDestFolder: TComboBox
-      Left = 10
-      Height = 23
+      Left = 8
+      Height = 33
       Top = 16
-      Width = 337
+      Width = 829
       Anchors = [akTop, akLeft, akRight]
       DropDownCount = 60
-      ItemHeight = 15
-      OnChange = cbDestFolderChange
+      ItemHeight = 25
       Sorted = True
       TabOrder = 0
+      OnChange = cbDestFolderChange
+    end
+    object cbSequentialDownload: TCheckBox
+      Left = 10
+      Height = 29
+      Top = 168
+      Width = 192
+      Caption = 'Sequential download'
+      Checked = True
+      State = cbChecked
+      TabOrder = 6
+      OnChange = cbSequentialDownloadChange
     end
     object edPeerLimit: TSpinEdit
-      Left = 413
-      Height = 23
-      Top = 128
+      Left = 905
+      Height = 33
+      Top = 168
       Width = 62
       Anchors = [akTop, akRight]
       MaxValue = 999
       MinValue = 1
-      TabOrder = 3
+      TabOrder = 7
       Value = 1
     end
     object btBrowse: TButton
-      Left = 387
-      Height = 26
+      Left = 876
+      Height = 20
       Hint = 'Browse folder'
-      Top = 13
+      Top = 16
       Width = 91
       Anchors = [akTop, akRight]
       Caption = 'Browse...'
-      OnClick = btBrowseClick
       ParentShowHint = False
       ShowHint = True
-      TabOrder = 1
+      TabOrder = 2
+      OnClick = btBrowseClick
     end
     object txSaveAs: TLabel
       Left = 10
-      Height = 15
+      Height = 25
       Top = 80
-      Width = 41
+      Width = 63
       Caption = 'Save as:'
       ParentColor = False
     end
     object edSaveAs: TEdit
       Left = 10
-      Height = 23
+      Height = 33
       Top = 96
-      Width = 467
+      Width = 959
       Anchors = [akTop, akLeft, akRight]
+      TabOrder = 4
       OnChange = edSaveAsChange
-      TabOrder = 2
     end
     object edExtension: TEdit
       Left = 8
-      Height = 23
+      Height = 33
       Hint = 'for example: *.avi *.mkv'
       Top = 56
-      Width = 467
+      Width = 959
       Anchors = [akTop, akLeft, akRight]
-      OnChange = edSaveAsChange
       ParentShowHint = False
       ShowHint = True
-      TabOrder = 4
+      TabOrder = 3
+      OnChange = edSaveAsChange
     end
     object txSaveAs1: TLabel
       Left = 10
-      Height = 15
+      Height = 25
       Hint = 'for example: *.avi *.mkv'
       Top = 40
-      Width = 59
+      Width = 85
       Caption = 'Template:  '
       ParentColor = False
       ParentShowHint = False
       ShowHint = True
     end
+    object txLabel: TLabel
+      Left = 10
+      Height = 25
+      Top = 120
+      Width = 53
+      Caption = 'Labels:'
+      ParentColor = False
+    end
+    object edLabel: TEdit
+      Left = 8
+      Height = 33
+      Top = 136
+      Width = 959
+      Anchors = [akTop, akLeft, akRight]
+      TabOrder = 5
+      OnChange = edLabelChange
+    end
     object DelButton: TBitBtn
-      Left = 351
-      Height = 26
+      Left = 840
+      Height = 20
       Hint = 'Delete destination folder'
-      Top = 13
+      Top = 16
       Width = 31
       Anchors = [akTop, akRight]
       Glyph.Data = {
@@ -199,28 +227,28 @@ inherited AddTorrentForm: TAddTorrentForm
       OnClick = DelButtonClick
       ParentShowHint = False
       ShowHint = True
-      TabOrder = 5
+      TabOrder = 1
     end
   end
   object gbContents: TGroupBox[1]
     Left = 8
-    Height = 227
-    Top = 188
-    Width = 492
+    Height = 557
+    Top = 228
+    Width = 984
     Align = alClient
     BorderSpacing.Left = 8
     BorderSpacing.Top = 4
     BorderSpacing.Right = 8
     BorderSpacing.Bottom = 8
     Caption = 'Torrent contents'
-    ClientHeight = 207
-    ClientWidth = 488
+    ClientHeight = 527
+    ClientWidth = 980
     TabOrder = 1
     object txDiskSpace: TLabel
       Left = 10
-      Height = 15
+      Height = 25
       Top = 20
-      Width = 82
+      Width = 124
       Caption = 'Free disk space:'
       ParentColor = False
     end
@@ -233,16 +261,17 @@ inherited AddTorrentForm: TAddTorrentForm
     end
     object lvFiles: TVarGrid
       Left = 10
-      Height = 154
+      Height = 474
       Top = 40
-      Width = 467
+      Width = 959
+      RowCount = 1
       Anchors = [akTop, akLeft, akRight, akBottom]
-      Columns = <
+      Columns = <      
         item
           ReadOnly = True
           Title.Caption = 'File name'
           Width = 350
-        end
+        end      
         item
           ReadOnly = True
           Title.Caption = 'Size'
@@ -250,7 +279,6 @@ inherited AddTorrentForm: TAddTorrentForm
         end>
       FixedCols = 0
       Options = [goFixedVertLine, goFixedHorzLine, goColSizing, goEditing, goRowSelect, goThumbTracking, goDblClickAutoSize, goHeaderHotTracking, goHeaderPushedLook]
-      RowCount = 1
       TabOrder = 0
       Images = MainForm.ImageList16
       MultiSelect = True
@@ -258,33 +286,33 @@ inherited AddTorrentForm: TAddTorrentForm
       HideSelection = True
     end
     object btSelectAll: TButton
-      Left = 217
+      Left = 709
       Height = 23
       Top = 4
       Width = 126
       Anchors = [akTop, akRight]
       Caption = 'Select all'
       Constraints.MinWidth = 75
-      OnClick = btSelectAllClick
       TabOrder = 1
+      OnClick = btSelectAllClick
     end
     object btSelectNone: TButton
-      Left = 351
+      Left = 843
       Height = 23
       Top = 4
       Width = 126
       Anchors = [akTop, akRight]
       Caption = 'Select none'
       Constraints.MinWidth = 75
-      OnClick = btSelectNoneClick
       TabOrder = 2
+      OnClick = btSelectNoneClick
     end
   end
   object Buttons: TButtonPanel[2]
     Left = 8
-    Height = 26
-    Top = 423
-    Width = 492
+    Height = 35
+    Top = 793
+    Width = 984
     BorderSpacing.Left = 8
     BorderSpacing.Right = 8
     BorderSpacing.Bottom = 8
@@ -298,27 +326,27 @@ inherited AddTorrentForm: TAddTorrentForm
     CloseButton.DefaultCaption = True
     CancelButton.Name = 'CancelButton'
     CancelButton.DefaultCaption = True
-    TabOrder = 2
+    TabOrder = 3
     Spacing = 8
     ShowButtons = [pbOK, pbCancel]
     ShowBevel = False
   end
   object cbStartTorrent: TCheckBox[3]
     Left = 24
-    Height = 19
-    Top = 428
-    Width = 203
+    Height = 29
+    Top = 797
+    Width = 695
     Anchors = [akLeft, akRight, akBottom]
     Caption = 'Start torrent'
     Checked = True
-    OnChange = cbStartTorrentChange
     State = cbChecked
-    TabOrder = 3
+    TabOrder = 2
+    OnChange = cbStartTorrentChange
   end
   object DiskSpaceTimer: TTimer[4]
     Enabled = False
     OnTimer = DiskSpaceTimerTimer
-    left = 44
-    top = 248
+    Left = 368
+    Top = 552
   end
 end

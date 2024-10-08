@@ -2833,6 +2833,9 @@ var
   s, ss, OldDownloadDir, IniSec, OldName: string;
   ok: boolean;
   pFD:FolderData;
+  alabels: TJSONArray;
+  slabels: TStringList;
+
 begin
   Result:=False;
   if not RpcObj.Connected and not RpcObj.Connecting then
@@ -2877,6 +2880,7 @@ begin
 
         IniSec:='AddTorrent.' + FCurConn;
         FillDownloadDirs(cbDestFolder, 'LastDownloadDir');
+        edLabel.Text:=Ini.ReadString(IniSec, 'Label', '');
         if (FWatchDownloading) and (FWatchDestinationFolder <> '') then cbDestFolder.Text:=FWatchDestinationFolder;
 
         req:=TJSONObject.Create;
@@ -3042,7 +3046,24 @@ begin
               args.Add('files-unwanted', files)
             else
               files.Free;
-
+            if (RpcObj.RPCVersion >= 18) and cbStartTorrent.Checked then begin
+              args.Add('sequentialDownload', 1);
+            end;
+            if edLabel.Text <> '' then begin
+              alabels := TJSONArray.Create;
+              slabels := TStringList.Create;
+              SplitRegExpr(',', edLabel.Text, slabels);
+              slabels.Sort;
+              for s in slabels do begin
+                if trim(s) <> '' then
+                   alabels.Add(trim(s));
+              end;
+              if alabels.Count>0 then
+                 args.Add('labels', alabels)
+              else
+                  alabels.Free;
+              slabels.Free;
+            end;
             req.Add('arguments', args);
             args:=nil;
             args:=RpcObj.SendRequest(req, False);
@@ -3088,6 +3109,8 @@ begin
 
           Ini.WriteInteger(IniSec, 'PeerLimit', edPeerLimit.Value);
           SaveDownloadDirs(cbDestFolder, 'LastDownloadDir');
+          Ini.WriteString(IniSec, 'Label', edLabel.Text);
+
           Result:=True;
           AppNormal;
         end;
@@ -4023,7 +4046,8 @@ begin
            alabels.Add(trim(s));
       end;
 //            args.Add('labels','');
-      args.Add('labels', alabels);
+      if alabels.Count>0 then
+        args.Add('labels', alabels);
       req.Add('arguments', args);
       args := RpcObj.SendRequest(req, False);
       args.Free;
