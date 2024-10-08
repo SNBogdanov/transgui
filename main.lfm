@@ -2301,7 +2301,7 @@ inherited MainForm: TMainForm
     end
     object MenuItem12: TMenuItem
       Action = acSetHighPriority
-      ImageIndex = 25
+      ImageIndex = 26
       OnClick = acSetHighPriorityExecute
     end
     object MenuItem13: TMenuItem
