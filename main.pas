@@ -746,6 +746,7 @@ type
     fGlobalHotkeyMod: string;
     FUserDefinedMenuEx: string;
     FUserDefinedMenuParam: string;
+    FUserDefinedMenuParamType: string;
 {$endif windows}
 {$ifdef LCLcarbon}
     FFormActive: boolean;
@@ -2308,6 +2309,7 @@ begin
         {$ifdef windows}
         FUserDefinedMenuEx    := Ini.ReadString('UserFileMenu','ExeName'+IntToStr(TMenuItem(Sender).Tag-2000),'');
         FUserDefinedMenuParam := Ini.ReadString('UserFileMenu','Params'+IntToStr(TMenuItem(Sender).Tag-2000),'');
+        FUserDefinedMenuParamType := Ini.ReadString('UserFileMenu','ParamType'+IntToStr(TMenuItem(Sender).Tag-2000),'file');
         {$endif windows}
     end
       else if (Sender is TMenuItem) and (TMenuItem(Sender).Tag > 999) then
@@ -2316,6 +2318,7 @@ begin
         {$ifdef windows}
         FUserDefinedMenuEx    := Ini.ReadString('UserTorrentMenu','ExeName'+IntToStr(TMenuItem(Sender).Tag-1000),'');
         FUserDefinedMenuParam := Ini.ReadString('UserTorrentMenu','Params'+IntToStr(TMenuItem(Sender).Tag-1000),'');
+        FUserDefinedMenuParamType := 'id';
         {$endif windows}
     end
       else
@@ -2323,7 +2326,11 @@ begin
   if lvFiles.Focused then begin
     if lvFiles.Items.Count = 0 then exit;
     s:=FFilesTree.GetFullPath(lvFiles.Row);
-    if FileExistsUTF8(MapRemoteToLocal(s)) or FileExistsUTF8(MapRemoteToLocal(s+'.part')) or DirectoryExistsUTF8(MapRemoteToLocal(s)) then
+    if FUserDefinedMenuParamType = 'id' then
+       ExecRemoteFile('', Userdef,RpcObj.CurTorrentId, Userdef)
+    else if lvFiles.SelCount>1 then
+      ExecRemoteFile('', Userdef,RpcObj.CurTorrentId, Userdef)
+    else if FileExistsUTF8(MapRemoteToLocal(s)) or FileExistsUTF8(MapRemoteToLocal(s+'.part')) or DirectoryExistsUTF8(MapRemoteToLocal(s)) then
        ExecRemoteFile(s, Userdef,RpcObj.CurTorrentId, Userdef)
     else begin
         s:=FFilesTree.GetIncompleteFullPath(lvFiles.Row);
@@ -7998,16 +8005,24 @@ var
   i: integer;
 begin
   Result:= false;
+  s:='';
   if FileExistsUTF8(CorrectPath(MapRemoteToLocal(FileName))) or DirectoryExistsUTF8(CorrectPath(MapRemoteToLocal(FileName))) then
      s:='"'+CorrectPath(MapRemoteToLocal(FileName))+'"'
   else if FileExistsUTF8(CorrectPath(MapRemoteToLocal(FileName+'.part'))) then
      s:='"'+CorrectPath(MapRemoteToLocal(FileName))+'.part"';
-  if s <> '' then begin
+  if (s <> '') or UserDef then begin
     if Userdef then
       begin
-      if (lvFiles.Focused) and (lvFiles.SelCount > 1) then
-          begin
+      if (lvFiles.Focused)  then
+          if lvFiles.SelCount>1 Then begin
                 r := '';
+                if FUserDefinedMenuParamType = 'id' then begin
+                  for i := 0 to lvFiles.Items.Count-1 do
+                    if lvFiles.RowSelected[i] then
+                      if r = '' then r :=  Format('%d',[i])  else
+                        r := r +  Format(',%d',[i]);
+                end
+                else begin
                 for i := 0 to lvFiles.Items.Count-1 do
                   if lvFiles.RowSelected[i] then
                   begin
@@ -8018,8 +8033,15 @@ begin
                     if r = '' then r :=  '"'+CorrectPath(MapRemoteToLocal(r1))+'"'  else
                       r := r + ',"'+ CorrectPath(MapRemoteToLocal(r1)) + '"';
                   end;
+                end;
                 s := r;
+
+          end
+          else begin
+            if FUserDefinedMenuParamType = 'id' then
+              s:=Format('%d',[lvFiles.Row]);
           end;
+
         // else s := '"' + s + '"';
       end;
     _Exec(s);
