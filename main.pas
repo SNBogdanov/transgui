@@ -3494,7 +3494,7 @@ begin
     if FromNow then
       s := HumanReadableTime(Now,UnixToDateTime(d) + GetTimeZoneDelta)
     else
-      s := DateTimeToStr(UnixToDateTime(d) + GetTimeZoneDelta);
+      s := DateTimeToStr(UnixToDateTime(d) + GetTimeZoneDelta,True);
     Result := s;
   end;
 end;
