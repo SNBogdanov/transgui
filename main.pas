@@ -8016,7 +8016,7 @@ begin
                       r1:=FFilesTree.GetIncompleteFullPath(i);
 
                     if r = '' then r :=  '"'+CorrectPath(MapRemoteToLocal(r1))+'"'  else
-                      r := r + ' "'+ CorrectPath(MapRemoteToLocal(r1)) + '"';
+                      r := r + ',"'+ CorrectPath(MapRemoteToLocal(r1)) + '"';
                   end;
                 s := r;
           end;
