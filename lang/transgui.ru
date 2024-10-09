@@ -386,5 +386,15 @@ Sequential Download=Последовательная загрузка
 Labels=Метки
 Filtered Torrents=Отфильтрованные торренты
 Big Toolbar=Большие значки
-Sequential download=Последовательная закачка
 Delete file=Удалить файл
+Set priority on torrent files=Проставить приоритеты на файлах торрента
+Make Nice=Поправить имена файлов
+Make .part file=Создать файлы .part
+Clear .part file=Удалить файлы .part
+Move Ready=Переместить готовые файлы
+Finish Torrent=Закончить торрент
+Sort torrents=Отсортировать торренты
+Copy torrents to HUAWEI=Скопировать торренты на HUAWEI
+Copy torrents to QNAP=Скопировать торренты на QNAP
+Copy torrents to SAMSUNG-PC==Скопировать торренты на SAMSUNG-PC
+Restart daemon=Перезапустить transmission-daemon

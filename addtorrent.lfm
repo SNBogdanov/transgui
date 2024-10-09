@@ -64,7 +64,7 @@ inherited AddTorrentForm: TAddTorrentForm
       Height = 29
       Top = 168
       Width = 192
-      Caption = 'Sequential download'
+      Caption = 'Sequential Download'
       Checked = True
       State = cbChecked
       TabOrder = 6
