@@ -34,7 +34,7 @@ unit Main;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, zstream, LResources, Forms, Controls,ImgList,
+  Classes, SysUtils, FileUtil, zstream, LResources, Forms, Controls,ImgList,dbugintf,
   {$ifdef windows}
   windows, ShellApi,LCLIntf,
   {$else}
@@ -7980,7 +7980,7 @@ if Userdef then
                             s := FUserDefinedMenuEx;
                       end ;
     end;
-
+    OutputDebugString(LPCSTR(s));
 {$ifdef mswindows}
 //                    if FileExistsUTF8(s+'.part') then
 //                      Result:=OpenURL(s+'.part', p)
