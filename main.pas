@@ -2327,7 +2327,7 @@ begin
     if lvFiles.Items.Count = 0 then exit;
     s:=FFilesTree.GetFullPath(lvFiles.Row);
     if FUserDefinedMenuParamType = 'id' then
-       ExecRemoteFile('', Userdef,RpcObj.CurTorrentId, Userdef)
+       ExecRemoteFile(s, Userdef,RpcObj.CurTorrentId, Userdef)
     else if lvFiles.SelCount>1 then
       ExecRemoteFile('', Userdef,RpcObj.CurTorrentId, Userdef)
     else if FileExistsUTF8(MapRemoteToLocal(s)) or FileExistsUTF8(MapRemoteToLocal(s+'.part')) or DirectoryExistsUTF8(MapRemoteToLocal(s)) then
