@@ -4634,10 +4634,7 @@ begin
       finally
         req.Free;
       end;
-      if filtered then
-        TorrentAction(GetFilteredTorrents, 'torrent-reannounce')
-      else
-        TorrentAction(GetSelectedTorrents, 'torrent-reannounce');
+      TorrentAction(TorrentIds, 'torrent-reannounce');
       DoRefresh;
       AppNormal;
     end;
