@@ -1316,6 +1316,13 @@ inherited MainForm: TMainForm
       AutoSize = True
       ShowCaption = False
     end
+    object ToolButton11: TToolButton
+      Left = 399
+      Top = 2
+      Action = acTorrentProps
+      AutoSize = True
+      ShowCaption = False
+    end
     object ToolButton6: TToolButton
       Left = 251
       Height = 23
