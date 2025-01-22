@@ -774,7 +774,6 @@ type
     function GetTorrentError(t: TJSONObject; Status: integer): string;
     function SecondsToString(j: integer): string;
     function DoAddTorrent(const FileName: Utf8String): boolean;
-    procedure GetFreeSpace();
     procedure UpdateTray;
     procedure HideApp;
     procedure ShowApp;
@@ -1604,7 +1603,7 @@ begin
   lvTrackers.Items.ExtraColumns:=TrackersExtraColumns;
   FTrackers:=TStringList.Create;
   FTrackers.Sorted:=True;
-  FReconnectTimeOut:=-1;
+  FReconnectTimeOut:=0;
   FAlterColor:=GetLikeColor(gTorrents.Color, -$10);
   lvFilter.Items.ExtraColumns:=2;
   gTorrents.AlternateColor:=FAlterColor;
@@ -2067,8 +2066,8 @@ begin
       CheckStatus(False);
       exit;
     end;
-    args.Free;
   finally
+    args.Free;
     req.Free;
   end;
   DoRefresh;
@@ -2094,7 +2093,7 @@ procedure TMainForm.acFolderGroupingExecute(Sender: TObject);
 begin
   acFolderGrouping.Checked:=not acFolderGrouping.Checked;
   Ini.WriteBool('Interface', 'FolderGrouping', acFolderGrouping.Checked);
-  RpcObj.RefreshNow:=RpcObj.RefreshNow + [rtTorrents];
+  RpcObj.RefreshNow:=RpcObj.RefreshNow + [rtTorrents,rtSession];
 end;
 
 procedure TMainForm.acStartTorrentExecute(Sender: TObject);
@@ -2206,8 +2205,8 @@ begin
         args.Add('move', TJSONIntegerNumber.Create(integer(cbMoveData.Checked) and 1));
         req.Add('arguments', args);
         args:=RpcObj.SendRequest(req, False);
-        args.Free;
       finally
+        args.Free;
         req.Free;
       end;
       gTorrents.Tag:=0;
@@ -2322,7 +2321,12 @@ begin
         {$endif windows}
     end
       else
-      UserDef := false;
+      Begin
+        FUserDefinedMenuEx:='';
+        FUserDefinedMenuParam := '';
+        FUserDefinedMenuParamType := '';
+        UserDef := false;
+      end;
   if lvFiles.Focused then begin
     if lvFiles.Items.Count = 0 then exit;
     s:=FFilesTree.GetFullPath(lvFiles.Row);
@@ -2451,8 +2455,8 @@ begin
       CheckStatus(False);
       exit;
     end;
-    args.Free;
   finally
+    args.Free;
     req.Free;
   end;
   RpcObj.RefreshNow:=RpcObj.RefreshNow + [rtSession];
@@ -2717,9 +2721,9 @@ var
               TrackersList.Delete(j);
           end;
         finally
-          args.Free;
         end;
       finally
+        args.Free;
         req.Free;
       end;
 
@@ -2739,8 +2743,8 @@ var
             CheckStatus(False);
             exit;
           end;
-          args.Free;
         finally
+          args.Free;
           req.Free;
         end;
         DoRefresh;
@@ -2773,7 +2777,6 @@ var
         end;
         Result:=args.Objects['torrent-added'].Integers['id'];
       finally
-        args.Free;
       end
       else
         if RpcObj.Status='duplicate torrent' then begin
@@ -2781,6 +2784,7 @@ var
           exit;
         end;
     finally
+      args.Free;
       req.Free;
     end;
     if Result = 0 then
@@ -2921,8 +2925,8 @@ begin
               txDiskSpace.Hide;
               txSize.Top:=(txSize.Top + txDiskSpace.Top) div 2;
             end;
-          args.Free;
         finally
+          args.Free;
           req.Free;
         end;
 
@@ -3072,13 +3076,15 @@ begin
               slabels.Free;
             end;
             req.Add('arguments', args);
-            args:=nil;
+            try
             args:=RpcObj.SendRequest(req, False);
             if args = nil then begin
               CheckStatus(False);
               exit;
             end;
-            args.Free;
+            Finally
+              args.Free;
+            end;
 
 //          edSaveAs.Text := Trim(edSaveAs.Text);               // leave spaces to not rename the torrent (see below)
             edSaveAs.Text := ExcludeInvalidChar(edSaveAs.Text); // Exclude prohibited characters
@@ -3093,13 +3099,15 @@ begin
               args.Add('path', UTF8Decode(OldName));
               args.Add('name', UTF8Decode(edSaveAs.Text));
               req.Add('arguments', args);
-              args:=nil;
               args:=RpcObj.SendRequest(req, False);
+              try
               if args = nil then begin
                 // CheckStatus(False); // failed to rename torrent
-                // exit;               // we continue work (try)
+                 exit;               // we continue work (try)
               end;
-              args.Free;
+              finally
+                args.Free;
+              end;
             end;
           finally
             req.Free;
@@ -3860,8 +3868,8 @@ begin
           CheckStatus(False);
           exit;
         end;
-        args.Free;
       finally
+        args.Free;
         req.Free;
       end;
       RpcObj.RefreshNow:=RpcObj.RefreshNow + [rtSession];
@@ -4028,8 +4036,8 @@ begin
         if j > 0 then s := s + ', ';
         s := s + ss;
       end;
+      args.Free;
       input := s;
-
   if InputQuery('Set tags',
       'This will overwrite any existing tags.' + sLineBreak +
       'You can set multiple tags separated by a comma or leave empty to clear tags.',
@@ -4057,21 +4065,21 @@ begin
         args.Add('labels', alabels);
       req.Add('arguments', args);
       args := RpcObj.SendRequest(req, False);
-      args.Free;
+      if args = nil then
+        CheckStatus(False)
+      else begin
+        RpcObj.RequestFullInfo:=True;
+        DoRefresh(True);
+        RpcObj.ForceRequest:=2;
+        Sleep(200);
+        Application.ProcessMessages;
+      end;
     finally
+      args.Free;
       req.Free;
       AppNormal;
 //      alabels.Free;
       slabels.Free;
-    end;
-    if args = nil then
-      CheckStatus(False)
-    else begin
-      RpcObj.RequestFullInfo:=True;
-      DoRefresh(True);
-      RpcObj.ForceRequest:=2;
-      Sleep(200);
-      Application.ProcessMessages;
     end;
 
   end;
@@ -4222,7 +4230,7 @@ end;
 
 procedure TMainForm.MenuItem107Click(Sender: TObject);
 var
-  req, args: TJSONObject;
+  req, args,args1: TJSONObject;
   id, torid: integer;
   i,i1:longint;
   listT,s,tText:string;
@@ -4272,13 +4280,14 @@ begin
       else
           args.Add('trackerReplace', TJSONArray.Create([id, UTF8Encode(tText)]));  //fix bag
       req.Add('arguments', args);
-      args:=nil;
-      args:=RpcObj.SendRequest(req, False);
-      if args = nil then begin
+      //FreeAndNil(args);
+      args1:=RpcObj.SendRequest(req, False);
+      if args1 = nil then begin
         CheckStatus(False);
         exit;
-      end;
-      args.Free;
+      end
+      else FreeAndNil(args1);
+
     finally
       req.Free;
     end;
@@ -4630,8 +4639,8 @@ begin
           CheckStatus(True);
           exit;
         end;
-        args.Free;
       finally
+        args.Free;
         req.Free;
       end;
       TorrentAction(TorrentIds, 'torrent-reannounce');
@@ -5265,8 +5274,8 @@ begin
     FLastClipboardLink := Magnets.Text;   // To Avoid TransGUI detect again this existing links
     Clipboard.AsText := Magnets.Text;
   finally
-    req.Free;
     args.Free;
+    req.Free;
     Magnets.Free;
   end;
 end;
@@ -6126,34 +6135,6 @@ begin
     end;
   end;
 end;
-procedure TMainForm.GetFreeSpace();
-var
-  i: integer;
-  req, args2: TJSONObject;
-  begin
-    if FreeSpacePaths = nil then
-       exit;
-    for i:=0 to FreeSpacePaths.Count - 1 do begin
-//    Application.ProcessMessages;
-      req:=TJSONObject.Create;
-      req.Add('method', 'free-space');
-      args2:=TJSONObject.Create;
-      args2.Add('path', FreeSpacePaths.Keys[i]);
-      req.Add('arguments', args2);
-      try
-      args2:=RpcObj.SendRequest(req,True,20000);
-            //args2:=RpcObj.SendRequest(req);
-      if args2 <> nil then
-        FreeSpacePaths[FreeSpacePaths.Keys[i]]:='('+Format(SFreeSpace, [GetHumanSize(args2.Floats['size-bytes'])])+')';
-      finally
-        args2.Free;
-        RpcObj.Status:='';
-        req.Free;
-        CheckStatus(True);
-      end;
-    end;
-
-  end;
 
 procedure TMainForm.FillTorrentsList(list: TJSONArray);
 var
@@ -6362,7 +6343,8 @@ begin
     if not ExistingRow then
       FTorrents.InsertRow(row);
 
-    FTorrents[idxTorrentId, row]:=t.Integers['id'];
+//    FTorrents[idxTorrentId, row]:=t.Integers['id'];
+    FTorrents[idxTorrentId, row]:=id;
 
     if FieldExists[idxName] then
       FTorrents[idxName, row]:=t.Strings['name'];
@@ -7571,7 +7553,7 @@ begin
         str:=str+' '+Format(STempSpace, [GetHumanSize(s.Floats['incomplete-dir-free-space'])]);
   end;
   StatusBar.Panels[3].Text:=str;
-  GetFreeSpace;
+//  GetFreeSpace;
 
   if (RpcObj.RPCVersion >= 5) and acAltSpeed.Checked then begin
     d:=s.Integers['alt-speed-down'];
@@ -7639,12 +7621,15 @@ var
 begin
   with MainForm do begin
     s:=TranslateString(RpcObj.Status, True);
+
     if s <> '' then begin
       RpcObj.Status:='';
       if Fatal then
         DoDisconnect;
       ForceAppNormal;
-      if Fatal and not RpcObj.Connected and RpcObj.ReconnectAllowed and (FReconnectTimeOut <> -1) then begin
+      if Fatal and not RpcObj.Connected Then
+      begin
+        if RpcObj.ReconnectAllowed and (FReconnectTimeOut <> -1) then begin
         FReconnectWaitStart:=Now;
         if FReconnectTimeOut < 60 then
           if FReconnectTimeOut < 10 then
@@ -7661,9 +7646,18 @@ begin
         panReconnect.AutoSize:=False;
         panReconnectFrame.Show;
         CenterReconnectWindow;
+        if RpcObj.Http.Sock.LastError = 10057 Then
+        begin
+          s:=FCurConn ;
+          FCurConn := '';
+           DoDisconnect;
+           FCurConn := s;
+           DoConnect;
+        End;
       end
       else
         MessageDlg(s, mtError, [mbOK], 0);
+      end;
     end;
 
     if StatusBar.Panels[0].Text <> RpcObj.InfoStatus then begin
@@ -7704,10 +7698,11 @@ begin
       args.Add('ids', ids);
     end;
     req.Add('arguments', args);
+//    args:=nil;
     args:=RpcObj.SendRequest(req, False, 30000);
     Result:=args <> nil;
-    args.Free;
   finally
+    args.Free;
     req.Free;
   end;
   if not Result then
@@ -7747,8 +7742,8 @@ begin
     req.Add('arguments', args);
     args:=RpcObj.SendRequest(req, False);
     Result:=args<> nil;
-    args.Free;
   finally
+    args.Free;
     req.Free;
   end;
   if not Result then
@@ -8058,6 +8053,8 @@ begin
 
   ForceAppNormal;
   MessageDlg(sNoPathMapping, mtInformation, [mbOK], 0);
+
+//  MessageDlg(sNoPathMapping+LineEnding+s+LineEnding+FileName+LineEnding+CorrectPath(MapRemoteToLocal(FileName)), mtInformation, [mbOK], 0);
 end;
 
 function TMainForm.GetFilteredTorrents: variant;
@@ -8147,12 +8144,16 @@ begin
 
         for i:=VarArrayLowBound(ids, 1) to VarArrayHighBound(ids, 1) do
         begin
+          try
           cidx := MMap[ids[i]];
           TotalSize             := TotalSize + FTorrents.Items[idxSize, cidx];
           TorrentSizeToDownload := FTorrents.Items[idxSizetoDowload, cidx];
           TorrentDownloaded     := TorrentSizeToDownload * (FTorrents.Items[idxDone, cidx] / 100);
           TotalSizeToDownload   := TotalSizeToDownload + TorrentSizeToDownload;
           TotalDownloaded       := TotalDownloaded + TorrentDownloaded;
+
+          except
+          end;
         end;
         MMap.Free;
 
@@ -8416,8 +8417,8 @@ begin
           CheckStatus(False);
           exit;
         end;
-        args.Free;
       finally
+        args.Free;
         req.Free;
       end;
       TorrentAction(GetSelectedTorrents, 'torrent-reannounce');
@@ -8511,8 +8512,8 @@ begin
       CheckStatus(False);
       exit;
     end;
-    args.Free;
   finally
+    args.Free;
     req.Free;
   end;
   RpcObj.RefreshNow:=RpcObj.RefreshNow + [rtSession];

@@ -35,7 +35,11 @@ unit rpc;
 interface
 
 uses
-  Classes, SysUtils, Forms, httpsend, syncobjs, fpjson, jsonparser, variants, ssl_openssl;
+  {$ifdef windows}
+  windows,
+  {$endif windows}
+  Classes, SysUtils, Forms, httpsend, syncobjs, fpjson, jsonparser, variants, ssl_openssl, dbugintf,
+  ZStream, jsonscanner;
 
 resourcestring
   sTransmissionAt = 'Transmission%s at %s:%s';
@@ -70,6 +74,7 @@ type
     procedure GetStats;
     procedure GetInfo(TorrentId: integer);
     procedure GetSessionInfo;
+    procedure GetFreeSpace;
 
     procedure DoFillTorrentsList;
     procedure DoFillPeersList;
@@ -160,6 +165,32 @@ implementation
 
 uses Main, ssl_openssl_lib, synafpc, blcksock;
 
+function TranslateTableToObjects(reply: TJSONObject) : TJSONObject;
+var
+  array_tor, fields, out_torrents : TJSONArray;
+  object_tor : TJSONObject;
+  i, j : integer;
+begin
+  out_torrents:=TJSONArray.Create;
+  if reply = nil then
+  Result:=TJSONObject.Create(['torrents', out_torrents])
+  else
+    begin
+      fields:=reply.Arrays['torrents'].Arrays[0];
+      for i:=1 to reply.Arrays['torrents'].Count - 1 do
+      begin
+        array_tor:=reply.Arrays['torrents'].Arrays[i];
+        object_tor:=TJSONObject.Create;
+        for j:=0 to fields.Count - 1 do
+          object_tor.Add(fields.Items[j].AsString, array_tor.Items[j].Clone);
+
+        out_torrents.Add(object_tor);
+      end;
+      Result:=TJSONObject.Create(['torrents', out_torrents]);
+      reply.Free;
+    end;
+end;
+
 { TRpcThread }
 
 procedure TRpcThread.Execute;
@@ -223,7 +254,9 @@ begin
           else
             if rtSession in FRpc.RefreshNow then begin
               GetSessionInfo;
+              GetFreeSpace;
               Exclude(FRpc.RefreshNow, rtSession);
+              FRpc.RefreshNow:=FRpc.RefreshNow + [rtTorrents];
             end;
 
       if Status <> '' then begin
@@ -236,14 +269,44 @@ begin
     end;
   except
     Status:=Exception(ExceptObject).Message;
+//    FRpc.RpcThread.destroy;
     FRpc.RpcThread:=nil;
     NotifyCheckStatus;
   end;
+//  if FRpc.RpcThread<>nil then FRpc.RpcThread.destroy;
   FRpc.RpcThread:=nil;
   FRpc.FConnected:=False;
   FRpc.FRPCVersion:=0;
   Sleep(20);
 end;
+procedure TRpcThread.GetFreeSpace;
+var
+  i: integer;
+  req, args2: TJSONObject;
+  begin
+    if FreeSpacePaths = nil then
+       exit;
+    for i:=0 to FreeSpacePaths.Count - 1 do begin
+//    Application.ProcessMessages;
+      req:=TJSONObject.Create;
+      req.Add('method', 'free-space');
+      args2:=TJSONObject.Create;
+      args2.Add('path', FreeSpacePaths.Keys[i]);
+      req.Add('arguments', args2);
+      try
+      args2:=RpcObj.SendRequest(req,True,20000);
+            //args2:=RpcObj.SendRequest(req);
+      if args2 <> nil then
+        FreeSpacePaths[FreeSpacePaths.Keys[i]]:='('+Format(SFreeSpace, [GetHumanSize(args2.Floats['size-bytes'])])+')';
+      finally
+        args2.Free;
+        RpcObj.Status:='';
+        req.Free;
+        MainForm.CheckStatus(True);
+      end;
+    end;
+
+  end;
 
 constructor TRpcThread.Create;
 begin
@@ -659,6 +722,59 @@ begin
   CreateHttp;
 end;
 
+type TGzipDecompressionStream=class(TDecompressionStream)
+public
+  constructor create(Asource:TStream);
+end;
+
+constructor TGzipDecompressionStream.create(Asource:TStream);
+var gzHeader:array[1..10] of byte;
+begin
+  {
+    paszlib is based on a relatively old zlib version that didn't implement
+    reading the gzip header. we "implement" this ourselves by skipping the first
+    10 bytes which is just enough for the data Transmission sends.
+  }
+  inherited create(Asource, True);
+  Asource.Read(gzHeader,sizeof(gzHeader));
+end;
+
+function DecompressGzipContent(source: TStream): TMemoryStream;
+var
+  buf : array[1..16384] of byte;
+  numRead : integer;
+  decomp : TGzipDecompressionStream;
+begin
+  decomp:=TGzipDecompressionStream.create(source);
+  Result:=TMemoryStream.create;
+  repeat
+    try
+      numRead:=decomp.read(buf,sizeof(buf));
+      Result.Write(buf,numRead);
+    except
+      Result.Clear;
+    end;
+  until numRead < sizeof(buf);
+  Result.Position:=0;
+  decomp.Free;
+end;
+
+function CreateJsonParser(serverResp : THTTPSend): TJSONParser;
+var decompressed : TMemoryStream;
+begin
+  if serverResp.Headers.IndexOf('Content-Encoding: gzip') <> -1 then
+  begin
+    { need to fully decompress as the parser relies on a working Seek() }
+    decompressed:=DecompressGzipContent(serverResp.Document);
+    Result:=TJSONParser.Create(decompressed, [joUTF8]);
+    decompressed.Free;
+  end
+  else
+  begin
+    Result:=TJSONParser.Create(serverResp.Document, [joUTF8]);
+  end;
+end;
+
 function TRpc.SendRequest(req: TJSONObject; ReturnArguments: boolean; ATimeOut: integer): TJSONObject;
 var
   obj: TJSONData;
@@ -672,7 +788,7 @@ begin
     FRpcPath:=DefaultRpcPath;
   Status:='';
   Result:=nil;
-  RetryCnt:=3;
+  RetryCnt:=2;
   i:=0;
   repeat
     Inc(i);
@@ -686,6 +802,7 @@ begin
       Http.Document.Write(PChar(s)^, Length(s));
       s:='';
       Http.Headers.Clear;
+      Http.Headers.Add('Accept-Encoding: gzip');
       Http.MimeType:='application/json';
       if XTorrentSession <> '' then
         Http.Headers.Add(XTorrentSession);
@@ -700,7 +817,6 @@ begin
         if FMainThreadId <> GetCurrentThreadId then
           ReconnectAllowed:=True;
         Status:=Http.Sock.LastErrorDesc;
-       // continue;
         break;
       end
       else begin
@@ -718,7 +834,6 @@ begin
               Status:='Session ID error.';
             end;
             continue;
-
           end;
         end;
 
@@ -782,7 +897,7 @@ begin
           break;
         end;
         Http.Document.Position:=0;
-        jp:=TJSONParser.Create(Http.Document);
+        jp:=CreateJsonParser(Http);
         HttpLock.Leave;
         locked:=False;
         RequestStartTime:=0;
@@ -841,6 +956,16 @@ begin
         HttpLock.Leave;
     end;
   until i >= RetryCnt;
+  if Status <> '' then OutputDebugString(LPCSTR(Status));
+end;
+
+procedure DeleteIfRpcLessThan(Fields: TStringList; Field: string; RpcVer: integer; NeededRpcVer: integer);
+var
+  idx: integer;
+begin
+  idx := Fields.IndexOf(Field);
+  if (idx <> -1) and (RpcVer < NeededRpcVer) then
+    Fields.Delete(idx);
 end;
 
 function TRpc.RequestInfo(TorrentId: integer; const Fields: array of const; const ExtraFields: array of string): TJSONObject;
@@ -864,14 +989,23 @@ begin
          sl.Add(String(Fields[i].VAnsiString));
     sl.AddStrings(ExtraFields);
     sl.Sort;
+
+    DeleteIfRpcLessThan(sl, 'labels', FRPCVersion, 16);
+
     for i:=sl.Count-2 downto 0 do
       if (sl[i]=sl[i+1]) then
         sl.Delete(i+1);
     for i:=0 to sl.Count-1 do
       _fields.Add(sl[i]);
     args.Add('fields', _fields);
+    if FRPCVersion >= 16 then
+      args.Add('format', 'table');
+
     req.Add('arguments', args);
-    Result:=SendRequest(req);
+    if FRPCVersion >= 16 then
+      Result:=TranslateTableToObjects(SendRequest(req))
+    else
+      Result:=SendRequest(req);
   finally
     sl.Free;
     req.Free;
@@ -910,8 +1044,14 @@ begin
     for i:=0 to sl.Count-1 do
       _fields.Add(sl[i]);
     args.Add('fields', _fields);
+    if FRPCVersion >= 16 then
+      args.Add('format', 'table');
+
     req.Add('arguments', args);
-    Result:=SendRequest(req);
+    if FRPCVersion >= 16 then
+      Result:=TranslateTableToObjects(SendRequest(req))
+    else
+      Result:=SendRequest(req);
   finally
     sl.Free;
     req.Free;
@@ -1047,12 +1187,18 @@ begin
 end;
 
 procedure TRpc.Disconnect;
+var
+  retry,i:integer;
 begin
   if Assigned(RpcThread) then begin
     RpcThread.Terminate;
-    while Assigned(RpcThread) do begin
+    retry:=20;
+    i:=0;
+    while Assigned(RpcThread) and (i<retry)do begin
       Application.ProcessMessages;
+      inc(i);
       try
+//        RpcThread.WaitFor;
         Http.Sock.CloseSocket;
       except
       end;
