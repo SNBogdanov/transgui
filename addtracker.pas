@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -28,61 +30,63 @@
   statement from your version.  If you delete this exception statement from all
   source files in the program, then also delete it here.
 *************************************************************************************}
-unit AddTracker;
+
+Unit AddTracker;
 
 {$mode objfpc}{$H+}
 
-interface
+Interface
 
-uses
-  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs, ButtonPanel, StdCtrls, ExtCtrls, BaseForm;
+Uses 
+Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+ButtonPanel, StdCtrls, ExtCtrls, BaseForm;
 
 resourcestring
-  STrackerProps = 'Tracker properties';
-  SNoTracker = 'No tracker URL was specified.';
+STrackerProps = 'Tracker properties';
+SNoTracker = 'No tracker URL was specified.';
 
-type
+Type 
 
   { TAddTrackerForm }
 
-  TAddTrackerForm = class(TBaseForm)
+  TAddTrackerForm = Class(TBaseForm)
     Buttons: TButtonPanel;
     edTracker: TEdit;
     Panel1: TPanel;
     txTrackerURL: TLabel;
-    procedure FormCreate(Sender: TObject);
-    procedure OKButtonClick(Sender: TObject);
-  private
+    Procedure FormCreate(Sender: TObject);
+    Procedure OKButtonClick(Sender: TObject);
+    Private 
     { private declarations }
-  public
+    Public 
     { public declarations }
-  end;
+  End;
 
-implementation
+Implementation
 
-uses main;
+Uses main;
 
 { TAddTrackerForm }
 
-procedure TAddTrackerForm.OKButtonClick(Sender: TObject);
-begin
-  edTracker.Text:=Trim(edTracker.Text);
-  if edTracker.Text = '' then begin
-    edTracker.SetFocus;
-    MessageDlg(SNoTracker, mtError, [mbOK], 0);
-    exit;
-  end;
-  ModalResult:=mrOk;
-end;
+Procedure TAddTrackerForm.OKButtonClick(Sender: TObject);
+Begin
+  edTracker.Text := Trim(edTracker.Text);
+  If edTracker.Text = '' Then
+    Begin
+      edTracker.SetFocus;
+      MessageDlg(SNoTracker, mtError, [mbOK], 0);
+      exit;
+    End;
+  ModalResult := mrOk;
+End;
 
-procedure TAddTrackerForm.FormCreate(Sender: TObject);
-begin
-  Buttons.OKButton.ModalResult:=mrNone;
-  Buttons.OKButton.OnClick:=@OKButtonClick;
-end;
+Procedure TAddTrackerForm.FormCreate(Sender: TObject);
+Begin
+  Buttons.OKButton.ModalResult := mrNone;
+  Buttons.OKButton.OnClick := @OKButtonClick;
+End;
 
 initialization
   {$I addtracker.lrs}
 
-end.
-
+End.

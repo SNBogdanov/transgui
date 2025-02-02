@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -28,654 +30,781 @@
   statement from your version.  If you delete this exception statement from all
   source files in the program, then also delete it here.
 *************************************************************************************}
-unit VarGrid;
+
+Unit VarGrid;
 
 {$mode objfpc}{$H+}
 
-interface
+Interface
 
-uses
-  Classes, SysUtils, Grids, VarList, Graphics, Controls, LMessages, Forms, StdCtrls, LCLType, ExtCtrls,LazUTF8, LCLVersion;
+Uses 
+Classes, SysUtils, Grids, VarList, Graphics, Controls, LMessages, Forms,
+StdCtrls, LCLType, ExtCtrls,LazUTF8, LCLVersion;
 
-type
-  TVarGrid = class;
+Type 
+  TVarGrid = Class;
 
-  TCellOption = (coDrawCheckBox, coDrawTreeButton);
-  TCellOptions = set of TCellOption;
+    TCellOption = (coDrawCheckBox, coDrawTreeButton);
+    TCellOptions = set Of TCellOption;
 
-  TCellAttributes = record
-    Text: string;
-    ImageIndex: integer;
-    Indent: integer;
-    Options: TCellOptions;
-    State: TCheckBoxState;
-    Expanded: boolean;
-  end;
+    TCellAttributes = Record
+      Text: string;
+      ImageIndex: integer;
+      Indent: integer;
+      Options: TCellOptions;
+      State: TCheckBoxState;
+      Expanded: boolean;
+    End;
 
-  TOnCellAttributes = procedure (Sender: TVarGrid; ACol, ARow, ADataCol: integer; AState: TGridDrawState; var CellAttribs: TCellAttributes) of object;
-  TOnDrawCellEvent = procedure (Sender: TVarGrid; ACol, ARow, ADataCol: integer; AState: TGridDrawState; const R: TRect; var ADefaultDrawing: boolean) of object;
-  TOnSortColumnEvent = procedure (Sender: TVarGrid; var ASortCol: integer) of object;
-  TCellNotifyEvent = procedure (Sender: TVarGrid; ACol, ARow, ADataCol: integer) of object;
-  TOnQuickSearch = procedure (Sender: TVarGrid; var SearchText: string; var ARow: integer) of object;
+    TOnCellAttributes = Procedure (Sender: TVarGrid; ACol, ARow, ADataCol:
+                                   integer; AState: TGridDrawState; Var
+                                   CellAttribs: TCellAttributes) Of object;
+    TOnDrawCellEvent = Procedure (Sender: TVarGrid; ACol, ARow, ADataCol:
+                                  integer; AState: TGridDrawState; Const R:
+                                  TRect; Var ADefaultDrawing: boolean) Of object
+    ;
+    TOnSortColumnEvent = Procedure (Sender: TVarGrid; Var ASortCol: integer) Of 
+                         object;
+    TCellNotifyEvent = Procedure (Sender: TVarGrid; ACol, ARow, ADataCol:
+                                  integer) Of object;
+    TOnQuickSearch = Procedure (Sender: TVarGrid; Var SearchText: String; Var
+                                ARow: integer) Of object;
 
   { TVarGridStringEditor }
 
-  TVarGridStringEditor = class(TStringCellEditor)
-  protected
-    procedure msg_SetGrid(var Msg: TGridMessage); message GM_SETGRID;
-    procedure msg_SetBounds(var Msg: TGridMessage); message GM_SETBOUNDS;
-  end;
+    TVarGridStringEditor = Class(TStringCellEditor)
+      Protected 
+        Procedure msg_SetGrid(Var Msg: TGridMessage);
+        message GM_SETGRID;
+        Procedure msg_SetBounds(Var Msg: TGridMessage);
+        message GM_SETBOUNDS;
+    End;
 
   { TVarGrid }
 
-  TVarGrid = class(TCustomDrawGrid)
-  private
-    FFirstVisibleColumn: integer;
-    FHideSelection: boolean;
-    FImages: TImageList;
-    FItems: TVarList;
-    FItemsChanging: boolean;
-    FColumnsMap: array of integer;
-    FMultiSelect: boolean;
-    FOnAfterSort: TNotifyEvent;
-    FOnCellAttributes: TOnCellAttributes;
-    FOnCheckBoxClick: TCellNotifyEvent;
-    FOnDrawCell: TOnDrawCellEvent;
-    FOnEditorHide: TNotifyEvent;
-    FOnEditorShow: TNotifyEvent;
-    FOnQuickSearch: TOnQuickSearch;
-    FOnTreeButtonClick: TCellNotifyEvent;
-    FSelCount: integer;
-    FAnchor: integer;
-    FSortColumn: integer;
-    FOnSortColumn: TOnSortColumnEvent;
-    FRow: integer;
-    FHintCell: TPoint;
-    FCurSearch: string;
-    FSearchTimer: TTimer;
-    FOldOpt: TGridOptions;
-    FNoDblClick: boolean;
-    FStrEditor: TVarGridStringEditor;
+    TVarGrid = Class(TCustomDrawGrid)
+      Private 
+        FFirstVisibleColumn: integer;
+        FHideSelection: boolean;
+        FImages: TImageList;
+        FItems: TVarList;
+        FItemsChanging: boolean;
+        FColumnsMap: array Of integer;
+        FMultiSelect: boolean;
+        FOnAfterSort: TNotifyEvent;
+        FOnCellAttributes: TOnCellAttributes;
+        FOnCheckBoxClick: TCellNotifyEvent;
+        FOnDrawCell: TOnDrawCellEvent;
+        FOnEditorHide: TNotifyEvent;
+        FOnEditorShow: TNotifyEvent;
+        FOnQuickSearch: TOnQuickSearch;
+        FOnTreeButtonClick: TCellNotifyEvent;
+        FSelCount: integer;
+        FAnchor: integer;
+        FSortColumn: integer;
+        FOnSortColumn: TOnSortColumnEvent;
+        FRow: integer;
+        FHintCell: TPoint;
+        FCurSearch: string;
+        FSearchTimer: TTimer;
+        FOldOpt: TGridOptions;
+        FNoDblClick: boolean;
+        FStrEditor: TVarGridStringEditor;
 
-    function GetRow: integer;
-    function GetRowSelected(RowIndex: integer): boolean;
-    function GetRowVisible(RowIndex: integer): boolean;
-    function GetSortOrder: TSortOrder;
-    procedure ItemsChanged(Sender: TObject);
-    procedure SetHideSelection(const AValue: boolean);
-    procedure SetRow(const AValue: integer);
-    procedure SetRowSelected(RowIndex: integer; const AValue: boolean);
-    procedure SetRowVisible(RowIndex: integer; const AValue: boolean);
-    procedure SetSortColumn(const AValue: integer);
-    procedure SetSortOrder(const AValue: TSortOrder);
-    procedure UpdateColumnsMap;
-    procedure UpdateSelCount;
-    procedure SelectRange(OldRow, NewRow: integer);
-    procedure CMHintShow(var Message: TCMHintShow); message CM_HINTSHOW;
-    function CellNeedsCheckboxBitmaps(const aCol,aRow: Integer): boolean;
-    procedure DrawCellCheckboxBitmaps(const aCol,aRow: Integer; const aRect: TRect);
-    function FindRow(const SearchStr: string; StartRow: integer): integer;
-    procedure DoSearchTimer(Sender: TObject);
+        Function GetRow: integer;
+        Function GetRowSelected(RowIndex: integer): boolean;
+        Function GetRowVisible(RowIndex: integer): boolean;
+        Function GetSortOrder: TSortOrder;
+        Procedure ItemsChanged(Sender: TObject);
+        Procedure SetHideSelection(Const AValue: boolean);
+        Procedure SetRow(Const AValue: integer);
+        Procedure SetRowSelected(RowIndex: integer; Const AValue: boolean);
+        Procedure SetRowVisible(RowIndex: integer; Const AValue: boolean);
+        Procedure SetSortColumn(Const AValue: integer);
+        Procedure SetSortOrder(Const AValue: TSortOrder);
+        Procedure UpdateColumnsMap;
+        Procedure UpdateSelCount;
+        Procedure SelectRange(OldRow, NewRow: integer);
+        Procedure CMHintShow(Var Message: TCMHintShow);
+        message CM_HINTSHOW;
+        Function CellNeedsCheckboxBitmaps(Const aCol,aRow: Integer): boolean;
+        Procedure DrawCellCheckboxBitmaps(Const aCol,aRow: Integer; Const aRect:
+                                          TRect);
+        Function FindRow(Const SearchStr: String; StartRow: integer): integer;
+        Procedure DoSearchTimer(Sender: TObject);
 
-  protected
-    procedure SizeChanged(OldColCount, OldRowCount: Integer); override;
-    procedure DrawCell(aCol,aRow: Integer; aRect: TRect; aState:TGridDrawState); override;
-    procedure ColRowMoved(IsColumn: Boolean; FromIndex,ToIndex: Integer); override;
-    procedure PrepareCanvas(aCol,aRow: Integer; aState:TGridDrawState); override;
-    procedure MouseDown(Button: TMouseButton; Shift:TShiftState; X,Y:Integer); override;
-    procedure MouseMove(Shift: TShiftState; X,Y: Integer);override;
-    procedure KeyDown(var Key : Word; Shift : TShiftState); override;
-    procedure UTF8KeyPress(var UTF8Key: TUTF8Char); override;
-    procedure DoOnCellAttributes(ACol, ARow, ADataCol: integer; AState: TGridDrawState; var CellAttribs: TCellAttributes);
-    procedure HeaderClick(IsColumn: Boolean; index: Integer); override;
-    procedure AutoAdjustColumn(aCol: Integer); override;
-    procedure DrawColumnText(aCol,aRow: Integer; aRect: TRect; aState:TGridDrawState); override;
-    procedure DblClick; override;
-    procedure VisualChange; override;
-    procedure Click; override;
-    procedure GetCheckBoxState(const aCol, aRow:Integer; var aState:TCheckboxState); override;
-    procedure SetCheckboxState(const aCol, aRow:Integer; const aState: TCheckboxState); override;
-    procedure SetupCell(ACol, ARow: integer; AState: TGridDrawState; out CellAttribs: TCellAttributes);
-    procedure DoOnCheckBoxClick(ACol, ARow: integer);
-    procedure DoOnTreeButtonClick(ACol, ARow: integer);
-    function  DoMouseWheelDown(Shift: TShiftState; MousePos: TPoint): Boolean; override;
-    function  DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean; override;
-    function  DoMouseWheel(Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint): Boolean; override;
-    procedure DrawRow(aRow: Integer); override;
-    function  GetCells(ACol, ARow: Integer): string; override;
-    function  GetEditText(ACol, ARow: Longint): string; override;
-    procedure SetEditText(ACol, ARow: Longint; const Value: string); override;
-    procedure DoEditorShow; override;
-    procedure DoEditorHide; override;
+      Protected 
+        Procedure SizeChanged(OldColCount, OldRowCount: Integer);
+        override;
+        Procedure DrawCell(aCol,aRow: Integer; aRect: TRect; aState:
+                           TGridDrawState);
+        override;
+        Procedure ColRowMoved(IsColumn: Boolean; FromIndex,ToIndex: Integer);
+        override;
+        Procedure PrepareCanvas(aCol,aRow: Integer; aState:TGridDrawState);
+        override;
+        Procedure MouseDown(Button: TMouseButton; Shift:TShiftState; X,Y:Integer
+        );
+        override;
+        Procedure MouseMove(Shift: TShiftState; X,Y: Integer);
+        override;
+        Procedure KeyDown(Var Key : Word; Shift : TShiftState);
+        override;
+        Procedure UTF8KeyPress(Var UTF8Key: TUTF8Char);
+        override;
+        Procedure DoOnCellAttributes(ACol, ARow, ADataCol: integer; AState:
+                                     TGridDrawState; Var CellAttribs:
+                                     TCellAttributes);
+        Procedure HeaderClick(IsColumn: Boolean; index: Integer);
+        override;
+        Procedure AutoAdjustColumn(aCol: Integer);
+        override;
+        Procedure DrawColumnText(aCol,aRow: Integer; aRect: TRect; aState:
+                                 TGridDrawState);
+        override;
+        Procedure DblClick;
+        override;
+        Procedure VisualChange;
+        override;
+        Procedure Click;
+        override;
+        Procedure GetCheckBoxState(Const aCol, aRow:Integer; Var aState:
+                                   TCheckboxState);
+        override;
+        Procedure SetCheckboxState(Const aCol, aRow:Integer; Const aState:
+                                   TCheckboxState);
+        override;
+        Procedure SetupCell(ACol, ARow: integer; AState: TGridDrawState; out
+                            CellAttribs: TCellAttributes);
+        Procedure DoOnCheckBoxClick(ACol, ARow: integer);
+        Procedure DoOnTreeButtonClick(ACol, ARow: integer);
+        Function  DoMouseWheelDown(Shift: TShiftState; MousePos: TPoint):
 
-  public
-    procedure VisualChangeNew;
-    constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-    function EditorByStyle(Style: TColumnButtonStyle): TWinControl; override;
-    procedure RemoveSelection;
-    procedure SelectAll;
-    procedure Sort; reintroduce;
-    function ColToDataCol(ACol: integer): integer;
-    function DataColToCol(ADataCol: integer): integer;
-    procedure EnsureSelectionVisible;
-    procedure EnsureRowVisible(ARow: integer);
-    procedure BeginUpdate; reintroduce;
-    procedure EndUpdate(aRefresh: boolean = true); reintroduce;
-    procedure EditCell(ACol, ARow: integer);
+                                                                         Boolean
+        ;
+        override;
+        Function  DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean;
+        override;
+        Function  DoMouseWheel(Shift: TShiftState; WheelDelta: Integer; MousePos
+                               : TPoint): Boolean;
+        override;
+        Procedure DrawRow(aRow: Integer);
+        override;
+        Function  GetCells(ACol, ARow: Integer): string;
+        override;
+        Function  GetEditText(ACol, ARow: Longint): string;
+        override;
+        Procedure SetEditText(ACol, ARow: Longint; Const Value: String);
+        override;
+        Procedure DoEditorShow;
+        override;
+        Procedure DoEditorHide;
+        override;
 
-    property Items: TVarList read FItems;
-    property RowSelected[RowIndex: integer]: boolean read GetRowSelected write SetRowSelected;
-    property RowVisible[RowIndex: integer]: boolean read GetRowVisible write SetRowVisible;
-    property SelCount: integer read FSelCount;
-    property Row: integer read GetRow write SetRow;
-    property FirstVisibleColumn: integer read FFirstVisibleColumn;
-  published
-    property RowCount;
-    property Align;
-    property AlternateColor;
-    property Anchors;
-    property BorderSpacing;
-    property BorderStyle;
-    property Color;
-    property Columns;
-    property Constraints;
-    property DragCursor;
-    property DragKind;
-    property DragMode;
-    property Enabled;
-    property FixedCols;
-    property FixedRows;
-    property Font;
-    property GridLineWidth;
-    property Options;
-    property ParentColor default false;
-    property ParentFont;
-    property ParentShowHint default false;
-    property PopupMenu;
-    property ScrollBars;
-    property ShowHint default True;
-    property TabOrder;
-    property TabStop;
-    property TitleFont;
-    property TitleImageList;
-    property TitleStyle default tsNative;
-    property Visible;
+      Public 
+        Procedure VisualChangeNew;
+        constructor Create(AOwner: TComponent);
+        override;
+        destructor Destroy;
+        override;
+        Function EditorByStyle(Style: TColumnButtonStyle): TWinControl;
+        override;
+        Procedure RemoveSelection;
+        Procedure SelectAll;
+        Procedure Sort;
+        reintroduce;
+        Function ColToDataCol(ACol: integer): integer;
+        Function DataColToCol(ADataCol: integer): integer;
+        Procedure EnsureSelectionVisible;
+        Procedure EnsureRowVisible(ARow: integer);
+        Procedure BeginUpdate;
+        reintroduce;
+        Procedure EndUpdate(aRefresh: boolean = true);
+        reintroduce;
+        Procedure EditCell(ACol, ARow: integer);
 
-    property OnClick;
-    property OnDblClick;
-    property OnEnter;
-    property OnExit;
-    property OnHeaderClick;
-    property OnHeaderSized;
-    property OnKeyDown;
-    property OnKeyPress;
-    property OnKeyUp;
-    property OnMouseDown;
-    property OnMouseMove;
-    property OnMouseUp;
-    property OnMouseWheelDown;
-    property OnMouseWheelUp;
-    property OnContextPopup;
-    property OnDragDrop;
-    property OnDragOver;
-    property OnEndDock;
-    property OnEndDrag;
-    property OnStartDock;
-    property OnStartDrag;
-    property OnUTF8KeyPress;
-    property OnResize;
-    property OnGetEditText;
-    property OnSetEditText;
+        property Items: TVarList read FItems;
+        property RowSelected[RowIndex: integer]: boolean read GetRowSelected
+                                                 write SetRowSelected;
+        property RowVisible[RowIndex: integer]: boolean read GetRowVisible write
+                                                SetRowVisible;
+        property SelCount: integer read FSelCount;
+        property Row: integer read GetRow write SetRow;
+        property FirstVisibleColumn: integer read FFirstVisibleColumn;
+      Published 
+        property RowCount;
+        property Align;
+        property AlternateColor;
+        property Anchors;
+        property BorderSpacing;
+        property BorderStyle;
+        property Color;
+        property Columns;
+        property Constraints;
+        property DragCursor;
+        property DragKind;
+        property DragMode;
+        property Enabled;
+        property FixedCols;
+        property FixedRows;
+        property Font;
+        property GridLineWidth;
+        property Options;
+        property ParentColor default false;
+        property ParentFont;
+        property ParentShowHint default false;
+        property PopupMenu;
+        property ScrollBars;
+        property ShowHint default True;
+        property TabOrder;
+        property TabStop;
+        property TitleFont;
+        property TitleImageList;
+        property TitleStyle default tsNative;
+        property Visible;
 
-    property Images: TImageList read FImages write FImages;
-    property MultiSelect: boolean read FMultiSelect write FMultiSelect default False;
-    property SortColumn: integer read FSortColumn write SetSortColumn default -1;
-    property SortOrder: TSortOrder read GetSortOrder write SetSortOrder default soAscending;
-    property HideSelection: boolean read FHideSelection write SetHideSelection default False;
+        property OnClick;
+        property OnDblClick;
+        property OnEnter;
+        property OnExit;
+        property OnHeaderClick;
+        property OnHeaderSized;
+        property OnKeyDown;
+        property OnKeyPress;
+        property OnKeyUp;
+        property OnMouseDown;
+        property OnMouseMove;
+        property OnMouseUp;
+        property OnMouseWheelDown;
+        property OnMouseWheelUp;
+        property OnContextPopup;
+        property OnDragDrop;
+        property OnDragOver;
+        property OnEndDock;
+        property OnEndDrag;
+        property OnStartDock;
+        property OnStartDrag;
+        property OnUTF8KeyPress;
+        property OnResize;
+        property OnGetEditText;
+        property OnSetEditText;
 
-    property OnCellAttributes: TOnCellAttributes read FOnCellAttributes write FOnCellAttributes;
-    property OnDrawCell: TOnDrawCellEvent read FOnDrawCell write FOnDrawCell;
-    property OnSortColumn: TOnSortColumnEvent read FOnSortColumn write FOnSortColumn;
-    property OnAfterSort: TNotifyEvent read FOnAfterSort write FOnAfterSort;
-    property OnCheckBoxClick: TCellNotifyEvent read FOnCheckBoxClick write FOnCheckBoxClick;
-    property OnTreeButtonClick: TCellNotifyEvent read FOnTreeButtonClick write FOnTreeButtonClick;
-    property OnQuickSearch: TOnQuickSearch read FOnQuickSearch write FOnQuickSearch;
-    property OnEditorShow: TNotifyEvent read FOnEditorShow write FOnEditorShow;
-    property OnEditorHide: TNotifyEvent read FOnEditorHide write FOnEditorHide;
-  end;
+        property Images: TImageList read FImages write FImages;
+        property MultiSelect: boolean read FMultiSelect write FMultiSelect
+                              default False;
+        property SortColumn: integer read FSortColumn write SetSortColumn
+                             default -1;
+        property SortOrder: TSortOrder read GetSortOrder write SetSortOrder
+                            default soAscending;
+        property HideSelection: boolean read FHideSelection write
+                                SetHideSelection default False;
 
-procedure Register;
+        property OnCellAttributes: TOnCellAttributes read FOnCellAttributes
+                                   write FOnCellAttributes;
+        property OnDrawCell: TOnDrawCellEvent read FOnDrawCell write FOnDrawCell
+        ;
+        property OnSortColumn: TOnSortColumnEvent read FOnSortColumn write
+                               FOnSortColumn;
+        property OnAfterSort: TNotifyEvent read FOnAfterSort write FOnAfterSort;
+        property OnCheckBoxClick: TCellNotifyEvent read FOnCheckBoxClick write
+                                  FOnCheckBoxClick;
+        property OnTreeButtonClick: TCellNotifyEvent read FOnTreeButtonClick
+                                    write FOnTreeButtonClick;
+        property OnQuickSearch: TOnQuickSearch read FOnQuickSearch write
+                                FOnQuickSearch;
+        property OnEditorShow: TNotifyEvent read FOnEditorShow write
+                               FOnEditorShow;
+        property OnEditorHide: TNotifyEvent read FOnEditorHide write
+                               FOnEditorHide;
+    End;
 
-implementation
+    Procedure Register;
 
-uses Variants, Math, GraphType, lclintf, Themes, types, lclproc
+    Implementation
+
+    Uses Variants, Math, GraphType, lclintf, Themes, types, lclproc
     {$ifdef LCLcarbon} , carbonproc {$endif LCLcarbon};
 
-const
-  roSelected = 1;
-  roCurRow   = 2;
+    Const 
+      roSelected = 1;
+      roCurRow   = 2;
 
-procedure Register;
-begin
-  RegisterComponents('TransGUI', [TVarGrid]);
-end;
+    Procedure Register;
+    Begin
+      RegisterComponents('TransGUI', [TVarGrid]);
+    End;
 
 { TVarGridStringEditor }
 
-procedure TVarGridStringEditor.msg_SetGrid(var Msg: TGridMessage);
-begin
-  inherited;
-  Msg.Options:=Msg.Options and not EO_AUTOSIZE;
-end;
+    Procedure TVarGridStringEditor.msg_SetGrid(Var Msg: TGridMessage);
+    Begin
+      inherited;
+      Msg.Options := Msg.Options And Not EO_AUTOSIZE;
+    End;
 
-procedure TVarGridStringEditor.msg_SetBounds(var Msg: TGridMessage);
-var
-  ca: TCellAttributes;
-begin
-  with Msg do begin
-    TVarGrid(Grid).SetupCell(Col, Row, [], ca);
-    with CellRect do begin
-      Inc(Left, ca.Indent);
-      if coDrawTreeButton in ca.Options then
-        Inc(Left, Bottom - Top);
-      if coDrawCheckBox in ca.Options then
-        Inc(Left, Bottom - Top);
-      if (ca.ImageIndex <> -1) and Assigned(TVarGrid(Grid).Images) then
-        Inc(Left, TVarGrid(Grid).Images.Width + 2);
-      Dec(Left, 3);
-      Dec(Top, 1);
-      SetBounds(Left, Top, Right-Left, Bottom-Top);
-    end;
-  end;
-end;
+    Procedure TVarGridStringEditor.msg_SetBounds(Var Msg: TGridMessage);
+
+    Var 
+      ca: TCellAttributes;
+    Begin
+      With Msg Do
+        Begin
+          TVarGrid(Grid).SetupCell(Col, Row, [], ca);
+          With CellRect Do
+            Begin
+              Inc(Left, ca.Indent);
+              If coDrawTreeButton In ca.Options Then
+                Inc(Left, Bottom - Top);
+              If coDrawCheckBox In ca.Options Then
+                Inc(Left, Bottom - Top);
+              If (ca.ImageIndex <> -1) And Assigned(TVarGrid(Grid).Images) Then
+                Inc(Left, TVarGrid(Grid).Images.Width + 2);
+              Dec(Left, 3);
+              Dec(Top, 1);
+              SetBounds(Left, Top, Right-Left, Bottom-Top);
+            End;
+        End;
+    End;
 
 { TVarGrid }
 
-procedure TVarGrid.ItemsChanged(Sender: TObject);
-var
-  i, OldRows, OldCols: integer;
-  pt: TPoint;
-begin
-  FItemsChanging:=True;
-  try
-    Perform(CM_MouseLeave, 0, 0);  // Hack to call ResetHotCell to workaround a bug
-    OldRows:=RowCount;
-    OldCols:=Columns.Count;
-    i:=FItems.RowCnt + FixedRows;
-    if (FRow = -1) and (inherited Row >= i) and (i > FixedRows) then
-      inherited Row:=i - 1;
-    RowCount:=i;
-    if FRow <> -1 then begin
-      Row:=FRow;
-      FRow:=-1;
-    end;
-    UpdateSelCount;
-    while Columns.Count > FItems.ColCnt do
-      Columns.Delete(Columns.Count - 1);
-    if Columns.Count <> FItems.ColCnt then begin
-      Columns.BeginUpdate;
-      try
-        for i:=Columns.Count to FItems.ColCnt - 1 do
-          Columns.Add;
-      finally
-        Columns.EndUpdate;
-      end;
-    end;
-    if (OldRows <> RowCount) or (OldCols <> Columns.Count) then begin
-      if Parent <> nil then
-        HandleNeeded;
-      ResetSizes;
-    end
-    else
+    Procedure TVarGrid.ItemsChanged(Sender: TObject);
+
+    Var 
+      i, OldRows, OldCols: integer;
+      pt: TPoint;
+    Begin
+      FItemsChanging := True;
+      Try
+        Perform(CM_MouseLeave, 0, 0);
+        // Hack to call ResetHotCell to workaround a bug
+        OldRows := RowCount;
+        OldCols := Columns.Count;
+        i := FItems.RowCnt + FixedRows;
+        If (FRow = -1) And (Inherited Row >= i) And (i > FixedRows) Then
+          inherited Row := i - 1;
+        RowCount := i;
+        If FRow <> -1 Then
+          Begin
+            Row := FRow;
+            FRow := -1;
+          End;
+        UpdateSelCount;
+        While Columns.Count > FItems.ColCnt Do
+          Columns.Delete(Columns.Count - 1);
+        If Columns.Count <> FItems.ColCnt Then
+          Begin
+            Columns.BeginUpdate;
+            Try
+              For i:=Columns.Count To FItems.ColCnt - 1 Do
+                Columns.Add;
+            Finally
+              Columns.EndUpdate;
+          End;
+    End;
+    If (OldRows <> RowCount) Or (OldCols <> Columns.Count) Then
+      Begin
+        If Parent <> Nil Then
+          HandleNeeded;
+        ResetSizes;
+      End
+    Else
       Invalidate;
-    pt:=ScreenToClient(Mouse.CursorPos);
-    if PtInRect(ClientRect, pt) then
+    pt := ScreenToClient(Mouse.CursorPos);
+    If PtInRect(ClientRect, pt) Then
       MouseMove([], pt.x, pt.y);
-  finally
-    FItemsChanging:=False;
-  end;
-end;
+  Finally
+    FItemsChanging := False;
+End;
+End;
 
-procedure TVarGrid.SetHideSelection(const AValue: boolean);
-begin
-  if FHideSelection=AValue then exit;
-  FHideSelection:=AValue;
+Procedure TVarGrid.SetHideSelection(Const AValue: boolean);
+Begin
+  If FHideSelection=AValue Then exit;
+  FHideSelection := AValue;
   Invalidate;
-end;
+End;
 
-procedure TVarGrid.SetRow(const AValue: integer);
-var
+Procedure TVarGrid.SetRow(Const AValue: integer);
+
+Var 
   i, r: integer;
-begin
-  if FItems.IsUpdating then
-    FRow:=AValue
-  else begin
-    r:=AValue + FixedRows;
-    if r <> inherited Row then begin
-      i:=LeftCol;
-      inherited Row:=r;
-      LeftCol:=i;
-    end;
-  end;
-end;
+Begin
+  If FItems.IsUpdating Then
+    FRow := AValue
+  Else
+    Begin
+      r := AValue + FixedRows;
+      If r <> Inherited Row Then
+        Begin
+          i := LeftCol;
+          inherited Row := r;
+          LeftCol := i;
+        End;
+    End;
+End;
 
-function TVarGrid.GetRowSelected(RowIndex: integer): boolean;
-begin
-  Result:=LongBool(FItems.RowOptions[RowIndex] and roSelected);
-end;
+Function TVarGrid.GetRowSelected(RowIndex: integer): boolean;
+Begin
+  Result := LongBool(FItems.RowOptions[RowIndex] And roSelected);
+End;
 
-function TVarGrid.GetRowVisible(RowIndex: integer): boolean;
-begin
-  Result:=RowHeights[RowIndex + FixedRows] > 0;
-end;
+Function TVarGrid.GetRowVisible(RowIndex: integer): boolean;
+Begin
+  Result := RowHeights[RowIndex + FixedRows] > 0;
+End;
 
-function TVarGrid.GetSortOrder: TSortOrder;
-begin
-  Result:=inherited SortOrder;
-end;
+Function TVarGrid.GetSortOrder: TSortOrder;
+Begin
+  Result := Inherited SortOrder;
+End;
 
-function TVarGrid.GetRow: integer;
-begin
-  if FItems.IsUpdating and (FRow <> -1) then
-    Result:=FRow
-  else begin
-    Result:=inherited Row - FixedRows;
-  end;
-end;
+Function TVarGrid.GetRow: integer;
+Begin
+  If FItems.IsUpdating And (FRow <> -1) Then
+    Result := FRow
+  Else
+    Begin
+      Result := Inherited Row - FixedRows;
+    End;
+End;
 
-procedure TVarGrid.SetRowSelected(RowIndex: integer; const AValue: boolean);
-var
+Procedure TVarGrid.SetRowSelected(RowIndex: integer; Const AValue: boolean);
+
+Var 
   i, j: integer;
-begin
-  i:=FItems.RowOptions[RowIndex];
-  if AValue then begin
-    j:=i or roSelected;
-    if j <> i then
-      Inc(FSelCount);
-  end
-  else begin
-    j:=i and not roSelected;
-    if j <> i then
-      Dec(FSelCount);
-  end;
-  FItems.RowOptions[RowIndex]:=j;
+Begin
+  i := FItems.RowOptions[RowIndex];
+  If AValue Then
+    Begin
+      j := i Or roSelected;
+      If j <> i Then
+        Inc(FSelCount);
+    End
+  Else
+    Begin
+      j := i And Not roSelected;
+      If j <> i Then
+        Dec(FSelCount);
+    End;
+  FItems.RowOptions[RowIndex] := j;
   InvalidateRow(RowIndex + FixedRows);
-  if FSelCount <= 1 then
-    InvalidateRow(inherited Row);
-end;
+  If FSelCount <= 1 Then
+    InvalidateRow(Inherited Row);
+End;
 
-procedure TVarGrid.SetRowVisible(RowIndex: integer; const AValue: boolean);
-begin
-  if AValue then
-    RowHeights[RowIndex + FixedRows]:=DefaultRowHeight
-  else
-    RowHeights[RowIndex + FixedRows]:=0;
-end;
+Procedure TVarGrid.SetRowVisible(RowIndex: integer; Const AValue: boolean);
+Begin
+  If AValue Then
+    RowHeights[RowIndex + FixedRows] := DefaultRowHeight
+  Else
+    RowHeights[RowIndex + FixedRows] := 0;
+End;
 
-procedure TVarGrid.SetSortColumn(const AValue: integer);
-begin
-//  if FItems.Count=0 then exit;
-  if FSortColumn=AValue then exit;
-  FSortColumn:=AValue;
-  if FSortColumn >= 0 then
+Procedure TVarGrid.SetSortColumn(Const AValue: integer);
+Begin
+  //  if FItems.Count=0 then exit;
+  If FSortColumn=AValue Then exit;
+  FSortColumn := AValue;
+  If FSortColumn >= 0 Then
 
-    Options:=Options + [goHeaderPushedLook, goHeaderHotTracking]
-  else
-    Options:=Options - [goHeaderPushedLook, goHeaderHotTracking];
+    Options := Options + [goHeaderPushedLook, goHeaderHotTracking]
+  Else
+    Options := Options - [goHeaderPushedLook, goHeaderHotTracking];
   Sort;
-end;
+End;
 
-procedure TVarGrid.SetSortOrder(const AValue: TSortOrder);
-begin
-  if SortOrder = AValue then exit;
-  inherited SortOrder:=AValue;
+Procedure TVarGrid.SetSortOrder(Const AValue: TSortOrder);
+Begin
+  If SortOrder = AValue Then exit;
+  inherited SortOrder := AValue;
   Sort;
-end;
+End;
 
-procedure TVarGrid.UpdateColumnsMap;
-var
+Procedure TVarGrid.UpdateColumnsMap;
+
+Var 
   i, j: integer;
-begin
-  FFirstVisibleColumn:=-1;
+Begin
+  FFirstVisibleColumn := -1;
   SetLength(FColumnsMap, Columns.Count);
-  j:=0;
-  for i:=0 to Columns.Count - 1 do
-    with Columns[i] do begin
-      if (FFirstVisibleColumn < 0) and Visible then
-        FFirstVisibleColumn:=i;
-      FColumnsMap[j]:=ID - 1;
-      Inc(j);
-    end;
+  j := 0;
+  For i:=0 To Columns.Count - 1 Do
+    With Columns[i] Do
+      Begin
+        If (FFirstVisibleColumn < 0) And Visible Then
+          FFirstVisibleColumn := i;
+        FColumnsMap[j] := ID - 1;
+        Inc(j);
+      End;
   SetLength(FColumnsMap, j);
-end;
+End;
 
-procedure TVarGrid.UpdateSelCount;
-var
+Procedure TVarGrid.UpdateSelCount;
+
+Var 
   i: integer;
-begin
-  FSelCount:=0;
-  for i:=0 to FItems.Count - 1 do
-    if RowSelected[i] then
+Begin
+  FSelCount := 0;
+  For i:=0 To FItems.Count - 1 Do
+    If RowSelected[i] Then
       Inc(FSelCount);
-end;
+End;
 
-procedure TVarGrid.SelectRange(OldRow, NewRow: integer);
-var
+Procedure TVarGrid.SelectRange(OldRow, NewRow: integer);
+
+Var 
   dir: integer;
   sel: boolean;
-begin
-  if OldRow = NewRow then
+Begin
+  If OldRow = NewRow Then
     exit;
-  if FAnchor = -1 then
-    FAnchor:=OldRow;
-  dir:=Sign(NewRow - OldRow);
-  if Sign(FAnchor - OldRow) <> Sign(FAnchor - NewRow) then
-    while OldRow <> FAnchor do begin
-      RowSelected[OldRow]:=False;
+  If FAnchor = -1 Then
+    FAnchor := OldRow;
+  dir := Sign(NewRow - OldRow);
+  If Sign(FAnchor - OldRow) <> Sign(FAnchor - NewRow) Then
+    While OldRow <> FAnchor Do
+      Begin
+        RowSelected[OldRow] := False;
+        Inc(OldRow, dir);
+      End;
+  sel := Abs(FAnchor - OldRow) < Abs(FAnchor - NewRow);
+  While OldRow <> NewRow Do
+    Begin
+      RowSelected[OldRow] := sel;
       Inc(OldRow, dir);
-    end;
-  sel:=Abs(FAnchor - OldRow) < Abs(FAnchor - NewRow);
-  while OldRow <> NewRow do begin
-    RowSelected[OldRow]:=sel;
-    Inc(OldRow, dir);
-  end;
-  RowSelected[NewRow]:=True;
-end;
+    End;
+  RowSelected[NewRow] := True;
+End;
 
-procedure TVarGrid.CMHintShow(var Message: TCMHintShow);
-var
+Procedure TVarGrid.CMHintShow(Var Message: TCMHintShow);
+
+Var 
   ca: TCellAttributes;
   pt: TPoint;
   wd: integer;
   R: TRect;
-begin
-  with Message.HintInfo^ do begin
-    pt:=MouseToCell(CursorPos);
-    if (pt.x >= FixedCols) and (pt.y >= 0) then begin
-      R:=CellRect(pt.x, pt.y);
-      if PtInRect(R, CursorPos) then begin
-        SetupCell(pt.x, pt.y, [], ca);
-        if ca.Text <> '' then begin
-          wd:=Canvas.TextWidth(ca.Text);
-          Inc(R.Left, ca.Indent);
-          if coDrawTreeButton in ca.Options then
-            Inc(R.Left, R.Bottom - R.Top);
-          if coDrawCheckBox in ca.Options then
-            Inc(R.Left, R.Bottom - R.Top);
-          if (ca.ImageIndex <> -1) and Assigned(FImages) then
-            Inc(R.Left, FImages.Width + 2);
-          if (R.Right <= R.Left) or (R.Right - R.Left < wd + 5) then begin
-            HintStr:=ca.Text;
-            R.Top:=(R.Top + R.Bottom - Canvas.TextHeight(ca.Text)) div 2 - 4;
-            Dec(R.Left);
-            HintPos:=ClientToScreen(R.TopLeft);
-          end;
-          FHintCell:=pt;
-        end
-        else
-          Message.Result:=1;
-      end
-      else
-        Message.Result:=1;
-    end;
-  end;
-end;
+Begin
+  With Message.HintInfo^ Do
+    Begin
+      pt := MouseToCell(CursorPos);
+      If (pt.x >= FixedCols) And (pt.y >= 0) Then
+        Begin
+          R := CellRect(pt.x, pt.y);
+          If PtInRect(R, CursorPos) Then
+            Begin
+              SetupCell(pt.x, pt.y, [], ca);
+              If ca.Text <> '' Then
+                Begin
+                  wd := Canvas.TextWidth(ca.Text);
+                  Inc(R.Left, ca.Indent);
+                  If coDrawTreeButton In ca.Options Then
+                    Inc(R.Left, R.Bottom - R.Top);
+                  If coDrawCheckBox In ca.Options Then
+                    Inc(R.Left, R.Bottom - R.Top);
+                  If (ca.ImageIndex <> -1) And Assigned(FImages) Then
+                    Inc(R.Left, FImages.Width + 2);
+                  If (R.Right <= R.Left) Or (R.Right - R.Left < wd + 5) Then
+                    Begin
+                      HintStr := ca.Text;
+                      R.Top := (R.Top + R.Bottom - Canvas.TextHeight(ca.Text))
+                               Div 2 - 4;
+                      Dec(R.Left);
+                      HintPos := ClientToScreen(R.TopLeft);
+                    End;
+                  FHintCell := pt;
+                End
+              Else
+                Message.Result := 1;
+            End
+          Else
+            Message.Result := 1;
+        End;
+    End;
+End;
 
-function TVarGrid.CellNeedsCheckboxBitmaps(const aCol, aRow: Integer): boolean;
-var
+Function TVarGrid.CellNeedsCheckboxBitmaps(Const aCol, aRow: Integer): boolean;
+
+Var 
   C: TGridColumn;
-begin
+Begin
   Result := false;
-  if (aRow>=FixedRows) and Columns.Enabled then begin
-    C := ColumnFromGridColumn(aCol);
-    result := (C<>nil) and (C.ButtonStyle=cbsCheckboxColumn)
-  end;
-end;
+  If (aRow>=FixedRows) And Columns.Enabled Then
+    Begin
+      C := ColumnFromGridColumn(aCol);
+      result := (C<>Nil) And (C.ButtonStyle=cbsCheckboxColumn)
+    End;
+End;
 
-procedure TVarGrid.DrawCellCheckboxBitmaps(const aCol, aRow: Integer; const aRect: TRect);
-var
+Procedure TVarGrid.DrawCellCheckboxBitmaps(Const aCol, aRow: Integer; Const
+                                           aRect: TRect);
+
+Var 
   AState: TCheckboxState;
-begin
+Begin
   AState := cbUnchecked;
   GetCheckBoxState(aCol, aRow, aState);
   DrawGridCheckboxBitmaps(aCol, aRow, aRect, aState);
-end;
+End;
 
-function TVarGrid.FindRow(const SearchStr: string; StartRow: integer): integer;
-var
+Function TVarGrid.FindRow(Const SearchStr: String; StartRow: integer): integer;
+
+Var 
   i, c: integer;
   s, ss: string;
   v: variant;
-begin
-  Result:=-1;
-  if Columns.Count = 0 then
+Begin
+  Result := -1;
+  If Columns.Count = 0 Then
     exit;
-  c:=SortColumn;
-  if (c < 0) or (c >= Items.ColCnt) then
-    c:=0;
-  ss:= LazUTF8.UTF8UpperCase(SearchStr);
-  for i:=StartRow to Items.Count - 1 do begin
-    v:=Items[c, i];
-    if VarIsNull(v) or VarIsEmpty(v) then
-      s:= ''
-    else
-      s:= LazUTF8.UTF8UpperCase(UTF8Encode(widestring(v){%H-}));
-    if Copy(s, 1, Length(ss)) = ss then begin
-      Result:=i;
-      break;
-    end;
-  end;
-end;
+  c := SortColumn;
+  If (c < 0) Or (c >= Items.ColCnt) Then
+    c := 0;
+  ss := LazUTF8.UTF8UpperCase(SearchStr);
+  For i:=StartRow To Items.Count - 1 Do
+    Begin
+      v := Items[c, i];
+      If VarIsNull(v) Or VarIsEmpty(v) Then
+        s := ''
+      Else
+        s := LazUTF8.UTF8UpperCase(UTF8Encode(widestring(v){%H-}));
+      If Copy(s, 1, Length(ss)) = ss Then
+        Begin
+          Result := i;
+          break;
+        End;
+    End;
+End;
 
-procedure TVarGrid.DoSearchTimer(Sender: TObject);
-begin
-  FSearchTimer.Enabled:=False;
-  FCurSearch:='';
-end;
+Procedure TVarGrid.DoSearchTimer(Sender: TObject);
+Begin
+  FSearchTimer.Enabled := False;
+  FCurSearch := '';
+End;
 
-procedure TVarGrid.SizeChanged(OldColCount, OldRowCount: Integer);
-begin
-  if not FItemsChanging and (FItems <> nil) then begin
-    FItems.ColCnt:=Columns.Count;
-    FItems.RowCnt:=RowCount - FixedRows;
-    UpdateColumnsMap;
-  end;
+Procedure TVarGrid.SizeChanged(OldColCount, OldRowCount: Integer);
+Begin
+  If Not FItemsChanging And (FItems <> Nil) Then
+    Begin
+      FItems.ColCnt := Columns.Count;
+      FItems.RowCnt := RowCount - FixedRows;
+      UpdateColumnsMap;
+    End;
   inherited;
-end;
+End;
 
-procedure TVarGrid.DrawCell(aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
-var
+Procedure TVarGrid.DrawCell(aCol, aRow: Integer; aRect: TRect; aState:
+                            TGridDrawState);
+
+Var 
   ca: TCellAttributes;
-//  ts: TTextStyle;
+  //  ts: TTextStyle;
   dd, IsHeader: boolean;
   R, RR: TRect;
   det: TThemedElementDetails;
   sz: TSize;
   i: integer;
-begin
-  RR:=aRect;
-  IsHeader:=(gdFixed in aState) and (aRow=0) and (aCol>=FirstGridColumn);
-  if not IsHeader and MultiSelect and (FSelCount > 0) then
-    if (aRow >= FixedRows) and (aCol >= FixedCols) and RowSelected[aRow - FixedRows] then
+Begin
+  RR := aRect;
+  IsHeader := (gdFixed In aState) And (aRow=0) And (aCol>=FirstGridColumn);
+  If Not IsHeader And MultiSelect And (FSelCount > 0) Then
+    If (aRow >= FixedRows) And (aCol >= FixedCols) And RowSelected[aRow -
+       FixedRows] Then
       Include(aState, gdSelected)
-    else
-      Exclude(aState, gdSelected);
+  Else
+    Exclude(aState, gdSelected);
 
   PrepareCanvas(aCol, aRow, aState);
-  if DefaultDrawing then
+  If DefaultDrawing Then
     SetupCell(aCol, aRow, aState, ca);
-  if not IsHeader or (TitleStyle<>tsNative) then
+  If Not IsHeader Or (TitleStyle<>tsNative) Then
     Canvas.FillRect(aRect);
 
-  if not IsHeader then begin
-    dd:=True;
-    if Assigned(FOnDrawCell) then begin
-      R:=CellRect(aCol, aRow);
-      if goVertLine in Options then
-        Dec(R.Right, 1);
-      if goHorzLine in Options then
-        Dec(R.Bottom, 1);
-      FOnDrawCell(Self, aCol, aRow - FixedRows, ColToDataCol(aCol), aState, R, dd);
-    end;
+  If Not IsHeader Then
+    Begin
+      dd := True;
+      If Assigned(FOnDrawCell) Then
+        Begin
+          R := CellRect(aCol, aRow);
+          If goVertLine In Options Then
+            Dec(R.Right, 1);
+          If goHorzLine In Options Then
+            Dec(R.Bottom, 1);
+          FOnDrawCell(Self, aCol, aRow - FixedRows, ColToDataCol(aCol), aState,
+          R, dd);
+        End;
 
-    if DefaultDrawing and dd then begin
-      if CellNeedsCheckboxBitmaps(aCol,aRow) then
-        DrawCellCheckboxBitmaps(aCol,aRow,aRect)
-      else begin
-        Inc(aRect.Left, ca.Indent);
-        if coDrawTreeButton in ca.Options then begin
-          R:=aRect;
-          R.Right:=R.Left + (R.Bottom - R.Top);
-          aRect.Left:=R.Right;
-          if ThemeServices.ThemesEnabled then begin
-            if ca.Expanded then
-              det:=ThemeServices.GetElementDetails(ttGlyphOpened)
-            else
-              det:=ThemeServices.GetElementDetails(ttGlyphClosed);
-            sz:=ThemeServices.GetDetailSizeForPPI(det,96);
-            with R do begin
-              Left:=(Left + Right - sz.cx) div 2;
-              Top:=(Top + Bottom - sz.cy) div 2;
-              R:=Bounds(Left, Top, sz.cx, sz.cy);
-            end;
-            ThemeServices.DrawElement(Canvas.Handle, det, R, nil);
-          end
-          else
-            with Canvas do begin
-              i:=(R.Bottom - R.Top) div 4;
-              InflateRect(R, -i, -i);
-              if (R.Right - R.Left) and 1 = 0 then
-                Dec(R.Right);
-              if (R.Bottom - R.Top) and 1 = 0 then
-                Dec(R.Bottom);
-              Pen.Color:=clWindowText;
-              Rectangle(R);
-              InflateRect(R, -1, -1);
-              Brush.Color:=clWindow;
-              FillRect(R);
-              InflateRect(R, -1, -1);
-              i:=(R.Top + R.Bottom) div 2;
-              MoveTo(R.Left, i);
-              LineTo(R.Right, i);
-              if not ca.Expanded then begin
-                i:=(R.Left + R.Right) div 2;
-                MoveTo(i, R.Top);
-                LineTo(i, R.Bottom);
-              end;
-            end;
-        end;
-        if coDrawCheckBox in ca.Options then begin
-          R:=aRect;
-          R.Right:=R.Left + (R.Bottom - R.Top);
-          aRect.Left:=R.Right;
-          DrawGridCheckboxBitmaps(aCol, aRow, R, ca.State);
-        end;
-        if (ca.ImageIndex <> -1) and Assigned(FImages) then begin
-          FImages.Draw(Canvas, aRect.Left + 2, (aRect.Bottom + aRect.Top - FImages.Height) div 2, ca.ImageIndex, gdeNormal);
-          Inc(aRect.Left, FImages.Width + 2);
-        end;
-        if ca.Text <> '' then begin
+      If DefaultDrawing And dd Then
+        Begin
+          If CellNeedsCheckboxBitmaps(aCol,aRow) Then
+            DrawCellCheckboxBitmaps(aCol,aRow,aRect)
+          Else
+            Begin
+              Inc(aRect.Left, ca.Indent);
+              If coDrawTreeButton In ca.Options Then
+                Begin
+                  R := aRect;
+                  R.Right := R.Left + (R.Bottom - R.Top);
+                  aRect.Left := R.Right;
+                  If ThemeServices.ThemesEnabled Then
+                    Begin
+                      If ca.Expanded Then
+                        det := ThemeServices.GetElementDetails(ttGlyphOpened)
+                      Else
+                        det := ThemeServices.GetElementDetails(ttGlyphClosed);
+                      sz := ThemeServices.GetDetailSizeForPPI(det,96);
+                      With R Do
+                        Begin
+                          Left := (Left + Right - sz.cx) Div 2;
+                          Top := (Top + Bottom - sz.cy) Div 2;
+                          R := Bounds(Left, Top, sz.cx, sz.cy);
+                        End;
+                      ThemeServices.DrawElement(Canvas.Handle, det, R, Nil);
+                    End
+                  Else
+                    With Canvas Do
+                      Begin
+                        i := (R.Bottom - R.Top) Div 4;
+                        InflateRect(R, -i, -i);
+                        If (R.Right - R.Left) And 1 = 0 Then
+                          Dec(R.Right);
+                        If (R.Bottom - R.Top) And 1 = 0 Then
+                          Dec(R.Bottom);
+                        Pen.Color := clWindowText;
+                        Rectangle(R);
+                        InflateRect(R, -1, -1);
+                        Brush.Color := clWindow;
+                        FillRect(R);
+                        InflateRect(R, -1, -1);
+                        i := (R.Top + R.Bottom) Div 2;
+                        MoveTo(R.Left, i);
+                        LineTo(R.Right, i);
+                        If Not ca.Expanded Then
+                          Begin
+                            i := (R.Left + R.Right) Div 2;
+                            MoveTo(i, R.Top);
+                            LineTo(i, R.Bottom);
+                          End;
+                      End;
+                End;
+              If coDrawCheckBox In ca.Options Then
+                Begin
+                  R := aRect;
+                  R.Right := R.Left + (R.Bottom - R.Top);
+                  aRect.Left := R.Right;
+                  DrawGridCheckboxBitmaps(aCol, aRow, R, ca.State);
+                End;
+              If (ca.ImageIndex <> -1) And Assigned(FImages) Then
+                Begin
+                  FImages.Draw(Canvas, aRect.Left + 2, (aRect.Bottom + aRect.Top
+                               - FImages.Height) div 2, ca.ImageIndex, gdeNormal
+                  );
+                  Inc(aRect.Left, FImages.Width + 2);
+                End;
+              If ca.Text <> '' Then
+                Begin
+
+
 {
           if Canvas.TextStyle.Alignment <> taLeftJustify then
             if (aRect.Right <= aRect.Left) or (aRect.Right - aRect.Left < Canvas.TextWidth(ca.Text) + 9) then begin
@@ -685,663 +814,764 @@ begin
             end;
           DrawCellText(aCol, aRow, aRect, aState, ca.Text);
 }
-          with aRect do begin
-            Inc(Top, 2);
-            Inc(Left, constCellPadding);
-            Dec(Right, constCellPadding);
-            if Right<Left then
-              Right:=Left;
-            if Left>Right then
-              Left:=Right;
-            if Bottom<Top then
-              Bottom:=Top;
-            if Top>Bottom then
-              Top:=Bottom;
-            Top:=(Top + Bottom - Canvas.TextHeight(ca.Text)) div 2 ;
-            if (Left <> Right) and (Top <> Bottom) then begin
-              if Canvas.TextStyle.Alignment <> taLeftJustify then begin
-                i:=Canvas.TextWidth(ca.Text);
-                if i < Right - Left then
-                  case Canvas.TextStyle.Alignment of
-                    taRightJustify:
-                      Left:=Right - i;
-                    taCenter:
-                      Left:=(Left + Right - i) div 2;
-                  end;
-              end;
-              ExtUTF8Out(Canvas.Handle, Left, Top, ETO_OPAQUE or ETO_CLIPPED, @aRect, PChar(ca.Text), Length(ca.Text), nil);
-            end;
-          end;
+                  With aRect Do
+                    Begin
+                      Inc(Top, 2);
+                      Inc(Left, constCellPadding);
+                      Dec(Right, constCellPadding);
+                      If Right<Left Then
+                        Right := Left;
+                      If Left>Right Then
+                        Left := Right;
+                      If Bottom<Top Then
+                        Bottom := Top;
+                      If Top>Bottom Then
+                        Top := Bottom;
+                      Top := (Top + Bottom - Canvas.TextHeight(ca.Text)) Div 2 ;
+                      If (Left <> Right) And (Top <> Bottom) Then
+                        Begin
+                          If Canvas.TextStyle.Alignment <> taLeftJustify Then
+                            Begin
+                              i := Canvas.TextWidth(ca.Text);
+                              If i < Right - Left Then
+                                Case Canvas.TextStyle.Alignment Of 
+                                  taRightJustify:
+                                                  Left := Right - i;
+                                  taCenter:
+                                            Left := (Left + Right - i) Div 2;
+                                End;
+                            End;
+                          ExtUTF8Out(Canvas.Handle, Left, Top, ETO_OPAQUE Or
+                                     ETO_CLIPPED, @aRect, PChar(ca.Text), Length
+                          (ca.Text), nil);
+                        End;
+                    End;
 
-        end;
-      end;
-    end;
-  end;
-  if gdFixed in aState then
+                End;
+            End;
+        End;
+    End;
+  If gdFixed In aState Then
     DefaultDrawCell(aCol, aRow, RR, aState)
-  else
+  Else
     DrawCellGrid(aCol, aRow, RR, aState);
-end;
+End;
 
-procedure TVarGrid.ColRowMoved(IsColumn: Boolean; FromIndex, ToIndex: Integer);
-begin
+Procedure TVarGrid.ColRowMoved(IsColumn: Boolean; FromIndex, ToIndex: Integer);
+Begin
   inherited ColRowMoved(IsColumn, FromIndex, ToIndex);
   UpdateColumnsMap;
-end;
+End;
 
-procedure TVarGrid.PrepareCanvas(aCol, aRow: Integer; aState: TGridDrawState);
-var
+Procedure TVarGrid.PrepareCanvas(aCol, aRow: Integer; aState: TGridDrawState);
+
+Var 
   F: TCustomForm;
-begin
-  if FHideSelection and (FSelCount = 0) then begin
-    F:=GetParentForm(Self);
-    if (F <> nil) and (F.ActiveControl <> Self) then
-      aState:=aState - [gdSelected];
-  end;
+Begin
+  If FHideSelection And (FSelCount = 0) Then
+    Begin
+      F := GetParentForm(Self);
+      If (F <> Nil) And (F.ActiveControl <> Self) Then
+        aState := aState - [gdSelected];
+    End;
   inherited PrepareCanvas(aCol, aRow, aState);
-  with Canvas do
-    if (Font.Color = clWindow) and (Brush.Color = clHighlight) then begin
-      Font.Color:=clHighlightText;
+  With Canvas Do
+    If (Font.Color = clWindow) And (Brush.Color = clHighlight) Then
+      Begin
+        Font.Color := clHighlightText;
 {$ifdef LCLgtk2}
-      Brush.Color:=ColorToRGB(Brush.Color); // Workaround for LCL bug
+        Brush.Color := ColorToRGB(Brush.Color);
+        // Workaround for LCL bug
 {$endif LCLgtk2}
-  end;
-end;
+      End;
+End;
 
-procedure TVarGrid.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-var
+Procedure TVarGrid.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y:
+                             Integer);
+
+Var 
   pt: TPoint;
   IsCtrl, CheckBoxClicked: boolean;
   ca: TCellAttributes;
   R, RR: TRect;
-begin
+Begin
 {$ifdef LCLcarbon}
-  IsCtrl:=ssMeta in GetCarbonShiftState;
+  IsCtrl := ssMeta In GetCarbonShiftState;
 {$else}
 {$ifdef LCLCocoa}
-  IsCtrl:=ssMeta in Shift;
+  IsCtrl := ssMeta In Shift;
 {$else}
-  IsCtrl:=ssCtrl in Shift;
+  IsCtrl := ssCtrl In Shift;
 {$endif LCLCocoa}
 {$endif LCLcarbon}
-  CheckBoxClicked:=False;
-  pt:=MouseToCell(Point(X,Y));
-  if ssLeft in Shift then begin
-    SetupCell(pt.x, pt.y, [], ca);
-    RR:=CellRect(pt.x, pt.y);
-    Inc(RR.Left, ca.Indent);
-    if (RR.Left <= RR.Right) and (coDrawTreeButton in ca.Options) then begin
-      R:=RR;
-      R.Right:=R.Left + (R.Bottom - R.Top);
-      if R.Right > RR.Right then
-        R.Right:=RR.Right;
-      if PtInRect(R, Point(X,Y)) then begin
-        DoOnTreeButtonClick(pt.x, pt.y);
-        InvalidateCell(pt.x, pt.y);
-        if Assigned(OnDblClick) and (ssDouble in Shift) then
-          FNoDblClick:=True;
-      end;
-      Inc(RR.Left, RR.Bottom - RR.Top);
-    end;
-    if (RR.Left <= RR.Right) and (coDrawCheckBox in ca.Options) then begin
-      R:=RR;
-      R.Right:=R.Left + (R.Bottom - R.Top);
-      if R.Right > RR.Right then
-        R.Right:=RR.Right;
-      if PtInRect(R, Point(X,Y)) then begin
-        DoOnCheckBoxClick(pt.x, pt.y);
-        InvalidateCell(pt.x, pt.y);
-        CheckBoxClicked:=True;
-        if Assigned(OnDblClick) and (ssDouble in Shift) then
-          FNoDblClick:=True;
-      end;
-    end;
-  end;
-  if (ssRight in Shift) {$ifdef darwin} or (Shift*[ssLeft, ssCtrl] = [ssLeft, ssCtrl]) {$endif} then begin
-    SetFocus;
-    if (pt.x >= FixedCols) and (pt.y >= FixedRows) then begin
-      if MultiSelect and (SelCount > 0) and not RowSelected[pt.y - FixedRows] then
-        RemoveSelection;
-      Row:=pt.y - FixedRows;
-    end;
-  end
-  else
-    if MultiSelect and (ssLeft in Shift) and (pt.x >= FixedCols) and (pt.y >= FixedRows) then begin
-      if IsCtrl then begin
-        if SelCount = 0 then
-          RowSelected[Row]:=True;
-        RowSelected[pt.y - FixedRows]:=not RowSelected[pt.y - FixedRows];
-        FAnchor:=-1;
-      end
-      else
-        if ssShift in Shift then
-          SelectRange(Row, pt.y - FixedRows)
-        else begin
-          if (SelCount > 0) and not CheckBoxClicked then
+  CheckBoxClicked := False;
+  pt := MouseToCell(Point(X,Y));
+  If ssLeft In Shift Then
+    Begin
+      SetupCell(pt.x, pt.y, [], ca);
+      RR := CellRect(pt.x, pt.y);
+      Inc(RR.Left, ca.Indent);
+      If (RR.Left <= RR.Right) And (coDrawTreeButton In ca.Options) Then
+        Begin
+          R := RR;
+          R.Right := R.Left + (R.Bottom - R.Top);
+          If R.Right > RR.Right Then
+            R.Right := RR.Right;
+          If PtInRect(R, Point(X,Y)) Then
+            Begin
+              DoOnTreeButtonClick(pt.x, pt.y);
+              InvalidateCell(pt.x, pt.y);
+              If Assigned(OnDblClick) And (ssDouble In Shift) Then
+                FNoDblClick := True;
+            End;
+          Inc(RR.Left, RR.Bottom - RR.Top);
+        End;
+      If (RR.Left <= RR.Right) And (coDrawCheckBox In ca.Options) Then
+        Begin
+          R := RR;
+          R.Right := R.Left + (R.Bottom - R.Top);
+          If R.Right > RR.Right Then
+            R.Right := RR.Right;
+          If PtInRect(R, Point(X,Y)) Then
+            Begin
+              DoOnCheckBoxClick(pt.x, pt.y);
+              InvalidateCell(pt.x, pt.y);
+              CheckBoxClicked := True;
+              If Assigned(OnDblClick) And (ssDouble In Shift) Then
+                FNoDblClick := True;
+            End;
+        End;
+    End;
+  If (ssRight In Shift) {$ifdef darwin} Or (Shift*[ssLeft, ssCtrl] = [ssLeft,
+     ssCtrl]) {$endif} Then
+    Begin
+      SetFocus;
+      If (pt.x >= FixedCols) And (pt.y >= FixedRows) Then
+        Begin
+          If MultiSelect And (SelCount > 0) And Not RowSelected[pt.y - FixedRows
+             ] Then
             RemoveSelection;
-          FAnchor:=-1;
-        end;
-    end;
+          Row := pt.y - FixedRows;
+        End;
+    End
+  Else
+    If MultiSelect And (ssLeft In Shift) And (pt.x >= FixedCols) And (pt.y >=
+       FixedRows) Then
+      Begin
+        If IsCtrl Then
+          Begin
+            If SelCount = 0 Then
+              RowSelected[Row] := True;
+            RowSelected[pt.y - FixedRows] := Not RowSelected[pt.y - FixedRows];
+            FAnchor := -1;
+          End
+        Else
+          If ssShift In Shift Then
+            SelectRange(Row, pt.y - FixedRows)
+        Else
+          Begin
+            If (SelCount > 0) And Not CheckBoxClicked Then
+              RemoveSelection;
+            FAnchor := -1;
+          End;
+      End;
   inherited MouseDown(Button, Shift, X, Y);
-end;
+End;
 
-procedure TVarGrid.MouseMove(Shift: TShiftState; X, Y: Integer);
-var
+Procedure TVarGrid.MouseMove(Shift: TShiftState; X, Y: Integer);
+
+Var 
   pt: TPoint;
-begin
+Begin
   NullStrictConvert := False;
   inherited MouseMove(Shift, X, Y);
-  pt:=MouseToCell(Point(x, y));
-  if (FHintCell.x <> -1) and ((FHintCell.x <> pt.x) or (FHintCell.y <> pt.y)) then begin
-    Application.CancelHint;
-    FHintCell.x:=-1;
-  end;
-end;
+  pt := MouseToCell(Point(x, y));
+  If (FHintCell.x <> -1) And ((FHintCell.x <> pt.x) Or (FHintCell.y <> pt.y))
+    Then
+    Begin
+      Application.CancelHint;
+      FHintCell.x := -1;
+    End;
+End;
 
-procedure TVarGrid.KeyDown(var Key: Word; Shift: TShiftState);
-var
+Procedure TVarGrid.KeyDown(Var Key: Word; Shift: TShiftState);
+
+Var 
   r, k: integer;
   ca: TCellAttributes;
-begin
-  if EditorMode then begin
-    if Key = VK_ESCAPE then begin
-      EditorHide;
-      SetFocus;
-    end;
-    exit;
-  end;
+Begin
+  If EditorMode Then
+    Begin
+      If Key = VK_ESCAPE Then
+        Begin
+          EditorHide;
+          SetFocus;
+        End;
+      exit;
+    End;
 
-  r:=Row;
-  k:=Key;
+  r := Row;
+  k := Key;
 
-  if (Shift = []) and ( (k = VK_SPACE) or (k = VK_LEFT) or (k = VK_RIGHT) or (k = VK_ADD) or (k = VK_SUBTRACT) ) then begin
-    SetupCell(FixedCols, inherited Row, [], ca);
-    case k of
-      VK_SPACE:
-        if coDrawCheckBox in ca.Options then begin
-          DoOnCheckBoxClick(FixedCols, inherited Row);
-          Key:=0;
-          exit;
-        end;
-      VK_LEFT, VK_SUBTRACT:
-        if (coDrawTreeButton in ca.Options) and ca.Expanded then begin
-          DoOnTreeButtonClick(FixedCols, inherited Row);
-          Key:=0;
-          exit;
-        end;
-      VK_RIGHT, VK_ADD:
-        if (coDrawTreeButton in ca.Options) and not ca.Expanded then begin
-          DoOnTreeButtonClick(FixedCols, inherited Row);
-          Key:=0;
-          exit;
-        end;
-    end;
-  end;
+  If (Shift = []) And ( (k = VK_SPACE) Or (k = VK_LEFT) Or (k = VK_RIGHT) Or (k
+     = VK_ADD) Or (k = VK_SUBTRACT) ) Then
+    Begin
+      SetupCell(FixedCols, Inherited Row, [], ca);
+      Case k Of 
+        VK_SPACE:
+                  If coDrawCheckBox In ca.Options Then
+                    Begin
+                      DoOnCheckBoxClick(FixedCols, Inherited Row);
+                      Key := 0;
+                      exit;
+                    End;
+        VK_LEFT, VK_SUBTRACT:
+                              If (coDrawTreeButton In ca.Options) And ca.
+                                 Expanded Then
+                                Begin
+                                  DoOnTreeButtonClick(FixedCols, Inherited Row);
+                                  Key := 0;
+                                  exit;
+                                End;
+        VK_RIGHT, VK_ADD:
+                          If (coDrawTreeButton In ca.Options) And Not ca.
+                             Expanded Then
+                            Begin
+                              DoOnTreeButtonClick(FixedCols, Inherited Row);
+                              Key := 0;
+                              exit;
+                            End;
+      End;
+    End;
 
   inherited KeyDown(Key, Shift);
 
-  if MultiSelect then begin
-    if ssCtrl in Shift then begin
-      if k = VK_SPACE then
-        RowSelected[Row]:=not RowSelected[Row];
-      FAnchor:=-1;
-    end
-    else
-      if ssShift in Shift then begin
-        SelectRange(r, Row);
-      end
-      else
-        if k in [VK_LEFT, VK_RIGHT, VK_UP, VK_DOWN, VK_HOME, VK_END, VK_NEXT, VK_PRIOR] then begin
-          if SelCount > 0 then
-            RemoveSelection;
-          FAnchor:=-1;
-        end;
-  end;
-  if (Key = VK_RETURN) and (Shift = []) and Assigned(OnDblClick) then
+  If MultiSelect Then
+    Begin
+      If ssCtrl In Shift Then
+        Begin
+          If k = VK_SPACE Then
+            RowSelected[Row] := Not RowSelected[Row];
+          FAnchor := -1;
+        End
+      Else
+        If ssShift In Shift Then
+          Begin
+            SelectRange(r, Row);
+          End
+      Else
+        If k In [VK_LEFT, VK_RIGHT, VK_UP, VK_DOWN, VK_HOME, VK_END, VK_NEXT,
+           VK_PRIOR] Then
+          Begin
+            If SelCount > 0 Then
+              RemoveSelection;
+            FAnchor := -1;
+          End;
+    End;
+  If (Key = VK_RETURN) And (Shift = []) And Assigned(OnDblClick) Then
     OnDblClick(Self);
-end;
+End;
 
-procedure TVarGrid.UTF8KeyPress(var UTF8Key: TUTF8Char);
-var
+Procedure TVarGrid.UTF8KeyPress(Var UTF8Key: TUTF8Char);
+
+Var 
   i, r: integer;
-begin
+Begin
   inherited UTF8KeyPress(UTF8Key);
   exit;
-  if UTF8Key = #0 then
+  If UTF8Key = #0 Then
     exit;
-  FSearchTimer.Enabled:=False;
-  FSearchTimer.Enabled:=True;
-  if FCurSearch = '' then
-    i:=0
-  else
-    i:=Row;
-  FCurSearch:=FCurSearch + UTF8Key;
-  if Assigned(FOnQuickSearch) then begin
-    r:=i;
-    FOnQuickSearch(Self, FCurSearch, r);
-    if r <> i then
-      Row:=r;
-  end
-  else begin
-    i:=FindRow(FCurSearch, i);
-    if i >= 0 then
-      Row:=i;
-  end;
-end;
+  FSearchTimer.Enabled := False;
+  FSearchTimer.Enabled := True;
+  If FCurSearch = '' Then
+    i := 0
+  Else
+    i := Row;
+  FCurSearch := FCurSearch + UTF8Key;
+  If Assigned(FOnQuickSearch) Then
+    Begin
+      r := i;
+      FOnQuickSearch(Self, FCurSearch, r);
+      If r <> i Then
+        Row := r;
+    End
+  Else
+    Begin
+      i := FindRow(FCurSearch, i);
+      If i >= 0 Then
+        Row := i;
+    End;
+End;
 
-procedure TVarGrid.DoOnCellAttributes(ACol, ARow, ADataCol: integer; AState: TGridDrawState; var CellAttribs: TCellAttributes);
-begin
-  if Assigned(FOnCellAttributes) then
+Procedure TVarGrid.DoOnCellAttributes(ACol, ARow, ADataCol: integer; AState:
+                                      TGridDrawState; Var CellAttribs:
+                                      TCellAttributes);
+Begin
+  If Assigned(FOnCellAttributes) Then
     FOnCellAttributes(Self, ACol, ARow, ADataCol, AState, CellAttribs);
-end;
+End;
 
-procedure TVarGrid.HeaderClick(IsColumn: Boolean; index: Integer);
-var
+Procedure TVarGrid.HeaderClick(IsColumn: Boolean; index: Integer);
+
+Var 
   i: integer;
-begin
+Begin
   inherited HeaderClick(IsColumn, index);
-  if FItems.Count = 0 then
+  If FItems.Count = 0 Then
     exit;
-  if IsColumn and (FSortColumn >= 0) then begin
-    fGridState:=gsNormal;
-    i:=ColToDataCol(index);
-    if FSortColumn = i then begin
-      if SortOrder = soAscending then
-        SortOrder:=soDescending
-      else
-        SortOrder:=soAscending;
-    end
-    else begin
-      SortOrder:=soAscending;
-      SortColumn:=i;
-    end;
-  end;
-end;
+  If IsColumn And (FSortColumn >= 0) Then
+    Begin
+      fGridState := gsNormal;
+      i := ColToDataCol(index);
+      If FSortColumn = i Then
+        Begin
+          If SortOrder = soAscending Then
+            SortOrder := soDescending
+          Else
+            SortOrder := soAscending;
+        End
+      Else
+        Begin
+          SortOrder := soAscending;
+          SortColumn := i;
+        End;
+    End;
+End;
 
-procedure TVarGrid.AutoAdjustColumn(aCol: Integer);
-var
+Procedure TVarGrid.AutoAdjustColumn(aCol: Integer);
+
+Var 
   i, j, wd, h, fr: integer;
   ca: TCellAttributes;
-begin
-  wd:=4;
-  fr:=FixedRows;
-  for i:=0 to FItems.Count - 1 do begin
-    h:=RowHeights[i + fr];
-    if h > 0 then begin
-      SetupCell(aCol, i + fr, [], ca);
-      j:=Canvas.TextWidth(ca.Text) + 6;
-      Inc(j, ca.Indent);
-      if coDrawTreeButton in ca.Options then
-        Inc(j, h);
-      if coDrawCheckBox in ca.Options then
-        Inc(j, h);
-      if (ca.ImageIndex <> -1) and Assigned(FImages) then
-        Inc(j, FImages.Width + 2);
-      if j > wd then
-        wd:=j;
-    end;
-  end;
-  ColumnFromGridColumn(aCol).Width:=wd;
-end;
-procedure TVarGrid.VisualChangeNew;
-begin
+Begin
+  wd := 4;
+  fr := FixedRows;
+  For i:=0 To FItems.Count - 1 Do
+    Begin
+      h := RowHeights[i + fr];
+      If h > 0 Then
+        Begin
+          SetupCell(aCol, i + fr, [], ca);
+          j := Canvas.TextWidth(ca.Text) + 6;
+          Inc(j, ca.Indent);
+          If coDrawTreeButton In ca.Options Then
+            Inc(j, h);
+          If coDrawCheckBox In ca.Options Then
+            Inc(j, h);
+          If (ca.ImageIndex <> -1) And Assigned(FImages) Then
+            Inc(j, FImages.Width + 2);
+          If j > wd Then
+            wd := j;
+        End;
+    End;
+  ColumnFromGridColumn(aCol).Width := wd;
+End;
+Procedure TVarGrid.VisualChangeNew;
+Begin
   VisualChange;
-end;
+End;
 
-procedure TVarGrid.VisualChange;
-var i:integer;
-begin
+Procedure TVarGrid.VisualChange;
+
+Var i: integer;
+Begin
   inherited VisualChange;
-  if Images <> nil then i:=Images.Height;
-  if HandleAllocated then
-    DefaultRowHeight:=Max(Canvas.TextHeight('Xy') + 5,i);
+  If Images <> Nil Then i := Images.Height;
+  If HandleAllocated Then
+    DefaultRowHeight := Max(Canvas.TextHeight('Xy') + 5,i);
   UpdateColumnsMap;
-end;
+End;
 
-procedure TVarGrid.DrawColumnText(aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
-var
+Procedure TVarGrid.DrawColumnText(aCol, aRow: Integer; aRect: TRect; aState:
+                                  TGridDrawState);
+
+Var 
   R: TRect;
   i: integer;
-begin
-  if (gdFixed in aState) and (aRow=0) and (aCol>=FirstGridColumn) then begin
-    R:=aRect;
-    if FSortColumn = ColToDataCol(aCol) then begin
-      R.Right:=R.Left + R.Bottom - R.Top;
-      InflateRect(R, -5, -5);
-      Types.OffsetRect(R, -3, 0);
-      Dec(R.Bottom, 2);
-      aRect.Left:=R.Right + 2;
-    end;
-    inherited DrawColumnText(aCol, aRow, aRect, aState);
-    if FSortColumn = ColToDataCol(aCol) then
-      with Canvas do begin
-        Pen.Color:=clGrayText;
-        i:=(R.Left + R.Right ) div 2;
-        if SortOrder = soAscending then begin
-          MoveTo(i + (i - R.Left) - 1, R.Bottom - 1);
-          LineTo(i, R.Top - 1);
-          MoveTo(i, R.Top);
-          LineTo(i - (R.Right - i) + 1, R.Bottom);
-          LineTo(R.Right, R.Bottom);
-        end
-        else begin
-          MoveTo(i + (i - R.Left) - 1, R.Top + 1);
-          LineTo(i, R.Bottom + 1);
-          MoveTo(i, R.Bottom);
-          LineTo(i - (R.Right - i) + 1, R.Top);
-          LineTo(R.Right, R.Top);
-        end;
-      end;
-  end;
-end;
+Begin
+  If (gdFixed In aState) And (aRow=0) And (aCol>=FirstGridColumn) Then
+    Begin
+      R := aRect;
+      If FSortColumn = ColToDataCol(aCol) Then
+        Begin
+          R.Right := R.Left + R.Bottom - R.Top;
+          InflateRect(R, -5, -5);
+          Types.OffsetRect(R, -3, 0);
+          Dec(R.Bottom, 2);
+          aRect.Left := R.Right + 2;
+        End;
+      inherited DrawColumnText(aCol, aRow, aRect, aState);
+      If FSortColumn = ColToDataCol(aCol) Then
+        With Canvas Do
+          Begin
+            Pen.Color := clGrayText;
+            i := (R.Left + R.Right ) Div 2;
+            If SortOrder = soAscending Then
+              Begin
+                MoveTo(i + (i - R.Left) - 1, R.Bottom - 1);
+                LineTo(i, R.Top - 1);
+                MoveTo(i, R.Top);
+                LineTo(i - (R.Right - i) + 1, R.Bottom);
+                LineTo(R.Right, R.Bottom);
+              End
+            Else
+              Begin
+                MoveTo(i + (i - R.Left) - 1, R.Top + 1);
+                LineTo(i, R.Bottom + 1);
+                MoveTo(i, R.Bottom);
+                LineTo(i - (R.Right - i) + 1, R.Top);
+                LineTo(R.Right, R.Top);
+              End;
+          End;
+    End;
+End;
 
 
-procedure TVarGrid.DblClick;
-var
+Procedure TVarGrid.DblClick;
+
+Var 
   pt: TPoint;
-begin
-  if FNoDblClick then begin
-    FNoDblClick:=False;
-    exit;
-  end;
-  pt:=MouseToCell(ScreenToClient(Mouse.CursorPos));
-  if (pt.y < FixedRows) and (pt.y = 0) and (Cursor <> crHSplit) then
+Begin
+  If FNoDblClick Then
+    Begin
+      FNoDblClick := False;
+      exit;
+    End;
+  pt := MouseToCell(ScreenToClient(Mouse.CursorPos));
+  If (pt.y < FixedRows) And (pt.y = 0) And (Cursor <> crHSplit) Then
     exit;
   inherited DblClick;
-end;
+End;
 
-procedure TVarGrid.Click;
-begin
-  if Assigned(OnClick) then
+Procedure TVarGrid.Click;
+Begin
+  If Assigned(OnClick) Then
     OnClick(Self);
-end;
+End;
 
-procedure TVarGrid.GetCheckBoxState(const aCol, aRow: Integer; var aState: TCheckboxState);
-var
+Procedure TVarGrid.GetCheckBoxState(Const aCol, aRow: Integer; Var aState:
+                                    TCheckboxState);
+
+Var 
   s: string;
-begin
-  if (aCol >= FixedCols) and (aRow >= FixedRows) then begin
-    s:=Items[ColToDataCol(aCol), aRow - FixedRows];
-    with Columns[GridColumnFromColumnIndex(aCol)] do
-      if s = ValueChecked then
-        aState:=cbChecked
-      else
-        if s = ValueUnchecked then
-          aState:=cbUnchecked
-        else
-          aState:=cbGrayed;
-  end;
+Begin
+  If (aCol >= FixedCols) And (aRow >= FixedRows) Then
+    Begin
+      s := Items[ColToDataCol(aCol), aRow - FixedRows];
+      With Columns[GridColumnFromColumnIndex(aCol)] Do
+        If s = ValueChecked Then
+          aState := cbChecked
+        Else
+          If s = ValueUnchecked Then
+            aState := cbUnchecked
+        Else
+          aState := cbGrayed;
+    End;
   inherited GetCheckBoxState(aCol, aRow, aState);
-end;
+End;
 
-procedure TVarGrid.SetCheckboxState(const aCol, aRow: Integer; const aState: TCheckboxState);
-var
+Procedure TVarGrid.SetCheckboxState(Const aCol, aRow: Integer; Const aState:
+                                    TCheckboxState);
+
+Var 
   s: string;
-begin
-  if (aCol >= FixedCols) and (aRow >= FixedRows) then begin
-    with Columns[GridColumnFromColumnIndex(aCol)] do
-      case aState of
-        cbUnchecked:
-          s:=ValueUnchecked;
-        cbChecked:
-          s:=ValueChecked;
-        else
-          s:='?';
-      end;
-    Items[ColToDataCol(aCol), aRow - FixedRows]:=s;
-  end;
+Begin
+  If (aCol >= FixedCols) And (aRow >= FixedRows) Then
+    Begin
+      With Columns[GridColumnFromColumnIndex(aCol)] Do
+        Case aState Of 
+          cbUnchecked:
+                       s := ValueUnchecked;
+          cbChecked:
+                     s := ValueChecked;
+          Else
+            s := '?';
+        End;
+      Items[ColToDataCol(aCol), aRow - FixedRows] := s;
+    End;
   inherited SetCheckboxState(aCol, aRow, aState);
-end;
+End;
 
-procedure TVarGrid.SetupCell(ACol, ARow: integer; AState: TGridDrawState; out CellAttribs: TCellAttributes);
-var
+Procedure TVarGrid.SetupCell(ACol, ARow: integer; AState: TGridDrawState; out
+                             CellAttribs: TCellAttributes);
+
+Var 
   v: variant;
   dc: integer;
-begin
-  if (ACol < 0) or (ARow < 0) then
+Begin
+  If (ACol < 0) Or (ARow < 0) Then
     exit;
-  CellAttribs.ImageIndex:=-1;
-  CellAttribs.Indent:=0;
-  CellAttribs.Options:=[];
-  CellAttribs.State:=cbUnchecked;
-  CellAttribs.Expanded:=True;
-  if ACol >= FixedCols then begin
-    dc:=ColToDataCol(ACol);
-    if ARow >= FixedRows then begin
-      v:=Items[dc, ARow - FixedRows];
-      if not VarIsNull(v) and not VarIsEmpty(v) then
-        CellAttribs.Text:=UTF8Encode(WideString(v))
-      else
-        CellAttribs.Text:='';
-    end
-    else
-      CellAttribs.Text:=ColumnFromGridColumn(ACol).Title.Caption;
-  end
-  else
-    dc:=-1;
-  DoOnCellAttributes(ACol - FixedCols, ARow - FixedRows, dc, AState, CellAttribs);
-end;
+  CellAttribs.ImageIndex := -1;
+  CellAttribs.Indent := 0;
+  CellAttribs.Options := [];
+  CellAttribs.State := cbUnchecked;
+  CellAttribs.Expanded := True;
+  If ACol >= FixedCols Then
+    Begin
+      dc := ColToDataCol(ACol);
+      If ARow >= FixedRows Then
+        Begin
+          v := Items[dc, ARow - FixedRows];
+          If Not VarIsNull(v) And Not VarIsEmpty(v) Then
+            CellAttribs.Text := UTF8Encode(WideString(v))
+          Else
+            CellAttribs.Text := '';
+        End
+      Else
+        CellAttribs.Text := ColumnFromGridColumn(ACol).Title.Caption;
+    End
+  Else
+    dc := -1;
+  DoOnCellAttributes(ACol - FixedCols, ARow - FixedRows, dc, AState, CellAttribs
+  );
+End;
 
-procedure TVarGrid.DoOnCheckBoxClick(ACol, ARow: integer);
-var
+Procedure TVarGrid.DoOnCheckBoxClick(ACol, ARow: integer);
+
+Var 
   i, dc, c: integer;
   ca: TCellAttributes;
   st: TCheckBoxState;
-begin
-  if Assigned(FOnCheckBoxClick) then begin
-    dc:=ColToDataCol(ACol);
-    c:=ACol - FixedCols;
-    FOnCheckBoxClick(Self, c, ARow - FixedRows, dc);
-    if (SelCount > 0) and RowSelected[ARow - FixedRows] then begin
-      SetupCell(ACol, ARow, [], ca);
-      st:=ca.State;
-      for i:=0 to Items.Count - 1 do
-        if RowSelected[i] then begin
-          SetupCell(ACol, i + FixedRows, [], ca);
-          if (coDrawCheckBox in ca.Options) and (ca.State <> st) then
-            FOnCheckBoxClick(Self, c, i, dc);
-        end;
-    end;
-  end;
-end;
+Begin
+  If Assigned(FOnCheckBoxClick) Then
+    Begin
+      dc := ColToDataCol(ACol);
+      c := ACol - FixedCols;
+      FOnCheckBoxClick(Self, c, ARow - FixedRows, dc);
+      If (SelCount > 0) And RowSelected[ARow - FixedRows] Then
+        Begin
+          SetupCell(ACol, ARow, [], ca);
+          st := ca.State;
+          For i:=0 To Items.Count - 1 Do
+            If RowSelected[i] Then
+              Begin
+                SetupCell(ACol, i + FixedRows, [], ca);
+                If (coDrawCheckBox In ca.Options) And (ca.State <> st) Then
+                  FOnCheckBoxClick(Self, c, i, dc);
+              End;
+        End;
+    End;
+End;
 
-procedure TVarGrid.DoOnTreeButtonClick(ACol, ARow: integer);
-begin
-  if Assigned(FOnTreeButtonClick) then
-    FOnTreeButtonClick(Self, ACol - FixedCols, ARow - FixedRows, ColToDataCol(ACol));
-end;
+Procedure TVarGrid.DoOnTreeButtonClick(ACol, ARow: integer);
+Begin
+  If Assigned(FOnTreeButtonClick) Then
+    FOnTreeButtonClick(Self, ACol - FixedCols, ARow - FixedRows, ColToDataCol(
+                       ACol));
+End;
 
-function TVarGrid.DoMouseWheelDown(Shift: TShiftState; MousePos: TPoint): Boolean;
-begin
+Function TVarGrid.DoMouseWheelDown(Shift: TShiftState; MousePos: TPoint):
+
+                                                                         Boolean
+;
+Begin
   Result := False;
-  if Assigned(OnMouseWheelDown) then
+  If Assigned(OnMouseWheelDown) Then
     OnMouseWheelDown(Self, Shift, MousePos, Result);
-end;
+End;
 
-function TVarGrid.DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean;
-begin
+Function TVarGrid.DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean;
+Begin
   Result := False;
-  if Assigned(OnMouseWheelUp) then
+  If Assigned(OnMouseWheelUp) Then
     OnMouseWheelUp(Self, Shift, MousePos, Result);
-end;
+End;
 
-function TVarGrid.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint): Boolean;
-begin
-  Result:=inherited DoMouseWheel(Shift, WheelDelta, MousePos);
-  if not Result then begin
-    if Mouse.WheelScrollLines = -1 then
+Function TVarGrid.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer; MousePos
+                               : TPoint): Boolean;
+Begin
+  Result := Inherited DoMouseWheel(Shift, WheelDelta, MousePos);
+  If Not Result Then
+    Begin
+      If Mouse.WheelScrollLines = -1 Then
   {$IF LCL_FULLVERSION < 1080000}
-      GridMouseWheel(Shift, -WheelDelta*VisibleRowCount div 120)
-    else
-      GridMouseWheel(Shift, -WheelDelta*Mouse.WheelScrollLines div 120);
+        GridMouseWheel(Shift, -WheelDelta*VisibleRowCount Div 120)
+      Else
+        GridMouseWheel(Shift, -WheelDelta*Mouse.WheelScrollLines Div 120);
   {$ENDIF}
   {$IF LCL_FULLVERSION >= 1080000}
-      GridMouseWheel(Shift, WheelDelta*VisibleRowCount div 120)
-    else
-      GridMouseWheel(Shift, -WheelDelta div 120);
+      GridMouseWheel(Shift, WheelDelta*VisibleRowCount Div 120)
+      Else
+        GridMouseWheel(Shift, -WheelDelta Div 120);
   {$ENDIF}
       Result := True;
-  end;
-end;
+    End;
+End;
 
 constructor TVarGrid.Create(AOwner: TComponent);
-begin
-  FRow:=-1;
-  FHintCell.x:=-1;
+Begin
+  FRow := -1;
+  FHintCell.x := -1;
   inherited Create(AOwner);
-  FixedRows:=1;
-  FixedCols:=0;
-  Options:=[goRowSelect, goThumbTracking, goVertLine, goHorzLine, goColSizing, goColMoving, goDblClickAutoSize, goFixedHorzLine, goFixedVertLine];
-  MouseWheelOption:=mwGrid;
-  FItems:=TVarList.Create(1, 0);
-  FItems.OnDataChanged:=@ItemsChanged;
-  ItemsChanged(nil);
-  TitleStyle:=tsNative;
-  FAnchor:=-1;
-  FSortColumn:=-1;
-  ShowHint:=True;
+  FixedRows := 1;
+  FixedCols := 0;
+  Options := [goRowSelect, goThumbTracking, goVertLine, goHorzLine, goColSizing,
+             goColMoving, goDblClickAutoSize, goFixedHorzLine, goFixedVertLine];
+  MouseWheelOption := mwGrid;
+  FItems := TVarList.Create(1, 0);
+  FItems.OnDataChanged := @ItemsChanged;
+  ItemsChanged(Nil);
+  TitleStyle := tsNative;
+  FAnchor := -1;
+  FSortColumn := -1;
+  ShowHint := True;
   SetLength(FColumnsMap, 1);
-  FColumnsMap[0]:=0;
-  FSearchTimer:=TTimer.Create(Self);
-  with FSearchTimer do begin
-    Enabled:=False;
-    Interval:=1500;
-    OnTimer:=@DoSearchTimer;
-  end;
-  FastEditing:=False;
-  EditorBorderStyle:=bsSingle;
-end;
+  FColumnsMap[0] := 0;
+  FSearchTimer := TTimer.Create(Self);
+  With FSearchTimer Do
+    Begin
+      Enabled := False;
+      Interval := 1500;
+      OnTimer := @DoSearchTimer;
+    End;
+  FastEditing := False;
+  EditorBorderStyle := bsSingle;
+End;
 
 destructor TVarGrid.Destroy;
-begin
+Begin
   inherited Destroy;
   FItems.Free;
-end;
+End;
 
-function TVarGrid.EditorByStyle(Style: TColumnButtonStyle): TWinControl;
-begin
-  if Style = cbsAuto then begin
-    if FStrEditor = nil then begin
-      FStrEditor:=TVarGridStringEditor.Create(Self);
-      FStrEditor.Name :='VGStringEditor';
-      FStrEditor.Text:='';
-      FStrEditor.Visible:=False;
-      FStrEditor.Align:=alNone;
-      FStrEditor.BorderStyle:=bsSingle;
-    end;
-    Result:=FStrEditor;
-  end
-  else
-    Result:=inherited EditorByStyle(Style);
-end;
+Function TVarGrid.EditorByStyle(Style: TColumnButtonStyle): TWinControl;
+Begin
+  If Style = cbsAuto Then
+    Begin
+      If FStrEditor = Nil Then
+        Begin
+          FStrEditor := TVarGridStringEditor.Create(Self);
+          FStrEditor.Name := 'VGStringEditor';
+          FStrEditor.Text := '';
+          FStrEditor.Visible := False;
+          FStrEditor.Align := alNone;
+          FStrEditor.BorderStyle := bsSingle;
+        End;
+      Result := FStrEditor;
+    End
+  Else
+    Result := Inherited EditorByStyle(Style);
+End;
 
-procedure TVarGrid.RemoveSelection;
-var
+Procedure TVarGrid.RemoveSelection;
+
+Var 
   i: integer;
-begin
-  for i:=0 to FItems.Count - 1 do
-    RowSelected[i]:=False;
-  FSelCount:=0;
-end;
+Begin
+  For i:=0 To FItems.Count - 1 Do
+    RowSelected[i] := False;
+  FSelCount := 0;
+End;
 
-procedure TVarGrid.SelectAll;
-var
+Procedure TVarGrid.SelectAll;
+
+Var 
   i: integer;
-begin
-  for i:=0 to FItems.Count - 1 do
-    RowSelected[i]:=True;
-end;
+Begin
+  For i:=0 To FItems.Count - 1 Do
+    RowSelected[i] := True;
+End;
 
-procedure TVarGrid.Sort;
-var
+Procedure TVarGrid.Sort;
+
+Var 
   i, c: integer;
-begin
-  if (FSortColumn >= 0) and (FItems.Count > 0) then begin
-    c:=FSortColumn;
-    if Assigned(FOnSortColumn) then
-      FOnSortColumn(Self, c);
-    if not FItems.IsUpdating and (Row >= 0) and (Row < FItems.Count) then
-      FItems.RowOptions[Row]:=FItems.RowOptions[Row] or roCurRow;
-    FItems.Sort(c, SortOrder = soDescending);
-    if not FItems.IsUpdating then begin
-      if Assigned(FOnAfterSort) then
-        FOnAfterSort(Self);
-      for i:=0 to FItems.Count - 1 do
-        if LongBool(FItems.RowOptions[i] and roCurRow) then begin
-          FItems.RowOptions[i]:=FItems.RowOptions[i] and not roCurRow;
-          Row:=i;
+Begin
+  If (FSortColumn >= 0) And (FItems.Count > 0) Then
+    Begin
+      c := FSortColumn;
+      If Assigned(FOnSortColumn) Then
+        FOnSortColumn(Self, c);
+      If Not FItems.IsUpdating And (Row >= 0) And (Row < FItems.Count) Then
+        FItems.RowOptions[Row] := FItems.RowOptions[Row] Or roCurRow;
+      FItems.Sort(c, SortOrder = soDescending);
+      If Not FItems.IsUpdating Then
+        Begin
+          If Assigned(FOnAfterSort) Then
+            FOnAfterSort(Self);
+          For i:=0 To FItems.Count - 1 Do
+            If LongBool(FItems.RowOptions[i] And roCurRow) Then
+              Begin
+                FItems.RowOptions[i] := FItems.RowOptions[i] And Not roCurRow;
+                Row := i;
+                break;
+              End;
+          Invalidate;
+        End;
+    End;
+End;
+
+Function TVarGrid.ColToDataCol(ACol: integer): integer;
+Begin
+  If (ACol >= FixedCols) And (ACol <= High(FColumnsMap)) Then
+    Result := FColumnsMap[ACol]
+  Else
+    Result := -1;
+End;
+
+Function TVarGrid.DataColToCol(ADataCol: integer): integer;
+
+Var 
+  i: integer;
+Begin
+  For i:=FixedCols To High(FColumnsMap) Do
+    If FColumnsMap[i] = ADataCol Then
+      Begin
+        Result := i;
+        exit;
+      End;
+  Result := -1;
+End;
+
+Procedure TVarGrid.EnsureSelectionVisible;
+
+Var 
+  i: integer;
+Begin
+  If FSelCount > 0 Then
+    For i:=0 To FItems.Count - 1 Do
+      If RowSelected[i] Then
+        Begin
+          Row := i;
           break;
-        end;
-      Invalidate;
-    end;
-  end;
-end;
-
-function TVarGrid.ColToDataCol(ACol: integer): integer;
-begin
-  if (ACol >= FixedCols) and (ACol <= High(FColumnsMap)) then
-    Result:=FColumnsMap[ACol]
-  else
-    Result:=-1;
-end;
-
-function TVarGrid.DataColToCol(ADataCol: integer): integer;
-var
-  i: integer;
-begin
-  for i:=FixedCols to High(FColumnsMap) do
-    if FColumnsMap[i] = ADataCol then begin
-      Result:=i;
-      exit;
-    end;
-  Result:=-1;
-end;
-
-procedure TVarGrid.EnsureSelectionVisible;
-var
-  i: integer;
-begin
-  if FSelCount > 0 then
-    for i:=0 to FItems.Count - 1 do
-      if RowSelected[i] then begin
-        Row:=i;
-        break;
-      end;
+        End;
   EnsureRowVisible(Row);
-end;
+End;
 
-procedure TVarGrid.EnsureRowVisible(ARow: integer);
-begin
-  ARow:=ARow + FixedRows;
-  if ARow < TopRow then
-    TopRow:=ARow
-  else
-    if ARow > GCache.FullVisibleGrid.Bottom then
-      TopRow:=ARow - (GCache.FullVisibleGrid.Bottom - GCache.FullVisibleGrid.Top);
-end;
+Procedure TVarGrid.EnsureRowVisible(ARow: integer);
+Begin
+  ARow := ARow + FixedRows;
+  If ARow < TopRow Then
+    TopRow := ARow
+  Else
+    If ARow > GCache.FullVisibleGrid.Bottom Then
+      TopRow := ARow - (GCache.FullVisibleGrid.Bottom - GCache.FullVisibleGrid.
+                Top);
+End;
 
-procedure TVarGrid.BeginUpdate;
-begin
+Procedure TVarGrid.BeginUpdate;
+Begin
   inherited BeginUpdate;
   Items.BeginUpdate;
-end;
+End;
 
-procedure TVarGrid.EndUpdate(aRefresh: boolean);
-begin
+Procedure TVarGrid.EndUpdate(aRefresh: boolean);
+Begin
   inherited EndUpdate(aRefresh);
   Items.EndUpdate;
-end;
+End;
 
-procedure TVarGrid.EditCell(ACol, ARow: integer);
-begin
+Procedure TVarGrid.EditCell(ACol, ARow: integer);
+Begin
   SetFocus;
-  FOldOpt:=Options;
-  Options:=Options + [goEditing];
+  FOldOpt := Options;
+  Options := Options + [goEditing];
   EditorShowInCell(DataColToCol(ACol), ARow + FixedRows);
-end;
+End;
 
-procedure TVarGrid.DrawRow(aRow: Integer);
-var
+Procedure TVarGrid.DrawRow(aRow: Integer);
+
+Var 
   Gds: TGridDrawState;
   aCol: Integer;
   Rs: Boolean;
@@ -1351,148 +1581,165 @@ var
   Rgn: HRGN;
 {$endif LCLgtk2}
 
-  procedure DoDrawCell;
-  begin
-    with GCache do begin
-      if (aCol=HotCell.x) and (aRow=HotCell.y) and not ((PushedCell.X<>-1) and (PushedCell.Y<>-1)) then begin
-        Include(gds, gdHot);
-        HotCellPainted:=True;
-      end;
-      if ClickCellPushed and (aCol=PushedCell.x) and (aRow=PushedCell.y) then begin
-        Include(gds, gdPushed);
-      end;
-    end;
+Procedure DoDrawCell;
+Begin
+  With GCache Do
+    Begin
+      If (aCol=HotCell.x) And (aRow=HotCell.y) And Not ((PushedCell.X<>-1) And (
+         PushedCell.Y<>-1)) Then
+        Begin
+          Include(gds, gdHot);
+          HotCellPainted := True;
+        End;
+      If ClickCellPushed And (aCol=PushedCell.x) And (aRow=PushedCell.y) Then
+        Begin
+          Include(gds, gdPushed);
+        End;
+    End;
 {$ifdef LCLgtk2}
-    Rgn := CreateRectRgn(R.Left, R.Top, R.Right, R.Bottom);
-    SelectClipRgn(Canvas.Handle, Rgn);
-    DeleteObject(Rgn);
+  Rgn := CreateRectRgn(R.Left, R.Top, R.Right, R.Bottom);
+  SelectClipRgn(Canvas.Handle, Rgn);
+  DeleteObject(Rgn);
 {$endif LCLgtk2}
-    DrawCell(aCol, aRow, R, gds);
-  end;
+  DrawCell(aCol, aRow, R, gds);
+End;
 
-  function HorizontalIntersect(const aRect,bRect: TRect): boolean;
-  begin
-    result := (aRect.Left < bRect.Right) and (aRect.Right > bRect.Left);
-  end;
+Function HorizontalIntersect(Const aRect,bRect: TRect): boolean;
+Begin
+  result := (aRect.Left < bRect.Right) And (aRect.Right > bRect.Left);
+End;
 
-begin
+Begin
   Rs := false;
   // Upper and Lower bounds for this row
-  R.Left:=0;
+  R.Left := 0;
   ColRowToOffSet(False, True, aRow, R.Top, R.Bottom);
-  if R.Bottom <= R.Top then
+  If R.Bottom <= R.Top Then
     exit;
   // is this row within the ClipRect?
   ClipArea := Canvas.ClipRect;
-  if (R.Top >= ClipArea.Bottom) or (R.Bottom < ClipArea.Top) then
+  If (R.Top >= ClipArea.Bottom) Or (R.Bottom < ClipArea.Top) Then
     exit;
   // Draw columns in this row
-  with GCache.VisibleGrid do begin
-    for aCol:=left to Right do begin
-      ColRowToOffset(True, True, aCol, R.Left, R.Right);
-      if (R.Right <= R.Left) or not HorizontalIntersect(R, ClipArea) then
-        continue;
-      gds := [];
-      Rs := (goRowSelect in Options);
-      if ARow<FixedRows then
-        include(gds, gdFixed)
-      else begin
-        if (aCol=Col)and(aRow=inherited Row) then
-          gds := gds + [gdFocused, gdSelected]
-        else
-        if IsCellSelected[aCol, aRow] then
-          include(gds, gdSelected);
-      end;
+  With GCache.VisibleGrid Do
+    Begin
+      For aCol:=left To Right Do
+        Begin
+          ColRowToOffset(True, True, aCol, R.Left, R.Right);
+          If (R.Right <= R.Left) Or Not HorizontalIntersect(R, ClipArea) Then
+            continue;
+          gds := [];
+          Rs := (goRowSelect In Options);
+          If ARow<FixedRows Then
+            include(gds, gdFixed)
+          Else
+            Begin
+              If (aCol=Col)And(aRow=Inherited Row) Then
+                gds := gds + [gdFocused, gdSelected]
+              Else
+                If IsCellSelected[aCol, aRow] Then
+                  include(gds, gdSelected);
+            End;
 
-      DoDrawCell;
-    end;
+          DoDrawCell;
+        End;
 
-    // Draw Fixed Columns
-    For aCol:=0 to FixedCols-1 do begin
-      gds:=[gdFixed];
-      ColRowToOffset(True, True, aCol, R.Left, R.Right);
-      // is this column within the ClipRect?
-      if (R.Right > R.Left) and HorizontalIntersect(R, ClipArea) then
-        DoDrawCell;
-    end;
+      // Draw Fixed Columns
+      For aCol:=0 To FixedCols-1 Do
+        Begin
+          gds := [gdFixed];
+          ColRowToOffset(True, True, aCol, R.Left, R.Right);
+          // is this column within the ClipRect?
+          If (R.Right > R.Left) And HorizontalIntersect(R, ClipArea) Then
+            DoDrawCell;
+        End;
 
 {$ifdef LCLgtk2}
-    with ClipArea do
-      Rgn := CreateRectRgn(Left, Top, Right, Bottom);
-    SelectClipRgn(Canvas.Handle, Rgn);
-    DeleteObject(Rgn);
+      With ClipArea Do
+        Rgn := CreateRectRgn(Left, Top, Right, Bottom);
+      SelectClipRgn(Canvas.Handle, Rgn);
+      DeleteObject(Rgn);
 {$endif LCLgtk2}
 
-    // Draw the focus Rect
-    if FocusRectVisible and (ARow=inherited Row) and
-      ((Rs and (ARow>=Top) and (ARow<=Bottom)) or IsCellVisible(Col,ARow))
-    then begin
-      if EditorMode then begin
-      //if EditorAlwaysShown and (FEditor<>nil) and FEditor.Visible then begin
-        //DebugLn('No Draw Focus Rect');
-      end else begin
-        ColRowToOffset(True, True, Col, R.Left, R.Right);
-        // is this column within the ClipRect?
-        if HorizontalIntersect(R, ClipArea) then
-          DrawFocusRect(Col,inherited Row, R);
-      end;
-    end;
-  end;
-end;
+      // Draw the focus Rect
+      If FocusRectVisible And (ARow=Inherited Row) And
+         ((Rs And (ARow>=Top) And (ARow<=Bottom)) Or IsCellVisible(Col,ARow))
+        Then
+        Begin
+          If EditorMode Then
+            Begin
 
-function TVarGrid.GetCells(ACol, ARow: Integer): string;
-var
+
+        //if EditorAlwaysShown and (FEditor<>nil) and FEditor.Visible then begin
+              //DebugLn('No Draw Focus Rect');
+            End
+          Else
+            Begin
+              ColRowToOffset(True, True, Col, R.Left, R.Right);
+              // is this column within the ClipRect?
+              If HorizontalIntersect(R, ClipArea) Then
+                DrawFocusRect(Col,Inherited Row, R);
+            End;
+        End;
+    End;
+End;
+
+Function TVarGrid.GetCells(ACol, ARow: Integer): string;
+
+Var 
   dc: integer;
   v: variant;
-begin
-  Result:='';
-  dc:=ColToDataCol(ACol);
-  if ARow >= FixedRows then begin
-    v:=Items[dc, ARow - FixedRows];
-    if not VarIsNull(v) and not VarIsEmpty(v) then
-      Result:=UTF8Encode(WideString(v));
-  end;
-end;
+Begin
+  Result := '';
+  dc := ColToDataCol(ACol);
+  If ARow >= FixedRows Then
+    Begin
+      v := Items[dc, ARow - FixedRows];
+      If Not VarIsNull(v) And Not VarIsEmpty(v) Then
+        Result := UTF8Encode(WideString(v));
+    End;
+End;
 
-function TVarGrid.GetEditText(ACol, ARow: Longint): string;
-begin
-  Result:=GetCells(ACol, ARow);
-  if Assigned(OnGetEditText) then
+Function TVarGrid.GetEditText(ACol, ARow: Longint): string;
+Begin
+  Result := GetCells(ACol, ARow);
+  If Assigned(OnGetEditText) Then
     OnGetEditText(self, aCol - FixedCols, aRow - FixedRows, Result);
-end;
+End;
 
-procedure TVarGrid.SetEditText(ACol, ARow: Longint; const Value: string);
-var
+Procedure TVarGrid.SetEditText(ACol, ARow: Longint; Const Value: String);
+
+Var 
   dc: integer;
-begin
-  if not (gfEditingDone in GridFlags) then
+Begin
+  If Not (gfEditingDone In GridFlags) Then
     exit;
-  if Assigned(OnSetEditText) then
+  If Assigned(OnSetEditText) Then
     OnSetEditText(Self, aCol - FixedCols, aRow - FixedRows, Value)
-  else begin
-    dc:=ColToDataCol(ACol);
-    if ARow >= FixedRows then
-      Items[dc, ARow - FixedRows]:=UTF8Decode(Value);
-  end;
-end;
+  Else
+    Begin
+      dc := ColToDataCol(ACol);
+      If ARow >= FixedRows Then
+        Items[dc, ARow - FixedRows] := UTF8Decode(Value);
+    End;
+End;
 
-procedure TVarGrid.DoEditorShow;
-begin
+Procedure TVarGrid.DoEditorShow;
+Begin
   inherited DoEditorShow;
-  if Assigned(OnEditorShow) then
+  If Assigned(OnEditorShow) Then
     OnEditorShow(Self);
-end;
+End;
 
-procedure TVarGrid.DoEditorHide;
-begin
-  try
+Procedure TVarGrid.DoEditorHide;
+Begin
+  Try
     inherited DoEditorHide;
-  finally
-    Options:=FOldOpt;
-  end;
-  if Assigned(OnEditorHide) then
-    OnEditorHide(Self);
-end;
+  Finally
+    Options := FOldOpt;
+End;
+If Assigned(OnEditorHide) Then
+  OnEditorHide(Self);
+End;
 
-end.
-
+End.

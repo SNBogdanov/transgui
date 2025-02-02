@@ -1,3 +1,5 @@
+
+
 {
  * Copyright (C) 2005 MaxMind LLC  All Rights Reserved.
  *
@@ -23,44 +25,45 @@
 { Thanks to W. Tracz/Yvan Schwab for contributing this class }
 
 {$mode delphi}
-unit GeoIP;
 
-interface
+Unit GeoIP;
 
-uses Classes, SysUtils, utils, {$ifdef FPC} sockets {$else} WinSock {$endif};
+Interface
 
-type
+Uses Classes, SysUtils, utils, {$ifdef FPC} sockets {$else} WinSock {$endif};
+
+Type 
   TGeoIPResult = (
-    GEOIP_SUCCESS                 = 0,
-    GEOIP_NODATA                  = 1,
-    GEOIP_ERROR_IPADDR            = 2,
-    GEOIP_ERROR_DBTYPE            = 3,
-    GEOIP_ERROR_IO                = 4
-  );
+                  GEOIP_SUCCESS                 = 0,
+                  GEOIP_NODATA                  = 1,
+                  GEOIP_ERROR_IPADDR            = 2,
+                  GEOIP_ERROR_DBTYPE            = 3,
+                  GEOIP_ERROR_IO                = 4
+                 );
 
   TGeoIPDBTypes = (
-    GEOIP_COUNTRY_EDITION     = 1,
-    GEOIP_CITY_EDITION_REV1   = 2,
-    GEOIP_REGION_EDITION_REV1 = 3,
-    GEOIP_ISP_EDITION         = 4,
-    GEOIP_ORG_EDITION         = 5,
-    GEOIP_CITY_EDITION_REV0   = 6,
-    GEOIP_REGION_EDITION_REV0 = 7,
-    GEOIP_PROXY_EDITION       = 8,
-    GEOIP_ASNUM_EDITION       = 9
-  );
+                   GEOIP_COUNTRY_EDITION     = 1,
+                   GEOIP_CITY_EDITION_REV1   = 2,
+                   GEOIP_REGION_EDITION_REV1 = 3,
+                   GEOIP_ISP_EDITION         = 4,
+                   GEOIP_ORG_EDITION         = 5,
+                   GEOIP_CITY_EDITION_REV0   = 6,
+                   GEOIP_REGION_EDITION_REV0 = 7,
+                   GEOIP_PROXY_EDITION       = 8,
+                   GEOIP_ASNUM_EDITION       = 9
+                  );
 
-  TGeoIPCountry = record
+  TGeoIPCountry = Record
     CountryCode: string;
     CountryName: string;
-  end;
+  End;
 
-  TGeoIPRegion = record
+  TGeoIPRegion = Record
     CountryCode: string;
     Region: string;
-  end;
+  End;
 
-  TGeoIPCity = record
+  TGeoIPCity = Record
     CountryCode: string;
     CountryName: string;
     Region: string;
@@ -70,54 +73,225 @@ type
     Longitude: Double;
     DmaCode: Integer;
     AreaCode: Integer;
-  end;
+  End;
 
-  TGeoIPOrg = record
+  TGeoIPOrg = Record
     Name: string;
-  end;
+  End;
 
-  TGeoIP = class
-  private
-    FInputFile: TFileStreamUTF8;
-    FDatabaseType: TGeoIPDBTypes;
-    FDatabaseSegments: array of Cardinal;
-    FDatabaseInfo: string;
-    FRecordLength: Cardinal;
-    function _GetCity(IPNum: Cardinal; var GeoIPCity: TGeoIPCity): TGeoIPResult;
-    function _GetCountry(IPNum: Cardinal; var GeoIPCountry: TGeoIPCountry): TGeoIPResult;
-    function _GetOrg(IPNum: Cardinal; var GeoIPOrg: TGeoIPOrg): TGeoIPResult;
-    function _GetRegion(IPNum: Cardinal; var GeoIPRegion: TGeoIPRegion): TGeoIPResult;
-    function AddrToNum(const IPAddr: string): Cardinal;
-    procedure InitDBFile;
-    function SeekRecord(IPNum: Cardinal): Cardinal;
-  public
-    constructor Create(const FileName: string);
-    destructor Destroy; override;
-    function GetCity(const IPAddr: string; var GeoIPCity: TGeoIPCity): TGeoIPResult;
-    function GetCountry(const IPAddr: string; var GeoIPCountry: TGeoIPCountry): TGeoIPResult;
-    function GetDatabaseInfo: string;
-    function GetOrg(const IPAddr: string; var GeoIPOrg: TGeoIPOrg): TGeoIPResult;
-    function GetRegion(const IPAddr: string; var GeoIPRegion: TGeoIPRegion): TGeoIPResult;
-  end;
+  TGeoIP = Class
+    Private 
+      FInputFile: TFileStreamUTF8;
+      FDatabaseType: TGeoIPDBTypes;
+      FDatabaseSegments: array Of Cardinal;
+      FDatabaseInfo: string;
+      FRecordLength: Cardinal;
+      Function _GetCity(IPNum: Cardinal; Var GeoIPCity: TGeoIPCity):
 
-const
-  CountryCodes:array [0..252] of string = ('--','AP','EU','AD','AE','AF','AG','AI','AL','AM','AN','AO','AQ','AR','AS','AT','AU','AW','AZ','BA','BB','BD','BE','BF','BG','BH','BI','BJ','BM','BN','BO','BR','BS','BT','BV','BW','BY','BZ','CA','CC','CD','CF','CG','CH','CI','CK','CL','CM','CN','CO','CR','CU','CV','CX','CY','CZ','DE','DJ','DK','DM','DO','DZ','EC','EE','EG','EH','ER','ES','ET','FI','FJ','FK','FM','FO','FR','FX','GA','GB','GD','GE','GF','GH','GI','GL','GM','GN','GP','GQ','GR','GS','GT','GU','GW',
-                                          'GY','HK','HM','HN','HR','HT','HU','ID','IE','IL','IN','IO','IQ','IR','IS','IT','JM','JO','JP','KE','KG','KH','KI','KM','KN','KP','KR','KW','KY','KZ','LA','LB','LC','LI','LK','LR','LS','LT','LU','LV','LY','MA','MC','MD','MG','MH','MK','ML','MM','MN','MO','MP','MQ','MR','MS','MT','MU','MV','MW','MX','MY','MZ','NA','NC','NE','NF','NG','NI','NL','NO','NP','NR','NU','NZ','OM','PA','PE','PF','PG','PH','PK','PL','PM','PN','PR','PS','PT','PW','PY','QA','RE','RO','RU',
-                                          'RW','SA','SB','SC','SD','SE','SG','SH','SI','SJ','SK','SL','SM','SN','SO','SR','ST','SV','SY','SZ','TC','TD','TF','TG','TH','TJ','TK','TM','TN','TO','TL','TR','TT','TV','TW','TZ','UA','UG','UM','US','UY','UZ','VA','VC','VE','VG','VI','VN','VU','WF','WS','YE','YT','RS','ZA','ZM','ME','ZW','A1','A2','O1','AX','GG','IM','JE','BL','MF');
+                                                                    TGeoIPResult
+      ;
+      Function _GetCountry(IPNum: Cardinal; Var GeoIPCountry: TGeoIPCountry):
 
-  CountryNames:array [0..252] of string = ('N/A','Asia/Pacific Region','Europe','Andorra','United Arab Emirates','Afghanistan','Antigua and Barbuda','Anguilla','Albania','Armenia','Netherlands Antilles','Angola','Antarctica','Argentina','American Samoa','Austria','Australia','Aruba','Azerbaijan','Bosnia and Herzegovina','Barbados','Bangladesh','Belgium','Burkina Faso','Bulgaria','Bahrain','Burundi','Benin','Bermuda','Brunei Darussalam','Bolivia','Brazil','Bahamas','Bhutan','Bouvet Island','Botswana',
-                                          'Belarus','Belize','Canada','Cocos (Keeling) Islands','Congo, The Democratic Republic of the','Central African Republic','Congo','Switzerland','Cote D''Ivoire','Cook Islands','Chile','Cameroon','China','Colombia','Costa Rica','Cuba','Cape Verde','Christmas Island','Cyprus','Czech Republic','Germany','Djibouti','Denmark','Dominica','Dominican Republic','Algeria','Ecuador','Estonia','Egypt','Western Sahara','Eritrea','Spain','Ethiopia','Finland','Fiji',
-                                          'Falkland Islands (Malvinas)','Micronesia, Federated States of','Faroe Islands','France','France, Metropolitan','Gabon','United Kingdom','Grenada','Georgia','French Guiana','Ghana','Gibraltar','Greenland','Gambia','Guinea','Guadeloupe','Equatorial Guinea','Greece','South Georgia and the South Sandwich Islands','Guatemala','Guam','Guinea-Bissau','Guyana','Hong Kong','Heard Island and McDonald Islands','Honduras','Croatia','Haiti','Hungary','Indonesia','Ireland',
-                                          'Israel','India','British Indian Ocean Territory','Iraq','Iran, Islamic Republic of','Iceland','Italy','Jamaica','Jordan','Japan','Kenya','Kyrgyzstan','Cambodia','Kiribati','Comoros','Saint Kitts and Nevis','Korea, Democratic People''s Republic of','Korea, Republic of','Kuwait','Cayman Islands','Kazakstan','Lao People''s Democratic Republic','Lebanon','Saint Lucia','Liechtenstein','Sri Lanka','Liberia','Lesotho','Lithuania','Luxembourg','Latvia',
-                                          'Libyan Arab Jamahiriya','Morocco','Monaco','Moldova, Republic of','Madagascar','Marshall Islands','Macedonia, the Former Yugoslav Republic of','Mali','Myanmar','Mongolia','Macao','Northern Mariana Islands','Martinique','Mauritania','Montserrat','Malta','Mauritius','Maldives','Malawi','Mexico','Malaysia','Mozambique','Namibia','New Caledonia','Niger','Norfolk Island','Nigeria','Nicaragua','Netherlands','Norway','Nepal','Nauru','Niue','New Zealand','Oman',
-                                          'Panama','Peru','French Polynesia','Papua New Guinea','Philippines','Pakistan','Poland','Saint Pierre and Miquelon','Pitcairn','Puerto Rico','Palestinian Territory, Occupied','Portugal','Palau','Paraguay','Qatar','Reunion','Romania','Russian Federation','Rwanda','Saudi Arabia','Solomon Islands','Seychelles','Sudan','Sweden','Singapore','Saint Helena','Slovenia','Svalbard and Jan Mayen','Slovakia','Sierra Leone','San Marino','Senegal','Somalia','Suriname',
-                                          'Sao Tome and Principe','El Salvador','Syrian Arab Republic','Swaziland','Turks and Caicos Islands','Chad','French Southern Territories','Togo','Thailand','Tajikistan','Tokelau','Turkmenistan','Tunisia','Tonga','Timor-Leste','Turkey','Trinidad and Tobago','Tuvalu','Taiwan','Tanzania, United Republic of','Ukraine','Uganda','United States Minor Outlying Islands','United States','Uruguay','Uzbekistan','Holy See (Vatican City State)',
-                                          'Saint Vincent and the Grenadines','Venezuela','Virgin Islands, British','Virgin Islands, U.S.','Vietnam','Vanuatu','Wallis and Futuna','Samoa','Yemen','Mayotte','Serbia','South Africa','Zambia','Montenegro','Zimbabwe','Anonymous Proxy','Satellite Provider','Other','Aland Islands','Guernsey','Isle of Man','Jersey','Saint Barthelemy','Saint Martin');
+                                                                    TGeoIPResult
+      ;
+      Function _GetOrg(IPNum: Cardinal; Var GeoIPOrg: TGeoIPOrg): TGeoIPResult;
+      Function _GetRegion(IPNum: Cardinal; Var GeoIPRegion: TGeoIPRegion):
+
+                                                                    TGeoIPResult
+      ;
+      Function AddrToNum(Const IPAddr: String): Cardinal;
+      Procedure InitDBFile;
+      Function SeekRecord(IPNum: Cardinal): Cardinal;
+    Public 
+      constructor Create(Const FileName: String);
+      destructor Destroy;
+      override;
+      Function GetCity(Const IPAddr: String; Var GeoIPCity: TGeoIPCity):
+
+                                                                    TGeoIPResult
+      ;
+      Function GetCountry(Const IPAddr: String; Var GeoIPCountry: TGeoIPCountry)
+      : TGeoIPResult;
+      Function GetDatabaseInfo: string;
+      Function GetOrg(Const IPAddr: String; Var GeoIPOrg: TGeoIPOrg):
+
+                                                                    TGeoIPResult
+      ;
+      Function GetRegion(Const IPAddr: String; Var GeoIPRegion: TGeoIPRegion):
+
+                                                                    TGeoIPResult
+      ;
+  End;
+
+Const 
+  CountryCodes: array [0..252] Of string = ('--','AP','EU','AD','AE','AF','AG',
+                                            'AI','AL','AM','AN','AO','AQ','AR',
+                                            'AS','AT','AU','AW','AZ','BA','BB',
+                                            'BD','BE','BF','BG','BH','BI','BJ',
+                                            'BM','BN','BO','BR','BS','BT','BV',
+                                            'BW','BY','BZ','CA','CC','CD','CF',
+                                            'CG','CH','CI','CK','CL','CM','CN',
+                                            'CO','CR','CU','CV','CX','CY','CZ',
+                                            'DE','DJ','DK','DM','DO','DZ','EC',
+                                            'EE','EG','EH','ER','ES','ET','FI',
+                                            'FJ','FK','FM','FO','FR','FX','GA',
+                                            'GB','GD','GE','GF','GH','GI','GL',
+                                            'GM','GN','GP','GQ','GR','GS','GT',
+                                            'GU','GW',
+                                            'GY','HK','HM','HN','HR','HT','HU',
+                                            'ID','IE','IL','IN','IO','IQ','IR',
+                                            'IS','IT','JM','JO','JP','KE','KG',
+                                            'KH','KI','KM','KN','KP','KR','KW',
+                                            'KY','KZ','LA','LB','LC','LI','LK',
+                                            'LR','LS','LT','LU','LV','LY','MA',
+                                            'MC','MD','MG','MH','MK','ML','MM',
+                                            'MN','MO','MP','MQ','MR','MS','MT',
+                                            'MU','MV','MW','MX','MY','MZ','NA',
+                                            'NC','NE','NF','NG','NI','NL','NO',
+                                            'NP','NR','NU','NZ','OM','PA','PE',
+                                            'PF','PG','PH','PK','PL','PM','PN',
+                                            'PR','PS','PT','PW','PY','QA','RE',
+                                            'RO','RU',
+                                            'RW','SA','SB','SC','SD','SE','SG',
+                                            'SH','SI','SJ','SK','SL','SM','SN',
+                                            'SO','SR','ST','SV','SY','SZ','TC',
+                                            'TD','TF','TG','TH','TJ','TK','TM',
+                                            'TN','TO','TL','TR','TT','TV','TW',
+                                            'TZ','UA','UG','UM','US','UY','UZ',
+                                            'VA','VC','VE','VG','VI','VN','VU',
+                                            'WF','WS','YE','YT','RS','ZA','ZM',
+                                            'ME','ZW','A1','A2','O1','AX','GG',
+                                            'IM','JE','BL','MF');
+
+  CountryNames: array [0..252] Of string = ('N/A','Asia/Pacific Region','Europe'
+                                            ,'Andorra','United Arab Emirates',
+                                            'Afghanistan','Antigua and Barbuda',
+                                            'Anguilla','Albania','Armenia',
+                                            'Netherlands Antilles','Angola',
+                                            'Antarctica','Argentina',
+                                            'American Samoa','Austria',
+                                            'Australia','Aruba','Azerbaijan',
+                                            'Bosnia and Herzegovina','Barbados',
+                                            'Bangladesh','Belgium',
+                                            'Burkina Faso','Bulgaria','Bahrain',
+                                            'Burundi','Benin','Bermuda',
+                                            'Brunei Darussalam','Bolivia',
+                                            'Brazil','Bahamas','Bhutan',
+                                            'Bouvet Island','Botswana',
+                                            'Belarus','Belize','Canada',
+                                            'Cocos (Keeling) Islands',
+
+                                         'Congo, The Democratic Republic of the'
+                                            ,'Central African Republic','Congo',
+                                            'Switzerland','Cote D''Ivoire',
+                                            'Cook Islands','Chile','Cameroon',
+                                            'China','Colombia','Costa Rica',
+                                            'Cuba','Cape Verde',
+                                            'Christmas Island','Cyprus',
+                                            'Czech Republic','Germany',
+                                            'Djibouti','Denmark','Dominica',
+                                            'Dominican Republic','Algeria',
+                                            'Ecuador','Estonia','Egypt',
+                                            'Western Sahara','Eritrea','Spain',
+                                            'Ethiopia','Finland','Fiji',
+                                            'Falkland Islands (Malvinas)',
+                                            'Micronesia, Federated States of',
+                                            'Faroe Islands','France',
+                                            'France, Metropolitan','Gabon',
+                                            'United Kingdom','Grenada','Georgia'
+                                            ,'French Guiana','Ghana','Gibraltar'
+                                            ,'Greenland','Gambia','Guinea',
+                                            'Guadeloupe','Equatorial Guinea',
+                                            'Greece',
+
+                                  'South Georgia and the South Sandwich Islands'
+                                            ,'Guatemala','Guam','Guinea-Bissau',
+                                            'Guyana','Hong Kong',
+                                            'Heard Island and McDonald Islands',
+                                            'Honduras','Croatia','Haiti',
+                                            'Hungary','Indonesia','Ireland',
+                                            'Israel','India',
+                                            'British Indian Ocean Territory',
+                                            'Iraq','Iran, Islamic Republic of',
+                                            'Iceland','Italy','Jamaica','Jordan'
+                                            ,'Japan','Kenya','Kyrgyzstan',
+                                            'Cambodia','Kiribati','Comoros',
+                                            'Saint Kitts and Nevis',
+
+                                       'Korea, Democratic People''s Republic of'
+                                            ,'Korea, Republic of','Kuwait',
+                                            'Cayman Islands','Kazakstan',
+                                            'Lao People''s Democratic Republic',
+                                            'Lebanon','Saint Lucia',
+                                            'Liechtenstein','Sri Lanka',
+                                            'Liberia','Lesotho','Lithuania',
+                                            'Luxembourg','Latvia',
+                                            'Libyan Arab Jamahiriya','Morocco',
+                                            'Monaco','Moldova, Republic of',
+                                            'Madagascar','Marshall Islands',
+
+                                    'Macedonia, the Former Yugoslav Republic of'
+                                            ,'Mali','Myanmar','Mongolia','Macao'
+                                            ,'Northern Mariana Islands',
+                                            'Martinique','Mauritania',
+                                            'Montserrat','Malta','Mauritius',
+                                            'Maldives','Malawi','Mexico',
+                                            'Malaysia','Mozambique','Namibia',
+                                            'New Caledonia','Niger',
+                                            'Norfolk Island','Nigeria',
+                                            'Nicaragua','Netherlands','Norway',
+                                            'Nepal','Nauru','Niue','New Zealand'
+                                            ,'Oman',
+                                            'Panama','Peru','French Polynesia',
+                                            'Papua New Guinea','Philippines',
+                                            'Pakistan','Poland',
+                                            'Saint Pierre and Miquelon',
+                                            'Pitcairn','Puerto Rico',
+                                            'Palestinian Territory, Occupied',
+                                            'Portugal','Palau','Paraguay',
+                                            'Qatar','Reunion','Romania',
+                                            'Russian Federation','Rwanda',
+                                            'Saudi Arabia','Solomon Islands',
+                                            'Seychelles','Sudan','Sweden',
+                                            'Singapore','Saint Helena',
+                                            'Slovenia','Svalbard and Jan Mayen',
+                                            'Slovakia','Sierra Leone',
+                                            'San Marino','Senegal','Somalia',
+                                            'Suriname',
+                                            'Sao Tome and Principe',
+                                            'El Salvador','Syrian Arab Republic'
+                                            ,'Swaziland',
+                                            'Turks and Caicos Islands','Chad',
+                                            'French Southern Territories','Togo'
+                                            ,'Thailand','Tajikistan','Tokelau',
+                                            'Turkmenistan','Tunisia','Tonga',
+                                            'Timor-Leste','Turkey',
+                                            'Trinidad and Tobago','Tuvalu',
+                                            'Taiwan',
+                                            'Tanzania, United Republic of',
+                                            'Ukraine','Uganda',
+
+                                          'United States Minor Outlying Islands'
+                                            ,'United States','Uruguay',
+                                            'Uzbekistan',
+                                            'Holy See (Vatican City State)',
+                                            'Saint Vincent and the Grenadines',
+                                            'Venezuela',
+                                            'Virgin Islands, British',
+                                            'Virgin Islands, U.S.','Vietnam',
+                                            'Vanuatu','Wallis and Futuna',
+                                            'Samoa','Yemen','Mayotte','Serbia',
+                                            'South Africa','Zambia','Montenegro'
+                                            ,'Zimbabwe','Anonymous Proxy',
+                                            'Satellite Provider','Other',
+                                            'Aland Islands','Guernsey',
+                                            'Isle of Man','Jersey',
+                                            'Saint Barthelemy','Saint Martin');
 
 
-implementation
+Implementation
 
-const
+Const 
   COUNTRY_BEGIN = 16776960;
   STATE_BEGIN_REV0 = 16700000;
   STATE_BEGIN_REV1  = 16000000;
@@ -136,41 +310,46 @@ const
 
 { TGeoIP }
 
-constructor TGeoIP.Create(const FileName: string);
-begin
+  constructor TGeoIP.Create(Const FileName: String);
+Begin
   inherited Create;
-  FInputFile := TFileStreamUTF8.Create(FileName, fmOpenRead or fmShareDenyNone);
+  FInputFile := TFileStreamUTF8.Create(FileName, fmOpenRead Or fmShareDenyNone);
   InitDBFile;
-end;
+End;
 
 destructor TGeoIP.Destroy;
-begin
-  if Assigned(FInputFile) then
+Begin
+  If Assigned(FInputFile) Then
     FInputFile.Free;
   inherited Destroy;
-end;
+End;
 
-function TGeoIP._GetCity(IPNum: Cardinal; var GeoIPCity: TGeoIPCity): TGeoIPResult;
-var
+Function TGeoIP._GetCity(IPNum: Cardinal; Var GeoIPCity: TGeoIPCity):
+
+                                                                    TGeoIPResult
+;
+
+Var 
   SeekCity: Cardinal;
   RecordPointer: Cardinal;
   StrLen: Cardinal;
-  buf: array[0..FULL_RECORD_LENGTH-1] of Byte;
+  buf: array[0..FULL_RECORD_LENGTH-1] Of Byte;
   p: PChar;
   i: Integer;
   DmaAreaCombo: Integer;
-begin
-  if (FDatabaseType <> GEOIP_CITY_EDITION_REV0) and (FDatabaseType <> GEOIP_CITY_EDITION_REV1) then
-  begin
-    Result := GEOIP_ERROR_DBTYPE;
-    Exit;
-  end;
+Begin
+  If (FDatabaseType <> GEOIP_CITY_EDITION_REV0) And (FDatabaseType <>
+     GEOIP_CITY_EDITION_REV1) Then
+    Begin
+      Result := GEOIP_ERROR_DBTYPE;
+      Exit;
+    End;
   SeekCity := SeekRecord(IPNum);
-  if SeekCity = FDatabaseSegments[0] then
-  begin
-    Result := GEOIP_NODATA;
-    Exit;
-  end;
+  If SeekCity = FDatabaseSegments[0] Then
+    Begin
+      Result := GEOIP_NODATA;
+      Exit;
+    End;
   RecordPointer := SeekCity + (2 * FRecordLength - 1) * FDatabaseSegments[0];
   FInputFile.Seek(RecordPointer, soFromBeginning);
   FInputFile.Read(buf, FULL_RECORD_LENGTH);
@@ -182,394 +361,436 @@ begin
   // get region
   p := @buf[1];
   StrLen := 0;
-  while (p[StrLen] <> #0) do
+  While (p[StrLen] <> #0) Do
     Inc(StrLen);
   GeoIPCity.Region := Copy(p, 0, StrLen);
 
   // get city
   Inc(p, StrLen + 1);
   StrLen := 0;
-  while (p[StrLen] <> #0) do
+  While (p[StrLen] <> #0) Do
     Inc(StrLen);
   GeoIPCity.City := Copy(p, 0, StrLen);
 
   // get postal code
   Inc(p, StrLen + 1);
   StrLen := 0;
-  while (p[StrLen] <> #0) do
+  While (p[StrLen] <> #0) Do
     Inc(StrLen);
   GeoIPCity.PostalCode := Copy(p, 0, StrLen);
 
   // get latitude
   Inc(p, StrLen + 1);
   GeoIPCity.Latitude := 0.0;
-  for i:=0 to 2 do
-  begin
-    GeoIPCity.Latitude := GeoIPCity.Latitude + (Integer(p[i]) shl (i*8));
-  end;
+  For i:=0 To 2 Do
+    Begin
+      GeoIPCity.Latitude := GeoIPCity.Latitude + (Integer(p[i]) shl (i*8));
+    End;
   GeoIPCity.Latitude := GeoIPCity.Latitude/10000 - 180;
 
   // get longitude
   Inc(p, 3);
   GeoIPCity.Longitude := 0.0;
-  for i:=0 to 2 do
-  begin
-    GeoIPCity.Longitude := GeoIPCity.Longitude + (Integer(p[i]) shl (i*8));
-  end;
+  For i:=0 To 2 Do
+    Begin
+      GeoIPCity.Longitude := GeoIPCity.Longitude + (Integer(p[i]) shl (i*8));
+    End;
   GeoIPCity.Longitude := GeoIPCity.Longitude/10000 - 180;
 
-  // get area code and dma code for post April 2002 databases and for US locations
+
+
+// get area code and dma code for post April 2002 databases and for US locations
   GeoIPCity.DmaCode := 0;
   GeoIPCity.AreaCode := 0;
-  if FDatabaseType = GEOIP_CITY_EDITION_REV1 then
-  begin
-    if GeoIPCity.CountryCode = 'US' then
-    begin
-      Inc(p, 3);
-      DmaAreaCombo := 0;
-      for i:=0 to 2 do
-      begin
-        DmaAreaCombo := DmaAreaCombo + (Integer(p[i]) shl (i*8));
-      end;
-      GeoIPCity.DmaCode := DmaAreaCombo div 1000;
-      GeoIPCity.AreaCode := DmaAreaCombo mod 1000;
-    end;
-  end;
+  If FDatabaseType = GEOIP_CITY_EDITION_REV1 Then
+    Begin
+      If GeoIPCity.CountryCode = 'US' Then
+        Begin
+          Inc(p, 3);
+          DmaAreaCombo := 0;
+          For i:=0 To 2 Do
+            Begin
+              DmaAreaCombo := DmaAreaCombo + (Integer(p[i]) shl (i*8));
+            End;
+          GeoIPCity.DmaCode := DmaAreaCombo Div 1000;
+          GeoIPCity.AreaCode := DmaAreaCombo Mod 1000;
+        End;
+    End;
   Result := GEOIP_SUCCESS;
-end;
+End;
 
-function TGeoIP._GetCountry(IPNum: Cardinal; var GeoIPCountry: TGeoIPCountry): TGeoIPResult;
-var
+Function TGeoIP._GetCountry(IPNum: Cardinal; Var GeoIPCountry: TGeoIPCountry):
+
+                                                                    TGeoIPResult
+;
+
+Var 
   ret: Cardinal;
-begin
-  if (FDatabaseType <> GEOIP_COUNTRY_EDITION) and (FDatabaseType <> GEOIP_PROXY_EDITION) then
-  begin
-    Result := GEOIP_ERROR_DBTYPE;
-    Exit;
-  end;
+Begin
+  If (FDatabaseType <> GEOIP_COUNTRY_EDITION) And (FDatabaseType <>
+     GEOIP_PROXY_EDITION) Then
+    Begin
+      Result := GEOIP_ERROR_DBTYPE;
+      Exit;
+    End;
   ret := SeekRecord(IPNum) - COUNTRY_BEGIN;
-  if ret > 0 then
-  begin
-    GeoIPCountry.CountryCode := CountryCodes[ret];
-    GeoIPCountry.CountryName := CountryNames[ret];
-    Result := GEOIP_SUCCESS;
-  end
-  else
-  begin
-    Result := GEOIP_NODATA;
-  end;
-end;
+  If ret > 0 Then
+    Begin
+      GeoIPCountry.CountryCode := CountryCodes[ret];
+      GeoIPCountry.CountryName := CountryNames[ret];
+      Result := GEOIP_SUCCESS;
+    End
+  Else
+    Begin
+      Result := GEOIP_NODATA;
+    End;
+End;
 
-function TGeoIP._GetOrg(IPNum: Cardinal; var GeoIPOrg: TGeoIPOrg): TGeoIPResult;
-var
+Function TGeoIP._GetOrg(IPNum: Cardinal; Var GeoIPOrg: TGeoIPOrg): TGeoIPResult;
+
+Var 
   SeekOrg: Cardinal;
   RecordPointer: Cardinal;
   StrLen: Cardinal;
-  buf: array[0..MAX_ORG_RECORD_LENGTH-1] of Byte;
+  buf: array[0..MAX_ORG_RECORD_LENGTH-1] Of Byte;
   p: PChar;
-begin
-  if (FDatabaseType <> GEOIP_ORG_EDITION) and (FDatabaseType <> GEOIP_ISP_EDITION) and (FDatabaseType <> GEOIP_ASNUM_EDITION) then
-  begin
-    Result := GEOIP_ERROR_DBTYPE;
-    Exit;
-  end;
+Begin
+  If (FDatabaseType <> GEOIP_ORG_EDITION) And (FDatabaseType <>
+     GEOIP_ISP_EDITION) And (FDatabaseType <> GEOIP_ASNUM_EDITION) Then
+    Begin
+      Result := GEOIP_ERROR_DBTYPE;
+      Exit;
+    End;
   SeekOrg := SeekRecord(IPNum);
-  if SeekOrg = FDatabaseSegments[0] then
-  begin
-    Result := GEOIP_NODATA;
-    Exit;
-  end;
+  If SeekOrg = FDatabaseSegments[0] Then
+    Begin
+      Result := GEOIP_NODATA;
+      Exit;
+    End;
   RecordPointer := SeekOrg + (2 * FRecordLength - 1) * FDatabaseSegments[0];
   FInputFile.Seek(RecordPointer, soFromBeginning);
   FInputFile.Read(buf, FULL_RECORD_LENGTH);
 
   p := @buf[0];
   StrLen := 0;
-  while (p[StrLen] <> #0) do
+  While (p[StrLen] <> #0) Do
     Inc(StrLen);
   GeoIPOrg.Name := Copy(p, 0, StrLen);
   Result := GEOIP_SUCCESS;
-end;
+End;
 
-function TGeoIP._GetRegion(IPNum: Cardinal; var GeoIPRegion: TGeoIPRegion): TGeoIPResult;
-var
+Function TGeoIP._GetRegion(IPNum: Cardinal; Var GeoIPRegion: TGeoIPRegion):
+
+                                                                    TGeoIPResult
+;
+
+Var 
   SeekRegion: Cardinal;
-begin
-  if (FDatabaseType <> GEOIP_REGION_EDITION_REV0) and (FDatabaseType <> GEOIP_REGION_EDITION_REV1) then
-  begin
-    Result := GEOIP_ERROR_DBTYPE;
-    Exit;
-  end;
+Begin
+  If (FDatabaseType <> GEOIP_REGION_EDITION_REV0) And (FDatabaseType <>
+     GEOIP_REGION_EDITION_REV1) Then
+    Begin
+      Result := GEOIP_ERROR_DBTYPE;
+      Exit;
+    End;
   SeekRegion := SeekRecord(IPNum);
-  if FDatabaseType = GEOIP_REGION_EDITION_REV0 then
-  begin
-    // Region Edition, pre June 2003
-    Dec(SeekRegion, STATE_BEGIN_REV0);
-    if SeekRegion >= 1000 then
-    begin
-      GeoIPRegion.CountryCode := 'US';
-      GeoIPRegion.Region := Chr((SeekRegion - 1000) div 26 + 65) + Chr((SeekRegion - 1000) mod 26 + 65);
-    end
-    else
-    begin
-      GeoIPRegion.CountryCode := CountryCodes[SeekRegion];
-      GeoIPRegion.Region := '';
-    end;
-  end
-  else if FDatabaseType = GEOIP_REGION_EDITION_REV1 then
-  begin
-    // Region Edition, post June 2003
-    Dec(SeekRegion, STATE_BEGIN_REV1);
-    if SeekRegion < US_OFFSET then
-    begin
-      // Unknown
-      GeoIPRegion.CountryCode := '';
-      GeoIPRegion.Region := '';
-    end
-    else if SeekRegion < CANADA_OFFSET then
-    begin
-      // USA State
-      GeoIPRegion.CountryCode := 'US';
-      GeoIPRegion.Region := Chr((SeekRegion - US_OFFSET) div 26 + 65) + Chr((SeekRegion - US_OFFSET) mod 26 + 65);
-    end
-    else if SeekRegion < WORLD_OFFSET then
-    begin
-      // Canada Province
-      GeoIPRegion.CountryCode := 'CA';
-      GeoIPRegion.Region := Chr((SeekRegion - CANADA_OFFSET) div 26 + 65) + Chr((SeekRegion - CANADA_OFFSET) mod 26 + 65);
-    end
-    else
-    begin
-      // Not US or Canada
-      GeoIPRegion.CountryCode := CountryCodes[(SeekRegion - WORLD_OFFSET) div FIPS_RANGE];
-      GeoIPRegion.Region := '';
-    end;
-  end;
+  If FDatabaseType = GEOIP_REGION_EDITION_REV0 Then
+    Begin
+      // Region Edition, pre June 2003
+      Dec(SeekRegion, STATE_BEGIN_REV0);
+      If SeekRegion >= 1000 Then
+        Begin
+          GeoIPRegion.CountryCode := 'US';
+          GeoIPRegion.Region := Chr((SeekRegion - 1000) Div 26 + 65) + Chr((
+                                SeekRegion - 1000) Mod 26 + 65);
+        End
+      Else
+        Begin
+          GeoIPRegion.CountryCode := CountryCodes[SeekRegion];
+          GeoIPRegion.Region := '';
+        End;
+    End
+  Else If FDatabaseType = GEOIP_REGION_EDITION_REV1 Then
+         Begin
+           // Region Edition, post June 2003
+           Dec(SeekRegion, STATE_BEGIN_REV1);
+           If SeekRegion < US_OFFSET Then
+             Begin
+               // Unknown
+               GeoIPRegion.CountryCode := '';
+               GeoIPRegion.Region := '';
+             End
+           Else If SeekRegion < CANADA_OFFSET Then
+                  Begin
+                    // USA State
+                    GeoIPRegion.CountryCode := 'US';
+                    GeoIPRegion.Region := Chr((SeekRegion - US_OFFSET) Div 26 +
+                                          65) + Chr((SeekRegion - US_OFFSET) Mod
+                                          26 + 65);
+                  End
+           Else If SeekRegion < WORLD_OFFSET Then
+                  Begin
+                    // Canada Province
+                    GeoIPRegion.CountryCode := 'CA';
+                    GeoIPRegion.Region := Chr((SeekRegion - CANADA_OFFSET) Div
+                                          26 + 65) + Chr((SeekRegion -
+                                          CANADA_OFFSET) Mod 26 + 65);
+                  End
+           Else
+             Begin
+               // Not US or Canada
+               GeoIPRegion.CountryCode := CountryCodes[(SeekRegion -
+                                          WORLD_OFFSET) Div FIPS_RANGE];
+               GeoIPRegion.Region := '';
+             End;
+         End;
   Result := GEOIP_SUCCESS;
-end;
+End;
 
-function TGeoIP.AddrToNum(const IPAddr: string): Cardinal;
+Function TGeoIP.AddrToNum(Const IPAddr: String): Cardinal;
 {$ifdef FPC}
-begin
-  Result:=StrToHostAddr(IPAddr).s_addr;
-end;
+Begin
+  Result := StrToHostAddr(IPAddr).s_addr;
+End;
 {$else}
-var
+
+Var 
   netlong: LongInt;
-begin
+Begin
   netlong := inet_addr(PChar(IPAddr));
-  if netlong <> INADDR_NONE then
+  If netlong <> INADDR_NONE Then
     Result := ntohl(netlong)
-  else
+  Else
     Result := 0;
-end;
+End;
 {$endif}
 
-function TGeoIP.GetCity(const IPAddr: string; var GeoIPCity: TGeoIPCity): TGeoIPResult;
-var
+Function TGeoIP.GetCity(Const IPAddr: String; Var GeoIPCity: TGeoIPCity):
+
+                                                                    TGeoIPResult
+;
+
+Var 
   IPNum: Cardinal;
-begin
+Begin
   IPNum := AddrToNum(IPAddr);
-  if IPNum = 0 then
-  begin
-    Result := GEOIP_ERROR_IPADDR;
-    Exit;
-  end;
+  If IPNum = 0 Then
+    Begin
+      Result := GEOIP_ERROR_IPADDR;
+      Exit;
+    End;
   Result := _GetCity(IPNum, GeoIPCity);
-end;
+End;
 
-function TGeoIP.GetCountry(const IPAddr: string; var GeoIPCountry: TGeoIPCountry): TGeoIPResult;
-var
+Function TGeoIP.GetCountry(Const IPAddr: String; Var GeoIPCountry: TGeoIPCountry
+): TGeoIPResult;
+
+Var 
   IPNum: Cardinal;
-begin
+Begin
   IPNum := AddrToNum(IPAddr);
-  if IPNum = 0 then
-  begin
-    Result := GEOIP_ERROR_IPADDR;
-    Exit;
-  end;
+  If IPNum = 0 Then
+    Begin
+      Result := GEOIP_ERROR_IPADDR;
+      Exit;
+    End;
   Result := _GetCountry(IPNum, GeoIPCountry);
-end;
+End;
 
-function TGeoIP.GetDatabaseInfo: string;
-var
+Function TGeoIP.GetDatabaseInfo: string;
+
+Var 
   i: Integer;
-  delim: array[0..2] of Byte;
+  delim: array[0..2] Of Byte;
   HasStructureInfo: Boolean;
-begin
+Begin
   FDatabaseInfo := '';
   HasStructureInfo := False;
   FInputFile.Seek(-3, soFromEnd);
-  for i:=0 to STRUCTURE_INFO_MAX_SIZE-1 do
-  begin
-    FInputFile.Read(delim, 3);
-    if (delim[0] = 255) and (delim[1] = 255) and (delim[2] = 255) then
-    begin
-      HasStructureInfo := True;
-      Break;
-    end;
-    FInputFile.Seek(-4, soFromCurrent);
-  end;
-  if HasStructureInfo then
+  For i:=0 To STRUCTURE_INFO_MAX_SIZE-1 Do
+    Begin
+      FInputFile.Read(delim, 3);
+      If (delim[0] = 255) And (delim[1] = 255) And (delim[2] = 255) Then
+        Begin
+          HasStructureInfo := True;
+          Break;
+        End;
+      FInputFile.Seek(-4, soFromCurrent);
+    End;
+  If HasStructureInfo Then
     FInputFile.Seek(-3, soFromCurrent)
-  else
+  Else
     // no structure info, must be pre Sep 2002 database, go back to end
     FInputFile.Seek(-3, soFromEnd);
-  for i:=0 to DATABASE_INFO_MAX_SIZE-1 do
-  begin
-    FInputFile.Read(delim, 3);
-    if (delim[0] = 0) and (delim[1] = 0) and (delim[2] = 0) then
-    begin
-      SetLength(FDatabaseInfo, i);
-      FInputFile.Read(PChar(FDatabaseInfo)^, i);
-      Break;
-    end;
-    FInputFile.Seek(-4, soFromCurrent);
-  end;
+  For i:=0 To DATABASE_INFO_MAX_SIZE-1 Do
+    Begin
+      FInputFile.Read(delim, 3);
+      If (delim[0] = 0) And (delim[1] = 0) And (delim[2] = 0) Then
+        Begin
+          SetLength(FDatabaseInfo, i);
+          FInputFile.Read(PChar(FDatabaseInfo)^, i);
+          Break;
+        End;
+      FInputFile.Seek(-4, soFromCurrent);
+    End;
   Result := FDatabaseInfo;
-end;
+End;
 
-function TGeoIP.GetOrg(const IPAddr: string; var GeoIPOrg: TGeoIPOrg): TGeoIPResult;
-var
+Function TGeoIP.GetOrg(Const IPAddr: String; Var GeoIPOrg: TGeoIPOrg):
+
+                                                                    TGeoIPResult
+;
+
+Var 
   IPNum: Cardinal;
-begin
+Begin
   IPNum := AddrToNum(IPAddr);
-  if IPNum = 0 then
-  begin
-    Result := GEOIP_ERROR_IPADDR;
-    Exit;
-  end;
+  If IPNum = 0 Then
+    Begin
+      Result := GEOIP_ERROR_IPADDR;
+      Exit;
+    End;
   Result := _GetOrg(IPNum, GeoIPOrg);
-end;
+End;
 
-function TGeoIP.GetRegion(const IPAddr: string; var GeoIPRegion: TGeoIPRegion): TGeoIPResult;
-var
+Function TGeoIP.GetRegion(Const IPAddr: String; Var GeoIPRegion: TGeoIPRegion):
+
+                                                                    TGeoIPResult
+;
+
+Var 
   IPNum: Cardinal;
-begin
+Begin
   IPNum := AddrToNum(IPAddr);
-  if IPNum = 0 then
-  begin
-    Result := GEOIP_ERROR_IPADDR;
-    Exit;
-  end;
+  If IPNum = 0 Then
+    Begin
+      Result := GEOIP_ERROR_IPADDR;
+      Exit;
+    End;
   Result := _GetRegion(IPNum, GeoIPRegion);
-end;
+End;
 
-procedure TGeoIP.InitDBFile;
-var
+Procedure TGeoIP.InitDBFile;
+
+Var 
   i,j: Integer;
-  delim: array[0..2] of Byte;
-  buf: array[0..SEGMENT_RECORD_LENGTH-1] of Byte;
-begin
+  delim: array[0..2] Of Byte;
+  buf: array[0..SEGMENT_RECORD_LENGTH-1] Of Byte;
+Begin
   // default to GeoIP Country Edition
   FDatabaseType := GEOIP_COUNTRY_EDITION;
   FRecordLength := STANDARD_RECORD_LENGTH;
   FInputFile.Seek(-3, soFromEnd);
-  for i:=0 to STRUCTURE_INFO_MAX_SIZE-1 do
-  begin
-    FInputFile.Read(delim, 3);
-    if (delim[0] = 255) and (delim[1] = 255) and (delim[2] = 255) then
-    begin
-      FInputFile.Read(FDatabaseType, 1);
-      if Byte(FDatabaseType) >= 106 then
-      begin
-        // Backward compatibility with databases from April 2003 and earlier
-        Dec(FDatabaseType, 105);
-      end;
-      if FDatabaseType = GEOIP_REGION_EDITION_REV0 then
-      begin
-        // Region Edition, pre June 2003
-        SetLength(FDatabaseSegments, 1);
-        FDatabaseSegments[0] := STATE_BEGIN_REV0;
-      end
-      else if FDatabaseType = GEOIP_REGION_EDITION_REV1 then
-      begin
-        // Region Edition, post June 2003
-        SetLength(FDatabaseSegments, 1);
-        FDatabaseSegments[0] := STATE_BEGIN_REV1;
-      end
-      else if (FDatabaseType = GEOIP_CITY_EDITION_REV0) or
-              (FDatabaseType = GEOIP_CITY_EDITION_REV1) or
-              (FDatabaseType = GEOIP_ORG_EDITION) or
-              (FDatabaseType = GEOIP_ISP_EDITION) or
-              (FDatabaseType = GEOIP_ASNUM_EDITION) then
-      begin
-        // City/Org Editions have two segments, read offset of second segment
-        SetLength(FDatabaseSegments, 1);
-        FDatabaseSegments[0] := 0;
-        FInputFile.Read(buf, SEGMENT_RECORD_LENGTH);
-        for j:=0 to SEGMENT_RECORD_LENGTH-1 do
-        begin
-          Inc(FDatabaseSegments[0], Integer(buf[j]) shl (j*8));
-        end;
-        if (FDatabaseType = GEOIP_ORG_EDITION) or
-          (FDatabaseType = GEOIP_ISP_EDITION) then
-            FRecordLength := ORG_RECORD_LENGTH;
-      end;
-      Break;
-    end
-    else
-    begin
-      FInputFile.Seek(-4, soFromCurrent);
-    end;
-  end;
-  if (FDatabaseType = GEOIP_COUNTRY_EDITION) or
-    (FDatabaseType = GEOIP_PROXY_EDITION) then
-  begin
-    SetLength(FDatabaseSegments, 1);
-    FDatabaseSegments[0] := COUNTRY_BEGIN;
-  end;
-end;
+  For i:=0 To STRUCTURE_INFO_MAX_SIZE-1 Do
+    Begin
+      FInputFile.Read(delim, 3);
+      If (delim[0] = 255) And (delim[1] = 255) And (delim[2] = 255) Then
+        Begin
+          FInputFile.Read(FDatabaseType, 1);
+          If Byte(FDatabaseType) >= 106 Then
+            Begin
 
-function TGeoIP.SeekRecord(IPNum: Cardinal): Cardinal;
-var
+
+            // Backward compatibility with databases from April 2003 and earlier
+              Dec(FDatabaseType, 105);
+            End;
+          If FDatabaseType = GEOIP_REGION_EDITION_REV0 Then
+            Begin
+              // Region Edition, pre June 2003
+              SetLength(FDatabaseSegments, 1);
+              FDatabaseSegments[0] := STATE_BEGIN_REV0;
+            End
+          Else If FDatabaseType = GEOIP_REGION_EDITION_REV1 Then
+                 Begin
+                   // Region Edition, post June 2003
+                   SetLength(FDatabaseSegments, 1);
+                   FDatabaseSegments[0] := STATE_BEGIN_REV1;
+                 End
+          Else If (FDatabaseType = GEOIP_CITY_EDITION_REV0) Or
+                  (FDatabaseType = GEOIP_CITY_EDITION_REV1) Or
+                  (FDatabaseType = GEOIP_ORG_EDITION) Or
+                  (FDatabaseType = GEOIP_ISP_EDITION) Or
+                  (FDatabaseType = GEOIP_ASNUM_EDITION) Then
+                 Begin
+
+
+           // City/Org Editions have two segments, read offset of second segment
+                   SetLength(FDatabaseSegments, 1);
+                   FDatabaseSegments[0] := 0;
+                   FInputFile.Read(buf, SEGMENT_RECORD_LENGTH);
+                   For j:=0 To SEGMENT_RECORD_LENGTH-1 Do
+                     Begin
+                       Inc(FDatabaseSegments[0], Integer(buf[j]) shl (j*8));
+                     End;
+                   If (FDatabaseType = GEOIP_ORG_EDITION) Or
+                      (FDatabaseType = GEOIP_ISP_EDITION) Then
+                     FRecordLength := ORG_RECORD_LENGTH;
+                 End;
+          Break;
+        End
+      Else
+        Begin
+          FInputFile.Seek(-4, soFromCurrent);
+        End;
+    End;
+  If (FDatabaseType = GEOIP_COUNTRY_EDITION) Or
+     (FDatabaseType = GEOIP_PROXY_EDITION) Then
+    Begin
+      SetLength(FDatabaseSegments, 1);
+      FDatabaseSegments[0] := COUNTRY_BEGIN;
+    End;
+End;
+
+Function TGeoIP.SeekRecord(IPNum: Cardinal): Cardinal;
+
+Var 
   depth: Cardinal;
   offset: Cardinal;
   i,j: Cardinal;
-  x: array[0..1] of Cardinal;
+  x: array[0..1] Of Cardinal;
   y: Cardinal;
-  buf: array[0..2*MAX_RECORD_LENGTH-1] of Byte;
-begin
+  buf: array[0..2*MAX_RECORD_LENGTH-1] Of Byte;
+Begin
   offset := 0;
-  for depth:=31 downto 0 do
-  begin
-    FInputFile.Seek(2 * FRecordLength * offset, soFromBeginning);
-    FInputFile.Read(buf, 2 * FRecordLength);
-    for i:=0 to 1 do
-    begin
-      x[i] := 0;
-      for j:=0 to FRecordLength-1 do
-      begin
-        y := buf[i*FRecordLength+j];
-        x[i] := x[i] + (y shl (j*8));
-      end;
-    end;
-    if (IPNum and (1 shl depth)) <> 0 then
-    begin
-      if x[1] >= FDatabaseSegments[0] then
-      begin
-        Result := x[1];
-        Exit;
-      end
-      else
-      begin
-        Offset := x[1];
-      end;
-    end
-    else
-    begin
-      if x[0] >= FDatabaseSegments[0] then
-      begin
-        Result := x[0];
-        Exit;
-      end
-      else
-      begin
-        Offset := x[0];
-      end;
-    end;
-  end;
+  For depth:=31 Downto 0 Do
+    Begin
+      FInputFile.Seek(2 * FRecordLength * offset, soFromBeginning);
+      FInputFile.Read(buf, 2 * FRecordLength);
+      For i:=0 To 1 Do
+        Begin
+          x[i] := 0;
+          For j:=0 To FRecordLength-1 Do
+            Begin
+              y := buf[i*FRecordLength+j];
+              x[i] := x[i] + (y shl (j*8));
+            End;
+        End;
+      If (IPNum And (1 shl depth)) <> 0 Then
+        Begin
+          If x[1] >= FDatabaseSegments[0] Then
+            Begin
+              Result := x[1];
+              Exit;
+            End
+          Else
+            Begin
+              Offset := x[1];
+            End;
+        End
+      Else
+        Begin
+          If x[0] >= FDatabaseSegments[0] Then
+            Begin
+              Result := x[0];
+              Exit;
+            End
+          Else
+            Begin
+              Offset := x[0];
+            End;
+        End;
+    End;
   Result := 0;
-end;
+End;
 
-end.
+End.

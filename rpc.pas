@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -12,9 +14,9 @@
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with Transmission Remote GUI; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  You should have received a copy of the GNU General Public License along with
+  Transmission Remote GUI; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
   In addition, as a special exception, the copyright holders give permission to 
   link the code of portions of this program with the
@@ -28,1187 +30,1380 @@
   statement from your version.  If you delete this exception statement from all
   source files in the program, then also delete it here.
 *************************************************************************************}
-unit rpc;
+
+Unit rpc;
 
 {$mode objfpc}{$H+}
 
-interface
+Interface
 
-uses
+Uses 
   {$ifdef windows}
-  windows,
+windows,
   {$endif windows}
-  Classes, SysUtils, Forms, httpsend, syncobjs, fpjson, jsonparser, variants, ssl_openssl, dbugintf,
-  ZStream, jsonscanner;
+Classes, SysUtils, Forms, httpsend, syncobjs, fpjson, jsonparser, variants,
+ssl_openssl, dbugintf,
+ZStream, jsonscanner;
 
 resourcestring
-  sTransmissionAt = 'Transmission%s at %s:%s';
+sTransmissionAt = 'Transmission%s at %s:%s';
 
-const
+Const 
   DefaultRpcPath = '/transmission/rpc';
 
-type
+Type 
   TAdvInfoType = (aiNone, aiGeneral, aiFiles, aiPeers, aiTrackers, aiStats);
   TRefreshTypes = (rtTorrents, rtDetails, rtSession);
-  TRefreshType = set of TRefreshTypes;
+  TRefreshType = set Of TRefreshTypes;
 
-  TRpc = class;
+  TRpc = Class;
 
   { TRpcThread }
 
-  TRpcThread = class(TThread)
-  private
-    ResultData: TJSONData;
-    FRpc: TRpc;
+    TRpcThread = Class(TThread)
+      Private 
+        ResultData: TJSONData;
+        FRpc: TRpc;
 
-    function GetAdvInfo: TAdvInfoType;
-    function GetCurTorrentId: cardinal;
-    function GetRefreshInterval: TDateTime;
-    function GetStatus: string;
-    procedure SetStatus(const AValue: string);
+        Function GetAdvInfo: TAdvInfoType;
+        Function GetCurTorrentId: cardinal;
+        Function GetRefreshInterval: TDateTime;
+        Function GetStatus: string;
+        Procedure SetStatus(Const AValue: String);
 
-    function GetTorrents: boolean;
-    procedure GetPeers(TorrentId: integer);
-    procedure GetFiles(TorrentId: integer);
-    procedure GetTrackers(TorrentId: integer);
-    procedure GetStats;
-    procedure GetInfo(TorrentId: integer);
-    procedure GetSessionInfo;
-    procedure GetFreeSpace;
+        Function GetTorrents: boolean;
+        Procedure GetPeers(TorrentId: integer);
+        Procedure GetFiles(TorrentId: integer);
+        Procedure GetTrackers(TorrentId: integer);
+        Procedure GetStats;
+        Procedure GetInfo(TorrentId: integer);
+        Procedure GetSessionInfo;
+        Procedure GetFreeSpace;
 
-    procedure DoFillTorrentsList;
-    procedure DoFillPeersList;
-    procedure DoFillFilesList;
-    procedure DoFillInfo;
-    procedure DoFillTrackersList;
-    procedure DoFillStats;
-    procedure DoFillSessionInfo;
-    procedure NotifyCheckStatus;
-    procedure CheckStatusHandler(Data: PtrInt);
-  protected
-    procedure Execute; override;
-  public
-    constructor Create;
-    destructor Destroy; override;
+        Procedure DoFillTorrentsList;
+        Procedure DoFillPeersList;
+        Procedure DoFillFilesList;
+        Procedure DoFillInfo;
+        Procedure DoFillTrackersList;
+        Procedure DoFillStats;
+        Procedure DoFillSessionInfo;
+        Procedure NotifyCheckStatus;
+        Procedure CheckStatusHandler(Data: PtrInt);
+      Protected 
+        Procedure Execute;
+        override;
+      Public 
+        constructor Create;
+        destructor Destroy;
+        override;
 
-    property Status: string read GetStatus write SetStatus;
-    property RefreshInterval: TDateTime read GetRefreshInterval;
-    property CurTorrentId: cardinal read GetCurTorrentId;
-    property AdvInfo: TAdvInfoType read GetAdvInfo;
-  end;
+        property Status: string read GetStatus write SetStatus;
+        property RefreshInterval: TDateTime read GetRefreshInterval;
+        property CurTorrentId: cardinal read GetCurTorrentId;
+        property AdvInfo: TAdvInfoType read GetAdvInfo;
+    End;
 
-  TRpc = class
-  private
-    FLock: TCriticalSection;
-    FStatus: string;
-    FInfoStatus: string;
-    FConnected: boolean;
-    FTorrentFields: string;
-    FRPCVersion: integer;
-    XTorrentSession: string;
-    FMainThreadId: TThreadID;
-    FRpcPath: string;
+    TRpc = Class
+      Private 
+        FLock: TCriticalSection;
+        FStatus: string;
+        FInfoStatus: string;
+        FConnected: boolean;
+        FTorrentFields: string;
+        FRPCVersion: integer;
+        XTorrentSession: string;
+        FMainThreadId: TThreadID;
+        FRpcPath: string;
 
-    function GetConnected: boolean;
-    function GetConnecting: boolean;
-    function GetInfoStatus: string;
-    function GetStatus: string;
-    function GetTorrentFields: string;
-    procedure SetInfoStatus(const AValue: string);
-    procedure SetStatus(const AValue: string);
-    procedure SetTorrentFields(const AValue: string);
-    procedure CreateHttp;
-  public
-    Http: THTTPSend;
-    HttpLock: TCriticalSection;
-    RpcThread: TRpcThread;
-    Url: string;
-    RefreshInterval: TDateTime;
-    CurTorrentId: cardinal;
-    AdvInfo: TAdvInfoType;
-    RefreshNow: TRefreshType;
-    RequestFullInfo: boolean;
-    ReconnectAllowed: boolean;
-    RequestStartTime: TDateTime;
-    IncompleteDir: string;
-    ForceRequest: integer;
+        Function GetConnected: boolean;
+        Function GetConnecting: boolean;
+        Function GetInfoStatus: string;
+        Function GetStatus: string;
+        Function GetTorrentFields: string;
+        Procedure SetInfoStatus(Const AValue: String);
+        Procedure SetStatus(Const AValue: String);
+        Procedure SetTorrentFields(Const AValue: String);
+        Procedure CreateHttp;
+      Public 
+        Http: THTTPSend;
+        HttpLock: TCriticalSection;
+        RpcThread: TRpcThread;
+        Url: string;
+        RefreshInterval: TDateTime;
+        CurTorrentId: cardinal;
+        AdvInfo: TAdvInfoType;
+        RefreshNow: TRefreshType;
+        RequestFullInfo: boolean;
+        ReconnectAllowed: boolean;
+        RequestStartTime: TDateTime;
+        IncompleteDir: string;
+        ForceRequest: integer;
 
-    constructor Create;
-    destructor Destroy; override;
-    procedure InitSSL;
+        constructor Create;
+        destructor Destroy;
+        override;
+        Procedure InitSSL;
 
-    procedure Lock;
-    procedure Unlock;
+        Procedure Lock;
+        Procedure Unlock;
 
-    procedure Connect;
-    procedure Disconnect;
+        Procedure Connect;
+        Procedure Disconnect;
 
-    function SendRequest(req: TJSONObject; ReturnArguments: boolean = True; ATimeOut: integer = -1): TJSONObject;
-    function RequestInfo(TorrentId: integer; const Fields: array of const; const ExtraFields: array of string): TJSONObject;
-    function RequestInfo(TorrentId: integer; const Fields: array of const): TJSONObject;
-    function RequestInfos(TorrentIds: variant; const Fields: array of const; const ExtraFields: array of string): TJSONObject;
-    function RequestInfos(TorrentIds: variant; const Fields: array of const): TJSONObject;
+        Function SendRequest(req: TJSONObject; ReturnArguments: boolean = True;
+                             ATimeOut: integer = -1): TJSONObject;
+        Function RequestInfo(TorrentId: integer; Const Fields: Array Of Const;
+                             Const ExtraFields: Array Of String): TJSONObject;
+        Function RequestInfo(TorrentId: integer; Const Fields: Array Of Const):
 
-    property Status: string read GetStatus write SetStatus;
-    property InfoStatus: string read GetInfoStatus write SetInfoStatus;
-    property Connected: boolean read GetConnected;
-    property Connecting: boolean read GetConnecting;
-    property TorrentFields: string read GetTorrentFields write SetTorrentFields;
-    property RPCVersion: integer read FRPCVersion;
-    property RpcPath: string read FRpcPath write FRpcPath;
-  end;
+                                                                     TJSONObject
+        ;
+        Function RequestInfos(TorrentIds: variant; Const Fields: Array Of Const;
+                              Const ExtraFields: Array Of String): TJSONObject;
+        Function RequestInfos(TorrentIds: variant; Const Fields: Array Of Const)
+        : TJSONObject;
 
-var
-  RemotePathDelimiter: char = '/';
+        property Status: string read GetStatus write SetStatus;
+        property InfoStatus: string read GetInfoStatus write SetInfoStatus;
+        property Connected: boolean read GetConnected;
+        property Connecting: boolean read GetConnecting;
+        property TorrentFields: string read GetTorrentFields write
+                                SetTorrentFields;
+        property RPCVersion: integer read FRPCVersion;
+        property RpcPath: string read FRpcPath write FRpcPath;
+    End;
 
-implementation
+    Var 
+      RemotePathDelimiter: char = '/';
 
-uses Main, ssl_openssl_lib, synafpc, blcksock;
+    Implementation
 
-function TranslateTableToObjects(reply: TJSONObject) : TJSONObject;
-var
-  array_tor, fields, out_torrents : TJSONArray;
-  object_tor : TJSONObject;
-  i, j : integer;
-begin
-  out_torrents:=TJSONArray.Create;
-  if reply = nil then
-  Result:=TJSONObject.Create(['torrents', out_torrents])
-  else
-    begin
-      fields:=reply.Arrays['torrents'].Arrays[0];
-      for i:=1 to reply.Arrays['torrents'].Count - 1 do
-      begin
-        array_tor:=reply.Arrays['torrents'].Arrays[i];
-        object_tor:=TJSONObject.Create;
-        for j:=0 to fields.Count - 1 do
-          object_tor.Add(fields.Items[j].AsString, array_tor.Items[j].Clone);
+    Uses Main, ssl_openssl_lib, synafpc, blcksock;
 
-        out_torrents.Add(object_tor);
-      end;
-      Result:=TJSONObject.Create(['torrents', out_torrents]);
-      reply.Free;
-    end;
-end;
+    Function TranslateTableToObjects(reply: TJSONObject) : TJSONObject;
+
+    Var 
+      array_tor, fields, out_torrents : TJSONArray;
+      object_tor : TJSONObject;
+      i, j : integer;
+    Begin
+      out_torrents := TJSONArray.Create;
+      If (reply = Nil) Or (reply.Arrays['torrents'] = Nil) Or(reply.Arrays[
+         'torrents'].Count = 0)Then
+        Result := TJSONObject.Create(['torrents', out_torrents])
+      Else
+        Begin
+          fields := reply.Arrays['torrents'].Arrays[0];
+          For i:=1 To reply.Arrays['torrents'].Count - 1 Do
+            Begin
+              array_tor := reply.Arrays['torrents'].Arrays[i];
+              object_tor := TJSONObject.Create;
+              For j:=0 To fields.Count - 1 Do
+                object_tor.Add(fields.Items[j].AsString, array_tor.Items[j].
+                               Clone);
+
+              out_torrents.Add(object_tor);
+            End;
+          Result := TJSONObject.Create(['torrents', out_torrents]);
+          reply.Free;
+        End;
+    End;
 
 { TRpcThread }
 
-procedure TRpcThread.Execute;
-var
-  t, tt: TDateTime;
-  i: integer;
-  ai: TAdvInfoType;
-begin
-  try
-    GetSessionInfo;
-    NotifyCheckStatus;
-    if not FRpc.FConnected then
+    Procedure TRpcThread.Execute;
+
+    Var 
+      t, tt: TDateTime;
+      i: integer;
+      ai: TAdvInfoType;
+    Begin
+      Try
+        Try
+          GetSessionInfo;
+          NotifyCheckStatus;
+        Except
+          OutputDebugString(LPCSTR(Exception(ExceptObject).Message+
+          '(GetSessionInfo)'));
+    End;
+    If Not FRpc.FConnected Then
       Terminate;
 
-    t:=Now - 1;
-    tt:=Now;
-    while not Terminated do begin
-      if (Now - t >= RefreshInterval) or (FRpc.ForceRequest>0) then begin
-        FRpc.RefreshNow:=FRpc.RefreshNow + [rtTorrents, rtDetails];
-        t:=Now;
+    t := Now - RefreshInterval;
+    tt := Now- RefreshInterval*5;
+    While Not Terminated Do
+      Begin
+        If (Now - t >= RefreshInterval) Or (FRpc.ForceRequest>0) Then
+          Begin
+            FRpc.RefreshNow := FRpc.RefreshNow + [rtTorrents, rtDetails];
+            t := Now;
 
-        if FRpc.ForceRequest>0 then
-        FRpc.ForceRequest:=FRpc.ForceRequest-1;
-      end;
-      if Now - tt >= RefreshInterval*5 then begin
-        Include(FRpc.RefreshNow, rtSession);
-        tt:=Now;
-      end;
+            If FRpc.ForceRequest>0 Then
+              FRpc.ForceRequest := FRpc.ForceRequest-1;
+          End;
+        If Now - tt >= RefreshInterval*5 Then
+          Begin
+            Include(FRpc.RefreshNow, rtSession);
+            tt := Now;
+          End;
 
-      if Status = '' then
-        if rtTorrents in FRpc.RefreshNow then begin
-          GetTorrents;
-          Exclude(FRpc.RefreshNow, rtTorrents);
-          t:=Now;
-        end
-        else
-          if rtDetails in FRpc.RefreshNow then begin
-            i:=CurTorrentId;
-            ai:=AdvInfo;
-            if i <> 0 then begin
-              case ai of
+        If Status = '' Then
+          If rtSession In FRpc.RefreshNow Then
+            Begin
+              Try
+                GetSessionInfo;
+              Except
+                OutputDebugString(LPCSTR(Exception(ExceptObject).Message+
+                '(GetSessionInfo)'));
+            End;
+        Try
+          GetFreeSpace;
+        Except
+          OutputDebugString(LPCSTR(Exception(ExceptObject).Message+
+          '(GetFreeSpace)'));
+      End;
+    Exclude(FRpc.RefreshNow, rtSession);
+    //FRpc.RefreshNow:=FRpc.RefreshNow + [rtTorrents];
+  End
+  Else
+    If rtDetails In FRpc.RefreshNow Then
+      Begin
+        i := CurTorrentId;
+        ai := AdvInfo;
+        Try
+          If i <> 0 Then
+            Begin
+              Case ai Of 
                 aiGeneral:
-                  GetInfo(i);
+                           GetInfo(i);
                 aiPeers:
-                  GetPeers(i);
+                         GetPeers(i);
                 aiFiles:
-                  GetFiles(i);
+                         GetFiles(i);
                 aiTrackers:
-                  GetTrackers(i);
-              end;
-            end;
+                            GetTrackers(i);
+              End;
+              Case ai Of 
+                aiStats:
+                         GetStats;
+              End;
 
-            case ai of
-              aiStats:
-                GetStats;
-            end;
+            End;
+        Except
+          OutputDebugString(LPCSTR(Exception(ExceptObject).Message+'(rtDetails)'
+          ));
+      End;
+  If (i = CurTorrentId) And (ai = AdvInfo) Then
+    Exclude(FRpc.RefreshNow, rtDetails);
+End
+Else
+  If rtTorrents In FRpc.RefreshNow Then
+    Begin
+      Try
+        GetTorrents;
+      Except
+        OutputDebugString(LPCSTR(Exception(ExceptObject).Message+'(GetTorrents)'
+        ));
+    End;
 
-            if (i = CurTorrentId) and (ai = AdvInfo) then
-              Exclude(FRpc.RefreshNow, rtDetails);
-          end
-          else
-            if rtSession in FRpc.RefreshNow then begin
-              GetSessionInfo;
-              GetFreeSpace;
-              Exclude(FRpc.RefreshNow, rtSession);
-              FRpc.RefreshNow:=FRpc.RefreshNow + [rtTorrents];
-            end;
+Exclude(FRpc.RefreshNow, rtTorrents);
+t := Now;
+End;
 
-      if Status <> '' then begin
-        NotifyCheckStatus;
-        Sleep(100);
-      end;
-
-      if FRpc.RefreshNow = [] then
-        Sleep(50);
-    end;
-  except
-    Status:=Exception(ExceptObject).Message;
-//    FRpc.RpcThread.destroy;
-    FRpc.RpcThread:=nil;
+If Status <> '' Then
+  Begin
     NotifyCheckStatus;
-  end;
+    Sleep(100);
+  End;
+
+If FRpc.RefreshNow = [] Then
+  Sleep(50);
+End;
+Except
+  Status := Exception(ExceptObject).Message;
+  FRpc.ReconnectAllowed := true;
+  If Status <> '' Then OutputDebugString(LPCSTR(Status));
+  //    FRpc.RpcThread.destroy;
+  FRpc.RpcThread := Nil;
+  NotifyCheckStatus;
+End;
 //  if FRpc.RpcThread<>nil then FRpc.RpcThread.destroy;
-  FRpc.RpcThread:=nil;
-  FRpc.FConnected:=False;
-  FRpc.FRPCVersion:=0;
-  Sleep(20);
-end;
-procedure TRpcThread.GetFreeSpace;
-var
+FRpc.RpcThread := Nil;
+FRpc.FConnected := False;
+FRpc.FRPCVersion := 0;
+Sleep(20);
+End;
+Procedure TRpcThread.GetFreeSpace;
+
+Var 
   i: integer;
   req, args2: TJSONObject;
-  begin
-    if FreeSpacePaths = nil then
-       exit;
-    for i:=0 to FreeSpacePaths.Count - 1 do begin
-//    Application.ProcessMessages;
-      req:=TJSONObject.Create;
+Begin
+  If FreeSpacePaths = Nil Then
+    exit;
+  For i:=0 To FreeSpacePaths.Count - 1 Do
+    Begin
+      //    Application.ProcessMessages;
+      req := TJSONObject.Create;
       req.Add('method', 'free-space');
-      args2:=TJSONObject.Create;
+      args2 := TJSONObject.Create;
       args2.Add('path', FreeSpacePaths.Keys[i]);
       req.Add('arguments', args2);
-      try
-      args2:=RpcObj.SendRequest(req,True,20000);
-            //args2:=RpcObj.SendRequest(req);
-      if args2 <> nil then
-        FreeSpacePaths[FreeSpacePaths.Keys[i]]:='('+Format(SFreeSpace, [GetHumanSize(args2.Floats['size-bytes'])])+')';
-      finally
+      Try
+        args2 := RpcObj.SendRequest(req,True,20000);
+        //args2:=RpcObj.SendRequest(req);
+        If args2 <> Nil Then
+          FreeSpacePaths[FreeSpacePaths.Keys[i]] := '('+Format(SFreeSpace, [
+                                                    GetHumanSize(args2.Floats[
+                                                    'size-bytes'])])+')';
+      Finally
         args2.Free;
-        RpcObj.Status:='';
+        RpcObj.Status := '';
         req.Free;
         MainForm.CheckStatus(True);
-      end;
-    end;
+    End;
+End;
 
-  end;
+End;
 
 constructor TRpcThread.Create;
-begin
+Begin
   inherited Create(True);
-end;
+End;
 
 destructor TRpcThread.Destroy;
-begin
+Begin
   inherited Destroy;
-end;
+End;
 
-procedure TRpcThread.SetStatus(const AValue: string);
-begin
-  FRpc.Status:=AValue;
-end;
+Procedure TRpcThread.SetStatus(Const AValue: String);
+Begin
+  FRpc.Status := AValue;
+End;
 
-procedure TRpcThread.DoFillTorrentsList;
-begin
+Procedure TRpcThread.DoFillTorrentsList;
+Begin
   MainForm.FillTorrentsList(ResultData as TJSONArray);
-end;
+End;
 
-procedure TRpcThread.DoFillPeersList;
-begin
+Procedure TRpcThread.DoFillPeersList;
+Begin
   MainForm.FillPeersList(ResultData as TJSONArray);
-end;
+End;
 
-procedure TRpcThread.DoFillFilesList;
-var
+Procedure TRpcThread.DoFillFilesList;
+
+Var 
   t: TJSONObject;
   dir: widestring;
-begin
-  if ResultData = nil then begin
-    MainForm.ClearDetailsInfo;
-    exit;
-  end;
-  t:=ResultData as TJSONObject;
-  if RpcObj.RPCVersion >= 4 then
-    dir:=widestring(t.Strings['downloadDir'])
-  else
-    dir:='';
-  MainForm.FillFilesList(t.Integers['id'], t.Arrays['files'], t.Arrays['priorities'], t.Arrays['wanted'], dir);
-end;
+Begin
+  If ResultData = Nil Then
+    Begin
+      MainForm.ClearDetailsInfo;
+      exit;
+    End;
+  t := ResultData as TJSONObject;
+  If RpcObj.RPCVersion >= 4 Then
+    dir := widestring(t.Strings['downloadDir'])
+  Else
+    dir := '';
+  MainForm.FillFilesList(t.Integers['id'], t.Arrays['files'], t.Arrays[
+                         'priorities'], t.Arrays['wanted'], dir);
+End;
 
-procedure TRpcThread.DoFillInfo;
-begin
+Procedure TRpcThread.DoFillInfo;
+Begin
   MainForm.FillGeneralInfo(ResultData as TJSONObject);
-end;
+End;
 
-procedure TRpcThread.DoFillTrackersList;
-begin
+Procedure TRpcThread.DoFillTrackersList;
+Begin
   MainForm.FillTrackersList(ResultData as TJSONObject);
-end;
+End;
 
-procedure TRpcThread.DoFillStats;
-begin
+Procedure TRpcThread.DoFillStats;
+Begin
   MainForm.FillStatistics(ResultData as TJSONObject);
-end;
+End;
 
-procedure TRpcThread.DoFillSessionInfo;
-begin
+Procedure TRpcThread.DoFillSessionInfo;
+Begin
   MainForm.FillSessionInfo(ResultData as TJSONObject);
-end;
+End;
 
-procedure TRpcThread.NotifyCheckStatus;
-begin
-  if not Terminated then
+Procedure TRpcThread.NotifyCheckStatus;
+Begin
+  If Not Terminated Then
     Application.QueueAsyncCall(@CheckStatusHandler, 0);
-end;
+End;
 
-procedure TRpcThread.CheckStatusHandler(Data: PtrInt);
-begin
-  if csDestroying in MainForm.ComponentState then exit;
+Procedure TRpcThread.CheckStatusHandler(Data: PtrInt);
+Begin
+  If csDestroying In MainForm.ComponentState Then exit;
   MainForm.CheckStatus(True);
-end;
+End;
 
-procedure TRpcThread.GetSessionInfo;
-var
+Procedure TRpcThread.GetSessionInfo;
+
+Var 
   req, args, args2: TJSONObject;
   s: string;
-begin
-  req:=TJSONObject.Create;
-  try
+Begin
+  req := TJSONObject.Create;
+  Try
     req.Add('method', 'session-get');
-    args:=FRpc.SendRequest(req);
-    if args <> nil then
-    try
-      FRpc.FConnected:=True;
-      FRpc.IncompleteDir:='';
-      if args.IndexOfName('incomplete-dir-enabled') >=0 then
-         if args.Booleans['incomplete-dir-enabled'] then
-            if args.IndexOfName('incomplete-dir') >=0 then
-               FRpc.IncompleteDir:=args.Strings['incomplete-dir'];
-      if args.IndexOfName('rpc-version') >= 0 then
-        FRpc.FRPCVersion := args.Integers['rpc-version']
-      else
-        FRpc.FRPCVersion := 0;
-      if args.IndexOfName('version') >= 0 then
-        s:=' ' + args.Strings['version']
-      else
-        s:='';
-      FRpc.InfoStatus:=Format(sTransmissionAt, [s, FRpc.Http.TargetHost, FRpc.Http.TargetPort]);
-      if FRpc.RPCVersion >= 15 then begin
-        // Requesting free space in download dir
-        req.Free;
-        req:=TJSONObject.Create;
-        req.Add('method', 'free-space');
-        args2:=TJSONObject.Create;
-        try
-          args2.Add('path', args.Strings['download-dir']);
-          req.Add('arguments', args2);
-          args2:=FRpc.SendRequest(req);
-          if args2 <> nil then
-            args.Floats['download-dir-free-space']:=args2.Floats['size-bytes']
-          else begin
-            args.Floats['download-dir-free-space']:=-1;
-            FRpc.Status:='';
-          end;
-          if FRpc.IncompleteDir <> '' then
-          begin
+    args := FRpc.SendRequest(req);
+    If args <> Nil Then
+      Try
+        FRpc.FConnected := True;
+        FRpc.IncompleteDir := '';
+        If args.IndexOfName('incomplete-dir-enabled') >=0 Then
+          If args.Booleans['incomplete-dir-enabled'] Then
+            If args.IndexOfName('incomplete-dir') >=0 Then
+              FRpc.IncompleteDir := args.Strings['incomplete-dir'];
+        If args.IndexOfName('rpc-version') >= 0 Then
+          FRpc.FRPCVersion := args.Integers['rpc-version']
+        Else
+          FRpc.FRPCVersion := 0;
+        If args.IndexOfName('version') >= 0 Then
+          s := ' ' + args.Strings['version']
+        Else
+          s := '';
+        FRpc.InfoStatus := Format(sTransmissionAt, [s, FRpc.Http.TargetHost,
+                           FRpc.Http.TargetPort]);
+        If FRpc.RPCVersion >= 15 Then
+          Begin
+            // Requesting free space in download dir
             req.Free;
-            req:=TJSONObject.Create;
+            req := TJSONObject.Create;
             req.Add('method', 'free-space');
-            args2:=TJSONObject.Create;
-            args2.Add('path', FRpc.IncompleteDir);
-            req.Add('arguments', args2);
-            args2:=FRpc.SendRequest(req);
-            if args2 <> nil then
-              args.Floats['incomplete-dir-free-space']:=args2.Floats['size-bytes']
-            else begin
-              args.Floats['incomplete-dir-free-space']:=-1;
-              FRpc.Status:='';
-            end;
-          end;
-        finally
-          args2.Free;
-        end;
-      end;
-      ResultData:=args;
-      if not Terminated then
-        Synchronize(@DoFillSessionInfo);
-    finally
-      args.Free;
-    end
-    else
-      ASSERT(FRpc.Status <> '');
-  finally
-    req.Free;
-  end;
-end;
+            args2 := TJSONObject.Create;
+            Try
+              args2.Add('path', args.Strings['download-dir']);
+              req.Add('arguments', args2);
+              args2 := FRpc.SendRequest(req);
+              If args2 <> Nil Then
+                args.Floats['download-dir-free-space'] := args2.Floats[
+                                                          'size-bytes']
+              Else
+                Begin
+                  args.Floats['download-dir-free-space'] := -1;
+                  FRpc.Status := '';
+                End;
+              If FRpc.IncompleteDir <> '' Then
+                Begin
+                  req.Free;
+                  req := TJSONObject.Create;
+                  req.Add('method', 'free-space');
+                  args2 := TJSONObject.Create;
+                  args2.Add('path', FRpc.IncompleteDir);
+                  req.Add('arguments', args2);
+                  args2 := FRpc.SendRequest(req);
+                  If args2 <> Nil Then
+                    args.Floats['incomplete-dir-free-space'] := args2.Floats[
+                                                                'size-bytes']
+                  Else
+                    Begin
+                      args.Floats['incomplete-dir-free-space'] := -1;
+                      FRpc.Status := '';
+                    End;
+                End;
+            Finally
+              args2.Free;
+          End;
+End;
+ResultData := args;
+If Not Terminated Then
+  Synchronize(@DoFillSessionInfo);
+Finally
+  args.Free;
+End
+Else
+  ASSERT(FRpc.Status <> '');
+Finally
+  req.Free;
+End;
+End;
 
-function TRpcThread.GetTorrents: boolean;
-var
+Function TRpcThread.GetTorrents: boolean;
+
+Var 
   args: TJSONObject;
-  ExtraFields: array of string;
+  ExtraFields: array Of string;
   sl: TStringList;
   i: integer;
-begin
-  Result:=False;
-  sl:=TStringList.Create;
-  try
+Begin
+  Result := False;
+  sl := TStringList.Create;
+  Try
     FRpc.Lock;
-    try
-      sl.CommaText:=FRpc.FTorrentFields;
-    finally
+    Try
+      sl.CommaText := FRpc.FTorrentFields;
+    Finally
       FRpc.Unlock;
-    end;
+End;
 
-    if FRpc.RPCVersion < 7 then begin
-      i:=sl.IndexOf('trackers');
-      if FRpc.RequestFullInfo then begin
-        if i < 0 then
+If FRpc.RPCVersion < 7 Then
+  Begin
+    i := sl.IndexOf('trackers');
+    If FRpc.RequestFullInfo Then
+      Begin
+        If i < 0 Then
           sl.Add('trackers');
-      end
-      else
-        if i >= 0 then
-          sl.Delete(i);
-    end;
-
-    i:=sl.IndexOf('downloadDir');
-    if FRpc.RequestFullInfo then begin
-      if i < 0 then
-        sl.Add('downloadDir');
-    end
-    else
-      if i >= 0 then
+      End
+    Else
+      If i >= 0 Then
         sl.Delete(i);
+  End;
 
-    SetLength(ExtraFields, sl.Count);
-    for i:=0 to sl.Count - 1 do
-      ExtraFields[i]:=sl[i];
-  finally
-    sl.Free;
-  end;
+i := sl.IndexOf('downloadDir');
+If FRpc.RequestFullInfo Then
+  Begin
+    If i < 0 Then
+      sl.Add('downloadDir');
+  End
+Else
+  If i >= 0 Then
+    sl.Delete(i);
 
-  args:=FRpc.RequestInfo(0, ['id', 'name', 'status', 'errorString', 'announceResponse', 'recheckProgress',
-                            'sizeWhenDone', 'leftUntilDone', 'rateDownload', 'rateUpload', 'trackerStats',
-                            'metadataPercentComplete'], ExtraFields);
-  try
-    if (args <> nil) and not Terminated then begin
-      FRpc.RequestFullInfo:=False;
-      ResultData:=args.Arrays['torrents'];
-      Synchronize(@DoFillTorrentsList);
-      Result:=True;
-    end;
-  finally
-    args.Free;
-  end;
-end;
+SetLength(ExtraFields, sl.Count);
+For i:=0 To sl.Count - 1 Do
+  ExtraFields[i] := sl[i];
+Finally
+  sl.Free;
+End;
 
-procedure TRpcThread.GetPeers(TorrentId: integer);
-var
+args := FRpc.RequestInfo(0, ['id', 'name', 'status', 'errorString',
+        'announceResponse', 'recheckProgress',
+        'sizeWhenDone', 'leftUntilDone', 'rateDownload', 'rateUpload',
+        'trackerStats',
+        'metadataPercentComplete'], ExtraFields);
+Try
+  If (args <> Nil) And Not Terminated Then
+    Begin
+      Try
+        FRpc.RequestFullInfo := False;
+        ResultData := args.Arrays['torrents'];
+        Synchronize(@DoFillTorrentsList);
+        Result := True;
+      Except
+        OutputDebugString(LPCSTR(Exception(ExceptObject).Message+
+        '(GetTorrents 0)'));
+    End;
+End;
+Finally
+  args.Free;
+End;
+End;
+
+Procedure TRpcThread.GetPeers(TorrentId: integer);
+
+Var 
   args: TJSONObject;
   t: TJSONArray;
-begin
-  args:=FRpc.RequestInfo(TorrentId, ['peers']);
-  try
-    if args <> nil then begin
-      t:=args.Arrays['torrents'];
-      if t.Count > 0 then
-        ResultData:=t.Objects[0].Arrays['peers']
-      else
-        ResultData:=nil;
-      if not Terminated then
-        Synchronize(@DoFillPeersList);
-    end;
-  finally
+Begin
+  args := FRpc.RequestInfo(TorrentId, ['peers']);
+  Try
+    If args <> Nil Then
+      Begin
+        t := args.Arrays['torrents'];
+        If t.Count > 0 Then
+          ResultData := t.Objects[0].Arrays['peers']
+        Else
+          ResultData := Nil;
+        If Not Terminated Then
+          Synchronize(@DoFillPeersList);
+      End;
+  Finally
     args.Free;
-  end;
-end;
+End;
+End;
 
-procedure TRpcThread.GetFiles(TorrentId: integer);
-var
+Procedure TRpcThread.GetFiles(TorrentId: integer);
+
+Var 
   args: TJSONObject;
   t: TJSONArray;
-begin
-  args:=FRpc.RequestInfo(TorrentId, ['id', 'files','priorities','wanted','downloadDir']);
-  try
-    if args <> nil then begin
-      t:=args.Arrays['torrents'];
-      if t.Count > 0 then
-        ResultData:=t.Objects[0]
-      else
-        ResultData:=nil;
-      if not Terminated then
-        Synchronize(@DoFillFilesList);
-    end;
-  finally
+Begin
+  args := FRpc.RequestInfo(TorrentId, ['id', 'files','priorities','wanted',
+          'downloadDir']);
+  Try
+    If args <> Nil Then
+      Begin
+        t := args.Arrays['torrents'];
+        If t.Count > 0 Then
+          ResultData := t.Objects[0]
+        Else
+          ResultData := Nil;
+        If Not Terminated Then
+          Synchronize(@DoFillFilesList);
+      End;
+  Finally
     args.Free;
-  end;
-end;
+End;
+End;
 
-procedure TRpcThread.GetTrackers(TorrentId: integer);
-var
+Procedure TRpcThread.GetTrackers(TorrentId: integer);
+
+Var 
   args: TJSONObject;
   t: TJSONArray;
-begin
-  args:=FRpc.RequestInfo(TorrentId, ['id','trackers','trackerStats', 'nextAnnounceTime']);
-  try
-    if args <> nil then begin
-      t:=args.Arrays['torrents'];
-      if t.Count > 0 then
-        ResultData:=t.Objects[0]
-      else
-        ResultData:=nil;
-      if not Terminated then
-        Synchronize(@DoFillTrackersList);
-    end;
-  finally
+Begin
+  args := FRpc.RequestInfo(TorrentId, ['id','trackers','trackerStats',
+          'nextAnnounceTime']);
+  Try
+    If args <> Nil Then
+      Begin
+        t := args.Arrays['torrents'];
+        If t.Count > 0 Then
+          ResultData := t.Objects[0]
+        Else
+          ResultData := Nil;
+        If Not Terminated Then
+          Synchronize(@DoFillTrackersList);
+      End;
+  Finally
     args.Free;
-  end;
-end;
+End;
+End;
 
-procedure TRpcThread.GetStats;
-var
+Procedure TRpcThread.GetStats;
+
+Var 
   req, args: TJSONObject;
-begin
-  req:=TJSONObject.Create;
-  try
+Begin
+  req := TJSONObject.Create;
+  Try
     req.Add('method', 'session-stats');
-    args:=FRpc.SendRequest(req);
-    if args <> nil then
-    try
-      ResultData:=args;
-      if not Terminated then
-        Synchronize(@DoFillStats);
-    finally
-      args.Free;
-    end;
-  finally
-    req.Free;
-  end;
-end;
+    args := FRpc.SendRequest(req);
+    If args <> Nil Then
+      Try
+        ResultData := args;
+        If Not Terminated Then
+          Synchronize(@DoFillStats);
+      Finally
+        args.Free;
+End;
+Finally
+  req.Free;
+End;
+End;
 
-procedure TRpcThread.GetInfo(TorrentId: integer);
-var
+Procedure TRpcThread.GetInfo(TorrentId: integer);
+
+Var 
   args: TJSONObject;
   t: TJSONArray;
-begin
-  args:=FRpc.RequestInfo(TorrentId, ['totalSize', 'sizeWhenDone', 'leftUntilDone', 'pieceCount', 'pieceSize', 'haveValid',
-                                    'hashString', 'comment', 'downloadedEver', 'uploadedEver', 'corruptEver', 'errorString',
-                                    'announceResponse', 'downloadLimit', 'downloadLimitMode', 'uploadLimit', 'uploadLimitMode',
-                                    'maxConnectedPeers', 'nextAnnounceTime', 'dateCreated', 'creator', 'eta', 'peersSendingToUs',
-                                    'seeders','peersGettingFromUs','leechers', 'uploadRatio', 'addedDate', 'doneDate',
-                                    'activityDate', 'downloadLimited', 'uploadLimited', 'downloadDir', 'id', 'pieces',
-                                    'trackerStats', 'secondsDownloading', 'secondsSeeding', 'magnetLink', 'isPrivate', 'labels','sequentialDownload']);
-  try
-    if args <> nil then begin
-      t:=args.Arrays['torrents'];
-      if t.Count > 0 then
-        ResultData:=t.Objects[0]
-      else
-        ResultData:=nil;
-      if not Terminated then
-        Synchronize(@DoFillInfo);
-    end;
-  finally
+Begin
+  args := FRpc.RequestInfo(TorrentId, ['totalSize', 'sizeWhenDone',
+          'leftUntilDone', 'pieceCount', 'pieceSize', 'haveValid',
+          'hashString', 'comment', 'downloadedEver', 'uploadedEver',
+          'corruptEver', 'errorString',
+          'announceResponse', 'downloadLimit', 'downloadLimitMode',
+          'uploadLimit', 'uploadLimitMode',
+          'maxConnectedPeers', 'nextAnnounceTime', 'dateCreated', 'creator',
+          'eta', 'peersSendingToUs',
+          'seeders','peersGettingFromUs','leechers', 'uploadRatio', 'addedDate',
+          'doneDate',
+          'activityDate', 'downloadLimited', 'uploadLimited', 'downloadDir',
+          'id', 'pieces',
+          'trackerStats', 'secondsDownloading', 'secondsSeeding', 'magnetLink',
+          'isPrivate', 'labels','sequentialDownload']);
+  Try
+    If args <> Nil Then
+      Begin
+        t := args.Arrays['torrents'];
+        If t.Count > 0 Then
+          ResultData := t.Objects[0]
+        Else
+          ResultData := Nil;
+        If Not Terminated Then
+          Synchronize(@DoFillInfo);
+      End;
+  Finally
     args.Free;
-  end;
-end;
+End;
+End;
 
-function TRpcThread.GetAdvInfo: TAdvInfoType;
-begin
+Function TRpcThread.GetAdvInfo: TAdvInfoType;
+Begin
   FRpc.Lock;
-  try
-    Result:=FRpc.AdvInfo;
-  finally
+  Try
+    Result := FRpc.AdvInfo;
+  Finally
     FRpc.Unlock;
-  end;
-end;
+End;
+End;
 
-function TRpcThread.GetCurTorrentId: cardinal;
-begin
+Function TRpcThread.GetCurTorrentId: cardinal;
+Begin
   FRpc.Lock;
-  try
-    Result:=FRpc.CurTorrentId;
-  finally
+  Try
+    Result := FRpc.CurTorrentId;
+  Finally
     FRpc.Unlock;
-  end;
-end;
+End;
+End;
 
-function TRpcThread.GetRefreshInterval: TDateTime;
-begin
+Function TRpcThread.GetRefreshInterval: TDateTime;
+Begin
   FRpc.Lock;
-  try
-    Result:=FRpc.RefreshInterval;
-  finally
+  Try
+    Result := FRpc.RefreshInterval;
+  Finally
     FRpc.Unlock;
-  end;
-end;
+End;
+End;
 
-function TRpcThread.GetStatus: string;
-begin
-  Result:=FRpc.Status;
-end;
+Function TRpcThread.GetStatus: string;
+Begin
+  Result := FRpc.Status;
+End;
 
 { TRpc }
 
 constructor TRpc.Create;
-begin
+Begin
   inherited;
-  FMainThreadId:=GetCurrentThreadId;
-  FLock:=TCriticalSection.Create;
-  HttpLock:=TCriticalSection.Create;
-  ForceRequest:=0;
-  RefreshNow:=[];
+  FMainThreadId := GetCurrentThreadId;
+  FLock := TCriticalSection.Create;
+  HttpLock := TCriticalSection.Create;
+  ForceRequest := 0;
+  RefreshNow := [];
   CreateHttp;
-end;
+End;
 
 destructor TRpc.Destroy;
-begin
+Begin
   Http.Free;
   HttpLock.Free;
   FLock.Free;
   inherited Destroy;
-end;
+End;
 
-procedure TRpc.InitSSL;
+Procedure TRpc.InitSSL;
 {$ifdef unix}
 {$ifndef darwin}
-  procedure CheckOpenSSL;
-  const
-  OpenSSLVersions: array[1..4] of string =
-  ('0.9.8', '1.0.0', '1.0.2', '1.1.0');
-  var
-    hLib1, hLib2: TLibHandle;
-    i: integer;
-  begin
-    for i:=Low(OpenSSLVersions) to High(OpenSSLVersions) do begin
-      hlib1:=LoadLibrary(PChar('libssl.so.' + OpenSSLVersions[i]));
-      hlib2:=LoadLibrary(PChar('libcrypto.so.' + OpenSSLVersions[i]));
-      if hLib2 <> 0 then
+Procedure CheckOpenSSL;
+
+Const 
+  OpenSSLVersions: array[1..4] Of string = 
+                                           ('0.9.8', '1.0.0', '1.0.2', '1.1.0');
+
+Var 
+  hLib1, hLib2: TLibHandle;
+  i: integer;
+Begin
+  For i:=Low(OpenSSLVersions) To High(OpenSSLVersions) Do
+    Begin
+      hlib1 := LoadLibrary(PChar('libssl.so.' + OpenSSLVersions[i]));
+      hlib2 := LoadLibrary(PChar('libcrypto.so.' + OpenSSLVersions[i]));
+      If hLib2 <> 0 Then
         FreeLibrary(hLib2);
-      if hLib1 <> 0 then
+      If hLib1 <> 0 Then
         FreeLibrary(hLib1);
-      if (hLib1 <> 0) and (hLib2 <> 0) then begin
-        DLLSSLName:='libssl.so.' + OpenSSLVersions[i];
-        DLLUtilName:='libcrypto.so.' + OpenSSLVersions[i];
-        break;
-      end;
-    end;
-  end;
+      If (hLib1 <> 0) And (hLib2 <> 0) Then
+        Begin
+          DLLSSLName := 'libssl.so.' + OpenSSLVersions[i];
+          DLLUtilName := 'libcrypto.so.' + OpenSSLVersions[i];
+          break;
+        End;
+    End;
+End;
 {$endif darwin}
 {$endif unix}
-begin
-  if IsSSLloaded then exit;
+Begin
+  If IsSSLloaded Then exit;
 {$ifdef unix}
 {$ifndef darwin}
   CheckOpenSSL;
 {$endif darwin}
 {$endif unix}
-  if InitSSLInterface then
+  If InitSSLInterface Then
     SSLImplementation := TSSLOpenSSL;
   CreateHttp;
-end;
+End;
 
-type TGzipDecompressionStream=class(TDecompressionStream)
-public
-  constructor create(Asource:TStream);
-end;
+Type TGzipDecompressionStream = Class(TDecompressionStream)
+  Public 
+    constructor create(Asource:TStream);
+End;
 
 constructor TGzipDecompressionStream.create(Asource:TStream);
-var gzHeader:array[1..10] of byte;
-begin
-  {
+
+Var gzHeader: array[1..10] Of byte;
+Begin
+
+
+{
     paszlib is based on a relatively old zlib version that didn't implement
     reading the gzip header. we "implement" this ourselves by skipping the first
     10 bytes which is just enough for the data Transmission sends.
   }
   inherited create(Asource, True);
   Asource.Read(gzHeader,sizeof(gzHeader));
-end;
+End;
 
-function DecompressGzipContent(source: TStream): TMemoryStream;
-var
-  buf : array[1..16384] of byte;
+Function DecompressGzipContent(source: TStream): TMemoryStream;
+
+Var 
+  buf : array[1..16384] Of byte;
   numRead : integer;
   decomp : TGzipDecompressionStream;
-begin
-  decomp:=TGzipDecompressionStream.create(source);
-  Result:=TMemoryStream.create;
-  repeat
-    try
-      numRead:=decomp.read(buf,sizeof(buf));
+Begin
+  decomp := TGzipDecompressionStream.create(source);
+  Result := TMemoryStream.create;
+  Repeat
+    Try
+      numRead := decomp.Read(buf,sizeof(buf));
       Result.Write(buf,numRead);
-    except
+    Except
       Result.Clear;
-    end;
-  until numRead < sizeof(buf);
-  Result.Position:=0;
-  decomp.Free;
-end;
+  End;
+Until numRead < sizeof(buf);
+Result.Position := 0;
+decomp.Free;
+End;
 
-function CreateJsonParser(serverResp : THTTPSend): TJSONParser;
-var decompressed : TMemoryStream;
-begin
-  if serverResp.Headers.IndexOf('Content-Encoding: gzip') <> -1 then
-  begin
-    { need to fully decompress as the parser relies on a working Seek() }
-    decompressed:=DecompressGzipContent(serverResp.Document);
-    Result:=TJSONParser.Create(decompressed, [joUTF8]);
-    decompressed.Free;
-  end
-  else
-  begin
-    Result:=TJSONParser.Create(serverResp.Document, [joUTF8]);
-  end;
-end;
+Function CreateJsonParser(serverResp : THTTPSend): TJSONParser;
 
-function TRpc.SendRequest(req: TJSONObject; ReturnArguments: boolean; ATimeOut: integer): TJSONObject;
-var
+Var decompressed : TMemoryStream;
+Begin
+  Try
+    If serverResp.Headers.IndexOf('Content-Encoding: gzip') <> -1 Then
+      Begin
+      { need to fully decompress as the parser relies on a working Seek() }
+        decompressed := DecompressGzipContent(serverResp.Document);
+        Result := TJSONParser.Create(decompressed, [joUTF8]);
+        decompressed.Free;
+      End
+    Else
+      Begin
+        Result := TJSONParser.Create(serverResp.Document, [joUTF8]);
+      End;
+  Except
+    OutputDebugString(LPCSTR(Exception(ExceptObject).Message+
+    '(CreateJsonParser 0)'));
+End;
+End;
+
+Function TRpc.SendRequest(req: TJSONObject; ReturnArguments: boolean; ATimeOut:
+                          integer): TJSONObject;
+
+Var 
   obj: TJSONData;
   res: TJSONObject;
   jp: TJSONParser;
   s: string;
   i, j, OldTimeOut, RetryCnt: integer;
   locked, r: boolean;
-begin
-  if FRpcPath = '' then
-    FRpcPath:=DefaultRpcPath;
-  Status:='';
-  Result:=nil;
-  RetryCnt:=2;
-  i:=0;
-  repeat
+Begin
+  If FRpcPath = '' Then
+    FRpcPath := DefaultRpcPath;
+  Status := '';
+  Result := Nil;
+  RetryCnt := 3;
+  i := 0;
+  Repeat
     Inc(i);
     HttpLock.Enter;
-    locked:=True;
-    try
-      OldTimeOut:=Http.Timeout;
-      RequestStartTime:=Now;
-      Http.Document.Clear;
-      s:=req.AsJSON;
-      Http.Document.Write(PChar(s)^, Length(s));
-      s:='';
-      Http.Headers.Clear;
-      Http.Headers.Add('Accept-Encoding: gzip');
-      Http.MimeType:='application/json';
-      if XTorrentSession <> '' then
-        Http.Headers.Add(XTorrentSession);
-      if ATimeOut >= 0 then
-        Http.Timeout:=ATimeOut;
-      try
-        r:=Http.HTTPMethod('POST', Url + FRpcPath);
-      finally
-        Http.Timeout:=OldTimeOut;
-      end;
-      if not r then begin
-        if FMainThreadId <> GetCurrentThreadId then
-          ReconnectAllowed:=True;
-        Status:=Http.Sock.LastErrorDesc;
-        break;
-      end
-      else begin
-        if Http.ResultCode = 409 then begin
-          XTorrentSession:='';
-          for j:=0 to Http.Headers.Count - 1 do
-            if Pos('x-transmission-session-id:', AnsiLowerCase(Http.Headers[j])) > 0 then begin
-              XTorrentSession:=Http.Headers[j];
-              break;
-            end;
-          if XTorrentSession <> '' then begin
-            if i = RetryCnt then begin
-              if FMainThreadId <> GetCurrentThreadId then
-                ReconnectAllowed:=True;
-              Status:='Session ID error.';
-            end;
-            continue;
-          end;
-        end;
+    locked := True;
+    Try
+      Try
+        OldTimeOut := Http.Timeout;
+        RequestStartTime := Now;
+        Http.Document.Clear;
+        s := req.AsJSON;
+        Http.Document.Write(PChar(s)^, Length(s));
+        s := '';
+        Http.Headers.Clear;
+        Http.Headers.Add('Accept-Encoding: gzip');
+        Http.MimeType := 'application/json';
+        If XTorrentSession <> '' Then
+          Http.Headers.Add(XTorrentSession);
+        If ATimeOut >= 0 Then
+          Http.Timeout := ATimeOut;
+        Try
+          Try
+            r := Http.HTTPMethod('POST', Url + FRpcPath);
+          Except
+            OutputDebugString(LPCSTR(Exception(ExceptObject).Message+
+            '(SendRequest 3)'));
+  End;
 
-        if Http.ResultCode = 301 then begin
-          s:=Trim(Http.Headers.Values['Location']);
-          if (s <> '') and (i = 1) then begin
-            j:=Length(s);
-            if Copy(s, j - 4, MaxInt) = '/web/' then
+Finally
+  Http.Timeout := OldTimeOut;
+End;
+If Not r Then
+  Begin
+    If FMainThreadId <> GetCurrentThreadId Then
+      ReconnectAllowed := True;
+    Status := Http.Sock.LastErrorDesc;
+    //break;
+    continue;
+  End
+Else
+  Begin
+    If Http.ResultCode = 409 Then
+      Begin
+        XTorrentSession := '';
+        For j:=0 To Http.Headers.Count - 1 Do
+          If Pos('x-transmission-session-id:', AnsiLowerCase(Http.Headers[j])) >
+             0 Then
+            Begin
+              XTorrentSession := Http.Headers[j];
+              break;
+            End;
+        If XTorrentSession <> '' Then
+          Begin
+            If i = RetryCnt Then
+              Begin
+                If FMainThreadId <> GetCurrentThreadId Then
+                  ReconnectAllowed := True;
+                Status := 'Session ID error.';
+              End;
+            continue;
+          End;
+      End;
+
+    If Http.ResultCode = 301 Then
+      Begin
+        s := Trim(Http.Headers.Values['Location']);
+        If (s <> '') And (i = 1) Then
+          Begin
+            j := Length(s);
+            If Copy(s, j - 4, MaxInt) = '/web/' Then
               SetLength(s, j - 4)
-            else
-              if Copy(s, j - 3, MaxInt) = '/web' then
+            Else
+              If Copy(s, j - 3, MaxInt) = '/web' Then
                 SetLength(s, j - 3);
-            FRpcPath:=s + 'rpc';
+            FRpcPath := s + 'rpc';
             Inc(RetryCnt);
             continue;
-          end;
-        end;
+          End;
+      End;
 
-        if Http.ResultCode <> 200 then begin
-          if Http.Headers.Count > 0 then begin
+    If Http.ResultCode <> 200 Then
+      Begin
+        If Http.Headers.Count > 0 Then
+          Begin
             SetString(s, Http.Document.Memory, Http.Document.Size);
-            j:=Pos('<body>', LowerCase(s));
-            if j > 0 then
+            j := Pos('<body>', LowerCase(s));
+            If j > 0 Then
               System.Delete(s, 1, j - 1);
-            s:=StringReplace(s, #13#10, '', [rfReplaceAll]);
-            s:=StringReplace(s, #13, '', [rfReplaceAll]);
-            s:=StringReplace(s, #10, '', [rfReplaceAll]);
-            s:=StringReplace(s, #9, ' ', [rfReplaceAll]);
-            s:=StringReplace(s, '&quot;', '"', [rfReplaceAll, rfIgnoreCase]);
-            s:=StringReplace(s, '<br>', LineEnding, [rfReplaceAll, rfIgnoreCase]);
-            s:=StringReplace(s, '</p>', LineEnding, [rfReplaceAll, rfIgnoreCase]);
-            s:=StringReplace(s, '</h1>', LineEnding, [rfReplaceAll, rfIgnoreCase]);
-            s:=StringReplace(s, '<li>', LineEnding+'* ', [rfReplaceAll, rfIgnoreCase]);
-            j:=1;
-            while j <= Length(s) do begin
-              if s[j] = '<' then begin
-                while (j <= Length(s)) and (s[j] <> '>') do
-                  System.Delete(s, j, 1);
-                System.Delete(s, j, 1);
-              end
-              else
-                Inc(j);
-            end;
-            while Pos('  ', s) > 0 do
-              s:=StringReplace(s, '  ', ' ', [rfReplaceAll]);
-            while Pos(LineEnding + ' ', s) > 0 do
-              s:=StringReplace(s, LineEnding + ' ', LineEnding, [rfReplaceAll]);
-            s:=Trim(s);
-          end
-          else
-            s:='';
-          if s = '' then begin
-            s:=Http.ResultString;
-            if s = '' then
-              if Http.ResultCode = 0 then
-                s:='Invalid server response.'
-              else
-                s:=Format('HTTP error: %d', [Http.ResultCode]);
-          end;
-          Status:=s;
+            s := StringReplace(s, #13#10, '', [rfReplaceAll]);
+            s := StringReplace(s, #13, '', [rfReplaceAll]);
+            s := StringReplace(s, #10, '', [rfReplaceAll]);
+            s := StringReplace(s, #9, ' ', [rfReplaceAll]);
+            s := StringReplace(s, '&quot;', '"', [rfReplaceAll, rfIgnoreCase]);
+            s := StringReplace(s, '<br>', LineEnding, [rfReplaceAll,
+                 rfIgnoreCase]);
+            s := StringReplace(s, '</p>', LineEnding, [rfReplaceAll,
+                 rfIgnoreCase]);
+            s := StringReplace(s, '</h1>', LineEnding, [rfReplaceAll,
+                 rfIgnoreCase]);
+            s := StringReplace(s, '<li>', LineEnding+'* ', [rfReplaceAll,
+                 rfIgnoreCase]);
+            j := 1;
+            While j <= Length(s) Do
+              Begin
+                If s[j] = '<' Then
+                  Begin
+                    While (j <= Length(s)) And (s[j] <> '>') Do
+                      System.Delete(s, j, 1);
+                    System.Delete(s, j, 1);
+                  End
+                Else
+                  Inc(j);
+              End;
+            While Pos('  ', s) > 0 Do
+              s := StringReplace(s, '  ', ' ', [rfReplaceAll]);
+            While Pos(LineEnding + ' ', s) > 0 Do
+              s := StringReplace(s, LineEnding + ' ', LineEnding, [rfReplaceAll]
+                   );
+            s := Trim(s);
+          End
+        Else
+          s := '';
+        If s = '' Then
+          Begin
+            s := Http.ResultString;
+            If s = '' Then
+              If Http.ResultCode = 0 Then
+                s := 'Invalid server response.'
+            Else
+              s := Format('HTTP error: %d', [Http.ResultCode]);
+          End;
+        Status := s;
+        break;
+      End;
+    Http.Document.Position := 0;
+    Try
+      jp := CreateJsonParser(Http);
+
+    Except
+      OutputDebugString(LPCSTR(Exception(ExceptObject).Message+
+      '(CreateJsonParser)'));
+  End;
+HttpLock.Leave;
+locked := False;
+RequestStartTime := 0;
+Try
+  Try
+    obj := jp.Parse;
+    Http.Document.Clear;
+  Finally
+    jp.Free;
+End;
+Except
+  on E: Exception Do
+        Begin
+          OutputDebugString(LPCSTR(Exception(ExceptObject).Message+
+          '(SendRequest 2)'));
+          Status := e.Message;
           break;
-        end;
-        Http.Document.Position:=0;
-        jp:=CreateJsonParser(Http);
-        HttpLock.Leave;
-        locked:=False;
-        RequestStartTime:=0;
-        try
-          try
-            obj:=jp.Parse;
-            Http.Document.Clear;
-          finally
-            jp.Free;
-          end;
-        except
-          on E: Exception do
-            begin
-              Status:=e.Message;
-              break;
-            end;
-        end;
-        try
-          if obj is TJSONObject then begin
-            res:=obj as TJSONObject;
-            s:=res.Strings['result'];
-            if AnsiCompareText(s, 'success') <> 0 then begin
-              if Trim(s) = '' then
-                s:='Unknown error.';
-              Status:=s;
-            end
-            else begin
-              if ReturnArguments then begin
-                Result:=res.Objects['arguments'];
-                if Result = nil then
-                  Status:='Arguments object not found.'
-                else begin
-//                res.Extract(Result); // lazarus 1.2.6 ok
-                  res.Extract(res.IndexOf(Result)); // fix Tample :) lazarus 1.4.0 and high!
-                  FreeAndNil(obj);
-                end;
-              end
-              else
-                Result:=res;
-              if Result <> nil then
-                obj:=nil;
-            end;
-            break;
-          end
-          else begin
-            Status:='Invalid server response.';
-            break;
-          end;
-        finally
-          obj.Free;
-        end;
-      end;
-    finally
-      RequestStartTime:=0;
-      if locked then
-        HttpLock.Leave;
-    end;
-  until i >= RetryCnt;
-  if Status <> '' then OutputDebugString(LPCSTR(Status));
-end;
+        End;
+End;
+Try
+  Try
+    If obj is TJSONObject Then
+      Begin
+        res := obj as TJSONObject;
+        s := res.Strings['result'];
+        If AnsiCompareText(s, 'success') <> 0 Then
+          Begin
+            If Trim(s) = '' Then
+              s := 'Unknown error.';
+            Status := s;
+          End
+        Else
+          Begin
+            If ReturnArguments Then
+              Begin
+                Result := res.Objects['arguments'];
+                If Result = Nil Then
+                  Status := 'Arguments object not found.'
+                Else
+                  Begin
+                    //                res.Extract(Result); // lazarus 1.2.6 ok
+                    res.Extract(res.IndexOf(Result));
+                    // fix Tample :) lazarus 1.4.0 and high!
+                    FreeAndNil(obj);
+                  End;
+              End
+            Else
+              Result := res;
+            If Result <> Nil Then
+              obj := Nil;
+          End;
+        break;
+      End
+    Else
+      Begin
+        Status := 'Invalid server response.';
+        break;
+      End;
+  Except
+    OutputDebugString(LPCSTR(Exception(ExceptObject).Message+'(SendRequest 1)'))
+    ;
+End;
 
-procedure DeleteIfRpcLessThan(Fields: TStringList; Field: string; RpcVer: integer; NeededRpcVer: integer);
-var
+Finally
+  obj.Free;
+End;
+End;
+
+Except
+  OutputDebugString(LPCSTR(Exception(ExceptObject).Message+'(SendRequest 0)'));
+End;
+Finally
+  RequestStartTime := 0;
+  If locked Then
+    HttpLock.Leave;
+End;
+Until i >= RetryCnt;
+If Status <> '' Then OutputDebugString(LPCSTR(Status));
+End;
+
+Procedure DeleteIfRpcLessThan(Fields: TStringList; Field: String; RpcVer:
+                              integer; NeededRpcVer: integer);
+
+Var 
   idx: integer;
-begin
+Begin
   idx := Fields.IndexOf(Field);
-  if (idx <> -1) and (RpcVer < NeededRpcVer) then
+  If (idx <> -1) And (RpcVer < NeededRpcVer) Then
     Fields.Delete(idx);
-end;
+End;
 
-function TRpc.RequestInfo(TorrentId: integer; const Fields: array of const; const ExtraFields: array of string): TJSONObject;
-var
+Function TRpc.RequestInfo(TorrentId: integer; Const Fields: Array Of Const;
+                          Const ExtraFields: Array Of String): TJSONObject;
+
+Var 
   req, args: TJSONObject;
   _fields: TJSONArray;
   i: integer;
   sl: TStringList;
-begin
-  Result:=nil;
-  req:=TJSONObject.Create;
-  sl:=TStringList.Create;
-  try
-    req.Add('method', 'torrent-get');
-    args:=TJSONObject.Create;
-    if TorrentId <> 0 then
-      args.Add('ids', TJSONArray.Create([TorrentId]));
-    _fields:=TJSONArray.Create;
-    for i:=Low(Fields) to High(Fields) do
-      if (Fields[i].VType=vtAnsiString) then
-         sl.Add(String(Fields[i].VAnsiString));
-    sl.AddStrings(ExtraFields);
-    sl.Sort;
+Begin
+  Result := Nil;
+  req := TJSONObject.Create;
+  sl := TStringList.Create;
+  Try
+    Try
 
-    DeleteIfRpcLessThan(sl, 'labels', FRPCVersion, 16);
+      req.Add('method', 'torrent-get');
+      args := TJSONObject.Create;
+      If TorrentId <> 0 Then
+        args.Add('ids', TJSONArray.Create([TorrentId]));
+      _fields := TJSONArray.Create;
+      For i:=Low(Fields) To High(Fields) Do
+        If (Fields[i].VType=vtAnsiString) Then
+          sl.Add(String(Fields[i].VAnsiString));
+      sl.AddStrings(ExtraFields);
+      sl.Sort;
 
-    for i:=sl.Count-2 downto 0 do
-      if (sl[i]=sl[i+1]) then
-        sl.Delete(i+1);
-    for i:=0 to sl.Count-1 do
-      _fields.Add(sl[i]);
-    args.Add('fields', _fields);
-    if FRPCVersion >= 16 then
-      args.Add('format', 'table');
+      DeleteIfRpcLessThan(sl, 'labels', FRPCVersion, 16);
 
-    req.Add('arguments', args);
-    if FRPCVersion >= 16 then
-      Result:=TranslateTableToObjects(SendRequest(req))
-    else
-      Result:=SendRequest(req);
-  finally
-    sl.Free;
-    req.Free;
-  end;
-end;
-function TRpc.RequestInfos(TorrentIds: variant; const Fields: array of const): TJSONObject;
-begin
-  Result:=RequestInfos(TorrentIds, Fields, []);
-end;
-function TRpc.RequestInfos(TorrentIds: variant; const Fields: array of const; const ExtraFields: array of string): TJSONObject;
-var
+      For i:=sl.Count-2 Downto 0 Do
+        If (sl[i]=sl[i+1]) Then
+          sl.Delete(i+1);
+      For i:=0 To sl.Count-1 Do
+        _fields.Add(sl[i]);
+      args.Add('fields', _fields);
+      //if FRPCVersion >= 16 then
+      //args.Add('format', 'table');
+
+      req.Add('arguments', args);
+      //if FRPCVersion >= 16 then
+      //Result:=TranslateTableToObjects(SendRequest(req))
+      //else
+      Try
+        Result := SendRequest(req);
+      Except
+        OutputDebugString(LPCSTR(Exception(ExceptObject).Message+'(SendRequest)'
+        ));
+End;
+Except
+  OutputDebugString(LPCSTR(Exception(ExceptObject).Message+'(RequestInfo)'));
+End;
+Finally
+  sl.Free;
+  req.Free;
+End;
+End;
+Function TRpc.RequestInfos(TorrentIds: variant; Const Fields: Array Of Const):
+
+                                                                     TJSONObject
+;
+Begin
+  Result := RequestInfos(TorrentIds, Fields, []);
+End;
+Function TRpc.RequestInfos(TorrentIds: variant; Const Fields: Array Of Const;
+                           Const ExtraFields: Array Of String): TJSONObject;
+
+Var 
   req, args: TJSONObject;
   _fields,ids: TJSONArray;
   i: integer;
   sl: TStringList;
-begin
-  Result:=nil;
-  req:=TJSONObject.Create;
-  sl:=TStringList.Create;
-  try
+Begin
+  Result := Nil;
+  req := TJSONObject.Create;
+  sl := TStringList.Create;
+  Try
     req.Add('method', 'torrent-get');
-    args:=TJSONObject.Create;
-    ids:=TJSONArray.Create;
-    for i:=VarArrayLowBound(TorrentIds, 1) to VarArrayHighBound(TorrentIds, 1) do
+    args := TJSONObject.Create;
+    ids := TJSONArray.Create;
+    For i:=VarArrayLowBound(TorrentIds, 1) To VarArrayHighBound(TorrentIds, 1) 
+      Do
       ids.Add(integer(TorrentIds[i]));
     args.Add('ids', ids);
-    _fields:=TJSONArray.Create;
-    for i:=Low(Fields) to High(Fields) do
-      if (Fields[i].VType=vtAnsiString) then
-         sl.Add(String(Fields[i].VAnsiString));
+    _fields := TJSONArray.Create;
+    For i:=Low(Fields) To High(Fields) Do
+      If (Fields[i].VType=vtAnsiString) Then
+        sl.Add(String(Fields[i].VAnsiString));
     sl.AddStrings(ExtraFields);
     sl.Sort;
-    for i:=sl.Count-2 downto 0 do
-      if (sl[i]=sl[i+1]) then
+    For i:=sl.Count-2 Downto 0 Do
+      If (sl[i]=sl[i+1]) Then
         sl.Delete(i+1);
-    for i:=0 to sl.Count-1 do
+    For i:=0 To sl.Count-1 Do
       _fields.Add(sl[i]);
     args.Add('fields', _fields);
-    if FRPCVersion >= 16 then
+    If FRPCVersion >= 16 Then
       args.Add('format', 'table');
 
     req.Add('arguments', args);
-    if FRPCVersion >= 16 then
-      Result:=TranslateTableToObjects(SendRequest(req))
-    else
-      Result:=SendRequest(req);
-  finally
+    If FRPCVersion >= 16 Then
+      Result := TranslateTableToObjects(SendRequest(req))
+    Else
+      Result := SendRequest(req);
+  Finally
     sl.Free;
     req.Free;
-  end;
-end;
+End;
+End;
 
-function TRpc.RequestInfo(TorrentId: integer; const Fields: array of const): TJSONObject;
-begin
-  Result:=RequestInfo(TorrentId, Fields, []);
-end;
+Function TRpc.RequestInfo(TorrentId: integer; Const Fields: Array Of Const):
+
+                                                                     TJSONObject
+;
+Begin
+  Result := RequestInfo(TorrentId, Fields, []);
+End;
 
 
-function TRpc.GetStatus: string;
-begin
+Function TRpc.GetStatus: string;
+Begin
   Lock;
-  try
-    Result:=FStatus;
+  Try
+    Result := FStatus;
     UniqueString(Result);
-  finally
+  Finally
     Unlock;
-  end;
-end;
+End;
+End;
 
-function TRpc.GetTorrentFields: string;
-begin
+Function TRpc.GetTorrentFields: string;
+Begin
   Lock;
-  try
-    Result:=FTorrentFields;
+  Try
+    Result := FTorrentFields;
     UniqueString(Result);
-  finally
+  Finally
     Unlock;
-  end;
-end;
+End;
+End;
 
-procedure TRpc.SetInfoStatus(const AValue: string);
-begin
+Procedure TRpc.SetInfoStatus(Const AValue: String);
+Begin
   Lock;
-  try
-    FInfoStatus:=AValue;
+  Try
+    FInfoStatus := AValue;
     UniqueString(FStatus);
-  finally
+  Finally
     Unlock;
-  end;
-end;
+End;
+End;
 
-function TRpc.GetConnected: boolean;
-begin
-  Result:=Assigned(RpcThread) and FConnected;
-end;
+Function TRpc.GetConnected: boolean;
+Begin
+  Result := Assigned(RpcThread) And FConnected;
+End;
 
-function TRpc.GetConnecting: boolean;
-begin
-  Result:=not FConnected and Assigned(RpcThread);
-end;
+Function TRpc.GetConnecting: boolean;
+Begin
+  Result := Not FConnected And Assigned(RpcThread);
+End;
 
-function TRpc.GetInfoStatus: string;
-begin
+Function TRpc.GetInfoStatus: string;
+Begin
   Lock;
-  try
-    Result:=FInfoStatus;
+  Try
+    Result := FInfoStatus;
     UniqueString(Result);
-  finally
+  Finally
     Unlock;
-  end;
-end;
+End;
+End;
 
-procedure TRpc.SetStatus(const AValue: string);
-begin
+Procedure TRpc.SetStatus(Const AValue: String);
+Begin
   Lock;
-  try
-    FStatus:=AValue;
+  Try
+    FStatus := AValue;
     UniqueString(FStatus);
-  finally
+  Finally
     Unlock;
-  end;
-end;
+End;
+End;
 
-procedure TRpc.SetTorrentFields(const AValue: string);
-begin
+Procedure TRpc.SetTorrentFields(Const AValue: String);
+Begin
   Lock;
-  try
-    FTorrentFields:=AValue;
+  Try
+    FTorrentFields := AValue;
     UniqueString(FTorrentFields);
-  finally
+  Finally
     Unlock;
-  end;
-end;
+End;
+End;
 
-procedure TRpc.CreateHttp;
-var
+Procedure TRpc.CreateHttp;
+
+Var 
   i : integer;
-begin
+Begin
   Http.Free;
-  Http:=THTTPSend.Create;
-  Http.Protocol:='1.1';
+  Http := THTTPSend.Create;
+  Http.Protocol := '1.1';
 
   i := Ini.ReadInteger('NetWork', 'HttpTimeout', 30);
-  if (i < 2) or (i > 999) then i:= 30; // default
+  If (i < 2) Or (i > 999) Then i := 30;
+  // default
   Ini.WriteInteger('NetWork', 'HttpTimeout', i);
-  Http.Timeout:= i * 1000;
+  Http.Timeout := i * 1000;
 
   i := Ini.ReadInteger('NetWork', 'ConnectTimeout', 0);
-  if (i < 0) or (i > 999) then i:= 0; // default
+  If (i < 0) Or (i > 999) Then i := 0;
+  // default
   Ini.WriteInteger('NetWork', 'ConnectTimeout', i);
   Http.FSock.ConnectionTimeout := i * 1000;
 
-  Http.Headers.NameValueSeparator:=':';
-end;
+  Http.Headers.NameValueSeparator := ':';
+End;
 
-procedure TRpc.Lock;
-begin
+Procedure TRpc.Lock;
+Begin
   FLock.Enter;
-end;
+End;
 
-procedure TRpc.Unlock;
-begin
+Procedure TRpc.Unlock;
+Begin
   FLock.Leave;
-end;
+End;
 
-procedure TRpc.Connect;
-begin
-  CurTorrentId:=0;
-  XTorrentSession:='';
-  RequestFullInfo:=True;
-  ReconnectAllowed:=False;
-  RefreshNow:=[];
-  RpcThread:=TRpcThread.Create;
-  with RpcThread do begin
-    FreeOnTerminate:=True;
-    FRpc:=Self;
-    Suspended:=False;
-  end;
-end;
+Procedure TRpc.Connect;
+Begin
+  CurTorrentId := 0;
+  XTorrentSession := '';
+  RequestFullInfo := True;
+  ReconnectAllowed := False;
+  RefreshNow := [];
+  RpcThread := TRpcThread.Create;
+  With RpcThread Do
+    Begin
+      FreeOnTerminate := True;
+      FRpc := Self;
+      Suspended := False;
+    End;
+End;
 
-procedure TRpc.Disconnect;
-var
-  retry,i:integer;
-begin
-  if Assigned(RpcThread) then begin
-    RpcThread.Terminate;
-    retry:=20;
-    i:=0;
-    while Assigned(RpcThread) and (i<retry)do begin
-      Application.ProcessMessages;
-      inc(i);
-      try
-//        RpcThread.WaitFor;
-        Http.Sock.CloseSocket;
-      except
-      end;
+Procedure TRpc.Disconnect;
+
+Var 
+  retry,i: integer;
+Begin
+  If Assigned(RpcThread) Then
+    Begin
+      RpcThread.Terminate;
+      retry := 20;
+      i := 0;
+      While Assigned(RpcThread) And (i<retry) Do
+        Begin
+          Application.ProcessMessages;
+          inc(i);
+          Try
+            //        RpcThread.WaitFor;
+            Http.Sock.CloseSocket;
+          Except
+        End;
       Sleep(20);
-    end;
-  end;
-  Status:='';
-  RequestStartTime:=0;
-  FRpcPath:='';
-end;
+    End;
+End;
+Status := '';
+RequestStartTime := 0;
+FRpcPath := '';
+End;
 
-end.
-
+End.

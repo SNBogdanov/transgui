@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -28,74 +30,79 @@
   statement from your version.  If you delete this exception statement from all
   source files in the program, then also delete it here.
 *************************************************************************************}
-unit MoveTorrent;
+
+Unit MoveTorrent;
 
 {$mode objfpc}{$H+}
 
-interface
+Interface
 
-uses
-  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs, StdCtrls, ButtonPanel, ExtCtrls, BaseForm;
+Uses 
+Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+StdCtrls, ButtonPanel, ExtCtrls, BaseForm;
 
 resourcestring
-  SNoTorrentDir = 'No torrent location was specified.';
-  SSelectFolder = 'Select torrent location';
+SNoTorrentDir = 'No torrent location was specified.';
+SSelectFolder = 'Select torrent location';
 
-type
+Type 
 
   { TMoveTorrentForm }
 
-  TMoveTorrentForm = class(TBaseForm)
+  TMoveTorrentForm = Class(TBaseForm)
     btBrowse: TButton;
     Buttons: TButtonPanel;
     cbMoveData: TCheckBox;
     edTorrentDir: TComboBox;
     Panel1: TPanel;
     txTorrentDir: TLabel;
-    procedure btBrowseClick(Sender: TObject);
-    procedure btOKClick(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
-  private
+    Procedure btBrowseClick(Sender: TObject);
+    Procedure btOKClick(Sender: TObject);
+    Procedure FormCreate(Sender: TObject);
+    Private 
     { private declarations }
-  public
+    Public 
     { public declarations }
-  end;
+  End;
 
-implementation
+Implementation
 
-uses main;
+Uses main;
 
 { TMoveTorrentForm }
 
-procedure TMoveTorrentForm.btOKClick(Sender: TObject);
-begin
-  edTorrentDir.Text:=Trim(edTorrentDir.Text);
-  if edTorrentDir.Text = '' then begin
-    edTorrentDir.SetFocus;
-    MessageDlg(SNoTorrentDir, mtError, [mbOK], 0);
-    exit;
-  end;
-  ModalResult:=mrOK;
-end;
+Procedure TMoveTorrentForm.btOKClick(Sender: TObject);
+Begin
+  edTorrentDir.Text := Trim(edTorrentDir.Text);
+  If edTorrentDir.Text = '' Then
+    Begin
+      edTorrentDir.SetFocus;
+      MessageDlg(SNoTorrentDir, mtError, [mbOK], 0);
+      exit;
+    End;
+  ModalResult := mrOK;
+End;
 
-procedure TMoveTorrentForm.btBrowseClick(Sender: TObject);
-var
+Procedure TMoveTorrentForm.btBrowseClick(Sender: TObject);
+
+Var 
   s: string;
-begin
-  s:=MainForm.SelectRemoteFolder(edTorrentDir.Text, SSelectFolder);
-  if s <> '' then
-    edTorrentDir.Text:=s;
-end;
+Begin
+  s := MainForm.SelectRemoteFolder(edTorrentDir.Text, SSelectFolder);
+  If s <> '' Then
+    edTorrentDir.Text := s;
+End;
 
-procedure TMoveTorrentForm.FormCreate(Sender: TObject);
-begin
-  Buttons.OKButton.ModalResult:=mrNone;
-  Buttons.OKButton.OnClick:=@btOKClick;
+Procedure TMoveTorrentForm.FormCreate(Sender: TObject);
+Begin
+  Buttons.OKButton.ModalResult := mrNone;
+  Buttons.OKButton.OnClick := @btOKClick;
   bidiMode := GetBiDi();
-  btBrowse.Left := edTorrentDir.Left + edTorrentDir.Width + 8; // fix button
-end;
+  btBrowse.Left := edTorrentDir.Left + edTorrentDir.Width + 8;
+  // fix button
+End;
 
 initialization
   {$I movetorrent.lrs}
 
-end.
+End.

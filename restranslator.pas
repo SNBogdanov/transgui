@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2011-2013 by Yury Sidorov
@@ -30,794 +32,975 @@
   source files in the program, then also delete it here.
 *************************************************************************************}
 
-unit ResTranslator;
+Unit ResTranslator;
 
 {$MODE objfpc}{$H+}
 
-interface
+Interface
 
-uses
-  Classes, StrUtils, SysUtils, FileUtil, LazFileUtils, LResources, TypInfo, LCLProc, LazUTF8;
+Uses 
+Classes, StrUtils, SysUtils, FileUtil, LazFileUtils, LResources, TypInfo,
+LCLProc, LazUTF8;
 
-type
+Type 
 
-  TWordDelimitersOptions = set of (wdIgnoreLeading, wdIgnoreTrailing);
+  TWordDelimitersOptions = set Of (wdIgnoreLeading, wdIgnoreTrailing);
 
-  TResTranslator = class;
+  TResTranslator = Class;
 
-  TTranslateStringEvent = procedure(Sender: TResTranslator; const ResourceName: AnsiString; var Accept: boolean);
+    TTranslateStringEvent = Procedure (Sender: TResTranslator; Const
+                                       ResourceName: AnsiString; Var Accept:
+                                       boolean);
 
-  TTranslateStringOption = (tsoNew, tsoUsed, tsoExternal);
-  TTranslateStringOptions = set of TTranslateStringOption;
+    TTranslateStringOption = (tsoNew, tsoUsed, tsoExternal);
+    TTranslateStringOptions = set Of TTranslateStringOption;
 
   { TTranslateStringList }
 
-  TTranslateStringList = class(TStringList)
-  private
-    function CorrectGetName(Index: integer): string;
-    function CorrectGetValue(const Name: string): string;
-    function GetOptions(Index: integer): TTranslateStringOptions;
-    function NormaliseQuotedStr(const S: string): string;
-    function ScanQuotSep(P: PChar):integer;
-    procedure SetOptions(Index: integer; const AValue: TTranslateStringOptions);
-  protected
-    function DoCompareText(const s1,s2 : string) : PtrInt; override;
-  public
-    constructor Create(const FileName: string); overload;
-    function IndexOfName(const Name: string; var Offset: integer): integer;
-    function IndexOfName(const Name: string): integer; override;
-    procedure LoadFromFile(const FileName: string); override;
-    procedure SaveToFile(const FileName: string); override;
-    procedure Merge(Source: TTranslateStringList; const NamesOnly: boolean = false);
-    property CValues[const Name: string]: string read CorrectGetValue;
-    property CNames[Index: integer]: string read CorrectGetName;
-    property Options[Index: integer]: TTranslateStringOptions read GetOptions write SetOptions;
-  end;
+    TTranslateStringList = Class(TStringList)
+      Private 
+        Function CorrectGetName(Index: integer): string;
+        Function CorrectGetValue(Const Name: String): string;
+        Function GetOptions(Index: integer): TTranslateStringOptions;
+        Function NormaliseQuotedStr(Const S: String): string;
+        Function ScanQuotSep(P: PChar): integer;
+        Procedure SetOptions(Index: integer; Const AValue:
+                             TTranslateStringOptions);
+      Protected 
+        Function DoCompareText(Const s1,s2 : String) : PtrInt;
+        override;
+      Public 
+        constructor Create(Const FileName: String);
+        overload;
+        Function IndexOfName(Const Name: String; Var Offset: integer): integer;
+        Function IndexOfName(Const Name: String): integer;
+        override;
+        Procedure LoadFromFile(Const FileName: String);
+        override;
+        Procedure SaveToFile(Const FileName: String);
+        override;
+        Procedure Merge(Source: TTranslateStringList; Const NamesOnly: boolean =
+                        false);
+        property CValues[
+
+        Const Name: string]: string read CorrectGetValue;
+          property CNames[Index: integer]: string read CorrectGetName;
+          property Options[Index: integer]: TTranslateStringOptions read
+                                            GetOptions write SetOptions;
+        End;
 
   { TResTranslator }
 
-  TResTranslator = class(TAbstractTranslator)
-  private
-    FIgnoreDelimiters: TWordDelimitersOptions;
-    FOnTranslateString: TTranslateStringEvent;
-    FStrResLst:    TTranslateStringList;
-    FModified:     boolean;
-    FTranslationLanguage: AnsiString;
-    FWordDelims:   TSysCharset;
-    function GetStrings: TStringList;
-    procedure SetIgnoreDelimiters(const AValue: TWordDelimitersOptions);
-    procedure SetOnTranslateString(const AValue: TTranslateStringEvent);
-    procedure SetWordDelims(const AValue: TSysCharset);
-    function InternalTranslateString(const Value: AnsiString; IsExternal: boolean = False): AnsiString;
-  public
-    FTranslationFile: string;
-    constructor Create(TranslationFile: AnsiString);
-    destructor Destroy; override;
-    procedure TranslateStringProperty(Sender: TObject; const Instance: TPersistent; PropInfo: PPropInfo; var Content: string); override;
-    procedure SaveFile; overload;
-    procedure SaveFile(const aFileName: string); overload;
-    property Modified: boolean Read FModified;
-    property Strings: TStringList Read GetStrings;
-    property IgnoreDelimiters: TWordDelimitersOptions Read FIgnoreDelimiters Write SetIgnoreDelimiters;
-    property WordDelims: TSysCharset Read FWordDelims Write SetWordDelims;
-    property TranslationLanguage: AnsiString read FTranslationLanguage;
-    property OnTranslateString: TTranslateStringEvent Read FOnTranslateString Write SetOnTranslateString;
-  end;
+        TResTranslator = Class(TAbstractTranslator)
+          Private 
+            FIgnoreDelimiters: TWordDelimitersOptions;
+            FOnTranslateString: TTranslateStringEvent;
+            FStrResLst:    TTranslateStringList;
+            FModified:     boolean;
+            FTranslationLanguage: AnsiString;
+            FWordDelims:   TSysCharset;
+            Function GetStrings: TStringList;
+            Procedure SetIgnoreDelimiters(Const AValue: TWordDelimitersOptions);
+            Procedure SetOnTranslateString(Const AValue: TTranslateStringEvent);
+            Procedure SetWordDelims(Const AValue: TSysCharset);
+            Function InternalTranslateString(Const Value: AnsiString; IsExternal
+                                             : boolean = False): AnsiString;
+          Public 
+            FTranslationFile: string;
+            constructor Create(TranslationFile: AnsiString);
+            destructor Destroy;
+            override;
+            Procedure TranslateStringProperty(Sender: TObject; Const Instance:
+                                              TPersistent; PropInfo: PPropInfo;
+                                              Var Content: String);
+            override;
+            Procedure SaveFile;
+            overload;
+            Procedure SaveFile(Const aFileName: String);
+            overload;
+            property Modified: boolean Read FModified;
+            property Strings: TStringList Read GetStrings;
+            property IgnoreDelimiters: TWordDelimitersOptions Read
+                                       FIgnoreDelimiters Write
+                                       SetIgnoreDelimiters;
+            property WordDelims: TSysCharset Read FWordDelims Write
+                                 SetWordDelims;
+            property TranslationLanguage: AnsiString read FTranslationLanguage;
+            property OnTranslateString: TTranslateStringEvent Read
+                                        FOnTranslateString Write
+                                        SetOnTranslateString;
+        End;
 
-function LoadTranslationFile(const TranslationFile: AnsiString; const OnTranslate: TTranslateStringEvent = nil): AnsiString;
-procedure SaveTranslationFile; overload;
-procedure SaveTranslationFile(const FileName: AnsiString); overload;
-procedure MakeTranslationFile; overload;
-procedure MakeTranslationFile(Language: AnsiString); overload;
-procedure MakeTranslationFile(const FileName, Language: AnsiString); overload;
-procedure SupplementTranslationFile(const FileName: AnsiString);
-procedure SupplementTranslationFiles; overload;
-procedure SupplementTranslationFiles(const TranslationFilesPath: AnsiString); overload;
-function LoadDefaultTranslationFile(const OnTranslate: TTranslateStringEvent = nil): TFileName;
-function LoadDefaultTranslationFile(const TranslationFilesPath: AnsiString; const OnTranslate: TTranslateStringEvent = nil): TFileName;
-function LoadLanguageTranslation(const Language: AnsiString; const OnTranslate: TTranslateStringEvent = nil): TFileName;
-function LoadLanguageTranslation(const Language, TranslationFilesPath: AnsiString; const OnTranslate: TTranslateStringEvent = nil): TFileName;
-function TranslateString(const Value: AnsiString; IsExternal: boolean = False): AnsiString;
-function ExtractLangName(const FileName: TFilename): AnsiString;
-function GetAvailableTranslations: TStringList;
-function GetAvailableTranslations(const SearchPath: AnsiString): TStringList;
-function GetTranslationFileName(const Language: AnsiString; AvailableTranslations: TStringList): AnsiString;
-function DefaultLangDir: AnsiString;
-function IsTranslationFileValid(const TranslationFile: AnsiString): boolean;
+        Function LoadTranslationFile(Const TranslationFile: AnsiString; Const
+                                     OnTranslate: TTranslateStringEvent = Nil):
 
-const
-  sLanguageIDName = 'TranslationLanguage';
+                                                                      AnsiString
+        ;
+        Procedure SaveTranslationFile;
+        overload;
+        Procedure SaveTranslationFile(Const FileName: AnsiString);
+        overload;
+        Procedure MakeTranslationFile;
+        overload;
+        Procedure MakeTranslationFile(Language: AnsiString);
+        overload;
+        Procedure MakeTranslationFile(Const FileName, Language: AnsiString);
+        overload;
+        Procedure SupplementTranslationFile(Const FileName: AnsiString);
+        Procedure SupplementTranslationFiles;
+        overload;
+        Procedure SupplementTranslationFiles(Const TranslationFilesPath:
+                                             AnsiString);
+        overload;
+        Function LoadDefaultTranslationFile(Const OnTranslate:
+                                            TTranslateStringEvent = Nil):
 
-var
-  IniFileName: string;
+                                                                       TFileName
+        ;
+        Function LoadDefaultTranslationFile(Const TranslationFilesPath:
+                                            AnsiString; Const OnTranslate:
+                                            TTranslateStringEvent = Nil):
 
-implementation
+                                                                       TFileName
+        ;
+        Function LoadLanguageTranslation(Const Language: AnsiString; Const
+                                         OnTranslate: TTranslateStringEvent =
+                                         Nil): TFileName;
+        Function LoadLanguageTranslation(Const Language, TranslationFilesPath:
+                                         AnsiString; Const OnTranslate:
+                                         TTranslateStringEvent = Nil): TFileName
+        ;
+        Function TranslateString(Const Value: AnsiString; IsExternal: boolean =
+                                 False): AnsiString;
+        Function ExtractLangName(Const FileName: TFilename): AnsiString;
+        Function GetAvailableTranslations: TStringList;
+        Function GetAvailableTranslations(Const SearchPath: AnsiString):
 
-uses
-  Forms, utils;
+                                                                     TStringList
+        ;
+        Function GetTranslationFileName(Const Language: AnsiString;
+                                        AvailableTranslations: TStringList):
 
-const
-  LineSeparator = '###################';
+                                                                      AnsiString
+        ;
+        Function DefaultLangDir: AnsiString;
+        Function IsTranslationFileValid(Const TranslationFile: AnsiString):
+
+                                                                         boolean
+        ;
+
+        Const 
+          sLanguageIDName = 'TranslationLanguage';
+
+        Var 
+          IniFileName: string;
+
+        Implementation
+
+        Uses 
+        Forms, utils;
+
+        Const 
+          LineSeparator = '###################';
 
 { procedures and functions }
 
-function IsQuoted(const S: AnsiString; QuoteChar: char): boolean; inline;
-var
-  L: integer;
-begin
-  L:= Length(S);
-  if L > 1 then
-    Result := (S[1] = QuoteChar) and (S[L] = QuoteChar)
-  else
-    Result := false;
-end;
+        Function IsQuoted(Const S: AnsiString; QuoteChar: char): boolean;
+        inline;
 
-function HasSeparator(const S: AnsiString; Separator: char): boolean; inline;
-begin
-  Result := Pos(Separator, S) > 0;
-end;
+        Var 
+          L: integer;
+        Begin
+          L := Length(S);
+          If L > 1 Then
+            Result := (S[1] = QuoteChar) And (S[L] = QuoteChar)
+          Else
+            Result := false;
+        End;
 
-function ExtractLangName(const FileName: TFilename): AnsiString;
-begin
-  with TTranslateStringList.Create(FileName) do
-    try
-      Result := AnsiDequotedStr(CValues[sLanguageIDName], QuoteChar);
-    finally
-      Free;
-    end;
-end;
+        Function HasSeparator(Const S: AnsiString; Separator: char): boolean;
+        inline;
+        Begin
+          Result := Pos(Separator, S) > 0;
+        End;
 
-function GetAvailableTranslations: TStringList;
-begin
-  Result:= GetAvailableTranslations(DefaultLangDir);
-end;
+        Function ExtractLangName(Const FileName: TFilename): AnsiString;
+        Begin
+          With TTranslateStringList.Create(FileName) Do
+            Try
+              Result := AnsiDequotedStr(CValues[sLanguageIDName], QuoteChar);
+            Finally
+              Free;
+        End;
+    End;
 
-function GetAvailableTranslations(const SearchPath: AnsiString): TStringList;
-var
-  Sr: TSearchRec;
-  LangName, s: AnsiString;
-begin
-  Result:= TStringList.Create;
-  if FindFirstUTF8(IncludeTrailingPathDelimiter(SearchPath) + '*', faArchive or faReadOnly, Sr) = 0 then
-    with Result do begin
-      NameValueSeparator:= '=';
-      QuoteChar:= '"';
-      repeat
-        if ExtractFileExt(Sr.Name) = '.template' then
-          continue;
-        s:=IncludeTrailingPathDelimiter(ExtractFilePath(SearchPath)) + Sr.Name;
-        if IsTranslationFileValid(s) then begin
-          LangName:= ExtractLangName(s);
-          if LangName <> '' then
-            Add(LangName + NameValueSeparator + Sr.Name);
-        end;
-      until FindNextUTF8(Sr) <> 0;
-      FindClose(Sr);
-    end;
-end;
+    Function GetAvailableTranslations: TStringList;
+    Begin
+      Result := GetAvailableTranslations(DefaultLangDir);
+    End;
 
-var
-  FDefaultLangDir: AnsiString;
+    Function GetAvailableTranslations(Const SearchPath: AnsiString): TStringList
+    ;
 
-function DefaultLangDir: AnsiString;
+    Var 
+      Sr: TSearchRec;
+      LangName, s: AnsiString;
+    Begin
+      Result := TStringList.Create;
+      If FindFirstUTF8(IncludeTrailingPathDelimiter(SearchPath) + '*', faArchive
+         Or faReadOnly, Sr) = 0 Then
+        With Result Do
+          Begin
+            NameValueSeparator := '=';
+            QuoteChar := '"';
+            Repeat
+              If ExtractFileExt(Sr.Name) = '.template' Then
+                continue;
+              s := IncludeTrailingPathDelimiter(ExtractFilePath(SearchPath)) +
+                   Sr.Name;
+              If IsTranslationFileValid(s) Then
+                Begin
+                  LangName := ExtractLangName(s);
+                  If LangName <> '' Then
+                    Add(LangName + NameValueSeparator + Sr.Name);
+                End;
+            Until FindNextUTF8(Sr) <> 0;
+            FindClose(Sr);
+          End;
+    End;
+
+    Var 
+      FDefaultLangDir: AnsiString;
+
+    Function DefaultLangDir: AnsiString;
 {$ifdef unix}
-  function _IsLangDir(const dir: string): boolean;
-  var
-    sr: TSearchRec;
-  begin
-    Result:=FindFirstUtf8(dir + ExtractFileNameOnly(ParamStrUtf8(0)) + '.*', faAnyFile, sr) = 0;
-    FindClose(sr);
-  end;
+    Function _IsLangDir(Const dir: String): boolean;
 
-var
-  s: string;
+    Var 
+      sr: TSearchRec;
+    Begin
+      Result := FindFirstUtf8(dir + ExtractFileNameOnly(ParamStrUtf8(0)) + '.*',
+                faAnyFile, sr) = 0;
+      FindClose(sr);
+    End;
+
+    Var 
+      s: string;
 {$endif unix}
-begin
-  if FDefaultLangDir = '' then begin
-    FDefaultLangDir:=ExtractFilePath(ParamStrUtf8(0)) + 'lang' + DirectorySeparator;
+    Begin
+      If FDefaultLangDir = '' Then
+        Begin
+          FDefaultLangDir := ExtractFilePath(ParamStrUtf8(0)) + 'lang' +
+                             DirectorySeparator;
 {$ifdef unix}
-    if not _IsLangDir(FDefaultLangDir) then begin
-      s:='/usr/share/' + ExtractFileNameOnly(ParamStrUtf8(0)) + '/lang/';
-      if _IsLangDir(s) then
-        FDefaultLangDir:=s
-      else begin
-        s:='/usr/local/share/' + ExtractFileNameOnly(ParamStrUtf8(0)) + '/lang/';
-        if _IsLangDir(s) then
-          FDefaultLangDir:=s;
-      end;
-    end;
+          If Not _IsLangDir(FDefaultLangDir) Then
+            Begin
+              s := '/usr/share/' + ExtractFileNameOnly(ParamStrUtf8(0)) +
+                   '/lang/';
+              If _IsLangDir(s) Then
+                FDefaultLangDir := s
+              Else
+                Begin
+                  s := '/usr/local/share/' + ExtractFileNameOnly(ParamStrUtf8(0)
+                       ) + '/lang/';
+                  If _IsLangDir(s) Then
+                    FDefaultLangDir := s;
+                End;
+            End;
 {$endif unix}
-  end;
-  Result:=FDefaultLangDir;
-end;
+        End;
+      Result := FDefaultLangDir;
+    End;
 
-function GetResStrings(Name, Value: AnsiString; Hash: longint; P: pointer): AnsiString;
-var
-  Accept: boolean;
-begin
-  with TResTranslator(P) do begin
-    Accept := True;
-    if Assigned(OnTranslateString) then
-      OnTranslateString(TResTranslator(P), Name, Accept);
-    if Accept then
-      Result := InternalTranslateString(Value)
-    else
-      Result := Value;
-  end;
-end;
+    Function GetResStrings(Name, Value: AnsiString; Hash: longint; P: pointer):
 
-function LoadTranslationFile(const TranslationFile: AnsiString; const OnTranslate: TTranslateStringEvent = nil): AnsiString;
-begin
-  LRSTranslator := TResTranslator.Create(TranslationFile);
-  TResTranslator(LRSTranslator).OnTranslateString := OnTranslate;
-  SetResourceStrings(@GetResStrings, LRSTranslator);
-  Result := TResTranslator(LRSTranslator).TranslationLanguage;
-end;
+                                                                      AnsiString
+    ;
 
-procedure SupplementTranslationFiles; overload;
-begin
-  SupplementTranslationFiles(DefaultLangDir);
-end;
+    Var 
+      Accept: boolean;
+    Begin
+      With TResTranslator(P) Do
+        Begin
+          Accept := True;
+          If Assigned(OnTranslateString) Then
+            OnTranslateString(TResTranslator(P), Name, Accept);
+          If Accept Then
+            Result := InternalTranslateString(Value)
+          Else
+            Result := Value;
+        End;
+    End;
 
-procedure MakeTranslationFile; overload;
-begin
-  MakeTranslationFile('???');
-end;
+    Function LoadTranslationFile(Const TranslationFile: AnsiString; Const
+                                 OnTranslate: TTranslateStringEvent = Nil):
 
-procedure MakeTranslationFile(Language: AnsiString); overload;
-var
-  lLang, sLang, s: string;
-begin
-  LazGetLanguageIDs(lLang, sLang);
-  sLang:=AnsiLowerCase(sLang);
-  s:=ExtractFileNameOnly(ParamStrUtf8(0));
-  if (sLang <> '') and not FileExistsUTF8(DefaultLangDir + s + '.' + sLang) then
-    s:=s + '.' + sLang
-  else
-    s:=s + '.lng';
-  MakeTranslationFile(DefaultLangDir + s, Language);
-end;
+                                                                      AnsiString
+    ;
+    Begin
+      LRSTranslator := TResTranslator.Create(TranslationFile);
+      TResTranslator(LRSTranslator).OnTranslateString := OnTranslate;
+      SetResourceStrings(@GetResStrings, LRSTranslator);
+      Result := TResTranslator(LRSTranslator).TranslationLanguage;
+    End;
 
-procedure MakeTranslationFile(const FileName, Language: AnsiString);
-var
+    Procedure SupplementTranslationFiles;
+    overload;
+    Begin
+      SupplementTranslationFiles(DefaultLangDir);
+    End;
+
+    Procedure MakeTranslationFile;
+    overload;
+    Begin
+      MakeTranslationFile('???');
+    End;
+
+    Procedure MakeTranslationFile(Language: AnsiString);
+    overload;
+
+    Var 
+      lLang, sLang, s: string;
+    Begin
+      LazGetLanguageIDs(lLang, sLang);
+      sLang := AnsiLowerCase(sLang);
+      s := ExtractFileNameOnly(ParamStrUtf8(0));
+      If (sLang <> '') And Not FileExistsUTF8(DefaultLangDir + s + '.' + sLang)
+        Then
+        s := s + '.' + sLang
+      Else
+        s := s + '.lng';
+      MakeTranslationFile(DefaultLangDir + s, Language);
+    End;
+
+    Procedure MakeTranslationFile(Const FileName, Language: AnsiString);
+
+    Var 
+      Dst: TTranslateStringList;
+    Begin
+      If Assigned(LRSTranslator) And (LRSTranslator is TResTranslator) Then
+        Begin
+          Dst := TTranslateStringList.Create;
+          Try
+            Dst.Values[sLanguageIDName] := Language;
+            With LRSTranslator as TResTranslator Do
+              Dst.Merge(Strings as TTranslateStringList, true);
+            ForceDirectories(ExtractFilePath(FileName));
+            Dst.SaveToFile(FileName);
+          Finally
+            Dst.Free;
+        End;
+    End;
+  End;
+
+Procedure SupplementTranslationFile(Const FileName: AnsiString);
+
+Var 
   Dst: TTranslateStringList;
-begin
-  if Assigned(LRSTranslator) and (LRSTranslator is TResTranslator) then begin
-    Dst := TTranslateStringList.Create;
-    try
-      Dst.Values[sLanguageIDName]:= Language;
-      with LRSTranslator as TResTranslator do
-        Dst.Merge(Strings as TTranslateStringList, true);
-      ForceDirectories(ExtractFilePath(FileName));
-      Dst.SaveToFile(FileName);
-    finally
-      Dst.Free;
-    end;
-  end;
-end;
+Begin
+  If Assigned(LRSTranslator) And (LRSTranslator is TResTranslator) Then
+    Begin
+      Dst := TTranslateStringList.Create(FileName);
+      Try
+        With LRSTranslator as TResTranslator Do
+          Dst.Merge(Strings as TTranslateStringList, true);
+        Dst.SaveToFile(FileName);
+      Finally
+        Dst.Free;
+    End;
+End;
+End;
 
-procedure SupplementTranslationFile(const FileName: AnsiString);
-var
-  Dst: TTranslateStringList;
-begin
-  if Assigned(LRSTranslator) and (LRSTranslator is TResTranslator) then begin
-    Dst := TTranslateStringList.Create(FileName);
-    try
-      with LRSTranslator as TResTranslator do
-        Dst.Merge(Strings as TTranslateStringList, true);
-      Dst.SaveToFile(FileName);
-    finally
-      Dst.Free;
-    end;
-  end;
-end;
+Procedure SupplementTranslationFiles(Const TranslationFilesPath: AnsiString);
 
-procedure SupplementTranslationFiles(const TranslationFilesPath: AnsiString);
-var
+Var 
   Sl: TStringList;
   i: integer;
   s: string;
-begin
-  if Assigned(LRSTranslator) and (LRSTranslator is TResTranslator) then begin
-    Sl := GetAvailableTranslations(TranslationFilesPath);
-    with Sl do
-      for i := 0 to Count - 1 do
-        SupplementTranslationFile(IncludeTrailingPathDelimiter(TranslationFilesPath) + ValueFromIndex[i]);
-    // Supplement template file
-    s:=IncludeTrailingPathDelimiter(TranslationFilesPath) + ExtractFileNameOnly(ParamStrUtf8(0)) + '.template';
-    if FileExistsUTF8(s) then
-      SupplementTranslationFile(s);
-  end;
-end;
+Begin
+  If Assigned(LRSTranslator) And (LRSTranslator is TResTranslator) Then
+    Begin
+      Sl := GetAvailableTranslations(TranslationFilesPath);
+      With Sl Do
+        For i := 0 To Count - 1 Do
+          SupplementTranslationFile(IncludeTrailingPathDelimiter(
+                                    TranslationFilesPath) + ValueFromIndex[i]);
+      // Supplement template file
+      s := IncludeTrailingPathDelimiter(TranslationFilesPath) +
+           ExtractFileNameOnly(ParamStrUtf8(0)) + '.template';
+      If FileExistsUTF8(s) Then
+        SupplementTranslationFile(s);
+    End;
+End;
 
-const
-  InvalidLangExt: array[1..6] of string = ('ua', 'by', 'cn', 'cz', 'se', 'tw');
+Const 
+  InvalidLangExt: array[1..6] Of string = ('ua', 'by', 'cn', 'cz', 'se', 'tw');
 
-function IsTranslationFileValid(const TranslationFile: AnsiString): boolean;
-var
+Function IsTranslationFileValid(Const TranslationFile: AnsiString): boolean;
+
+Var 
   s: string;
   i: integer;
-begin
-  Result:=FileExistsUTF8(TranslationFile);
-  if not Result then
+Begin
+  Result := FileExistsUTF8(TranslationFile);
+  If Not Result Then
     exit;
-  s:=LowerCase(ExtractFileExt(TranslationFile));
+  s := LowerCase(ExtractFileExt(TranslationFile));
   Delete(s, 1, 1);
-  for i:=Low(InvalidLangExt) to High(InvalidLangExt) do
-    if s = InvalidLangExt[i] then begin
-      Result:=False;
-      exit;
-    end;
-end;
+  For i:=Low(InvalidLangExt) To High(InvalidLangExt) Do
+    If s = InvalidLangExt[i] Then
+      Begin
+        Result := False;
+        exit;
+      End;
+End;
 
-function LoadDefaultTranslationFile(const OnTranslate: TTranslateStringEvent): TFileName;
-begin
+Function LoadDefaultTranslationFile(Const OnTranslate: TTranslateStringEvent):
+
+                                                                       TFileName
+;
+Begin
   Result := LoadDefaultTranslationFile(DefaultLangDir, OnTranslate);
-end;
+End;
 
-function LoadDefaultTranslationFile(const TranslationFilesPath: AnsiString; const OnTranslate: TTranslateStringEvent): TFileName;
-var
+Function LoadDefaultTranslationFile(Const TranslationFilesPath: AnsiString;
+                                    Const OnTranslate: TTranslateStringEvent):
+
+                                                                       TFileName
+;
+
+Var 
   lLang, sLang, s: string;
   i: integer;
-begin
+Begin
   LazGetLanguageIDs(lLang, sLang);
-  lLang:=LowerCase(lLang);
-  sLang:=LowerCase(sLang);
+  lLang := LowerCase(lLang);
+  sLang := LowerCase(sLang);
 {$ifdef windows}
-  if sLang = 'ch' then begin
-    sLang:='zh';
-    lLang:=StringReplace(lLang, 'ch_', 'zh_', []);
-  end;
+  If sLang = 'ch' Then
+    Begin
+      sLang := 'zh';
+      lLang := StringReplace(lLang, 'ch_', 'zh_', []);
+    End;
 {$endif windows}
-  i:=Pos('.', lLang);
-  if i > 0 then
+  i := Pos('.', lLang);
+  If i > 0 Then
     SetLength(lLang, i - 1);
-  s:=IncludeTrailingPathDelimiter(TranslationFilesPath) + ExtractFileNameOnly(ParamStrUtf8(0))+ '.';
+  s := IncludeTrailingPathDelimiter(TranslationFilesPath) + ExtractFileNameOnly(
+       ParamStrUtf8(0))+ '.';
   Result := s + lLang;
   // First check full language name (uk_ua)
-  if not IsTranslationFileValid(Result) then begin
-    Result := s + sLang;
-    // Check fallback language name (uk)
-    if not IsTranslationFileValid(Result) then begin
-      // Finally use country name (ua)
-      i:=Pos('_', lLang);
-      if i > 0 then
-        lLang:=Copy(lLang, i + 1, MaxInt);
-      Result := s + lLang;
-      if not IsTranslationFileValid(Result) then begin
-        Result:='';
-        exit;
-      end;
-    end;
-  end;
-  IniFileName:=Result;
+  If Not IsTranslationFileValid(Result) Then
+    Begin
+      Result := s + sLang;
+      // Check fallback language name (uk)
+      If Not IsTranslationFileValid(Result) Then
+        Begin
+          // Finally use country name (ua)
+          i := Pos('_', lLang);
+          If i > 0 Then
+            lLang := Copy(lLang, i + 1, MaxInt);
+          Result := s + lLang;
+          If Not IsTranslationFileValid(Result) Then
+            Begin
+              Result := '';
+              exit;
+            End;
+        End;
+    End;
+  IniFileName := Result;
   Result := LoadTranslationFile(Result, OnTranslate);
-end;
+End;
 
-function LoadLanguageTranslation(const Language: AnsiString; const OnTranslate: TTranslateStringEvent): TFileName;
-begin
+Function LoadLanguageTranslation(Const Language: AnsiString; Const OnTranslate:
+                                 TTranslateStringEvent): TFileName;
+Begin
   Result := LoadLanguageTranslation(Language, DefaultLangDir, OnTranslate);
-end;
+End;
 
-function LoadLanguageTranslation(const Language, TranslationFilesPath: AnsiString; const OnTranslate: TTranslateStringEvent): TFileName;
-var
+Function LoadLanguageTranslation(Const Language, TranslationFilesPath:
+                                 AnsiString; Const OnTranslate:
+                                 TTranslateStringEvent): TFileName;
+
+Var 
   Sl: TStringList;
-begin
-  Sl:= GetAvailableTranslations(TranslationFilesPath);
-  Result:= GetTranslationFileName(Language, Sl);
-  if Result <> '' then
+Begin
+  Sl := GetAvailableTranslations(TranslationFilesPath);
+  Result := GetTranslationFileName(Language, Sl);
+  If Result <> '' Then
     Result := IncludeTrailingPathDelimiter(TranslationFilesPath) + Result;
-  if FileExistsUTF8(Result) then
+  If FileExistsUTF8(Result) Then
     LoadTranslationFile(Result, OnTranslate);
-end;
+End;
 
-function GetTranslationFileName(const Language: AnsiString; AvailableTranslations: TStringList): AnsiString;
-var
+Function GetTranslationFileName(Const Language: AnsiString;
+                                AvailableTranslations: TStringList): AnsiString;
+
+Var 
   i: integer;
   aName, aValue: string;
-begin
+Begin
   Result := '';
-  if Assigned(AvailableTranslations) then
-    with AvailableTranslations do
-      for i := 0 to Count - 1 do begin
-        GetNameValue(i, aName, aValue);
-        if AnsiSameText(AnsiDequotedStr(Language, QuoteChar), AnsiDequotedStr(aName, QuoteChar)) then begin
-          Result:= AnsiDequotedStr(aValue, QuoteChar);
-          Break;
-        end;
-      end;
-end;
+  If Assigned(AvailableTranslations) Then
+    With AvailableTranslations Do
+      For i := 0 To Count - 1 Do
+        Begin
+          GetNameValue(i, aName, aValue);
+          If AnsiSameText(AnsiDequotedStr(Language, QuoteChar), AnsiDequotedStr(
+             aName, QuoteChar)) Then
+            Begin
+              Result := AnsiDequotedStr(aValue, QuoteChar);
+              Break;
+            End;
+        End;
+End;
 
-procedure SaveTranslationFile; overload;
-begin
-  if Assigned(LRSTranslator) and (LRSTranslator is TResTranslator) then
-    with LRSTranslator as TResTranslator do
-      if Modified then
+Procedure SaveTranslationFile;
+overload;
+Begin
+  If Assigned(LRSTranslator) And (LRSTranslator is TResTranslator) Then
+    With LRSTranslator as TResTranslator Do
+      If Modified Then
         SaveFile;
-end;
+End;
 
-procedure SaveTranslationFile(const FileName: AnsiString); overload;
-begin
-  if Assigned(LRSTranslator) and (LRSTranslator is TResTranslator) then
-    with LRSTranslator as TResTranslator do
-      if Modified then
+Procedure SaveTranslationFile(Const FileName: AnsiString);
+overload;
+Begin
+  If Assigned(LRSTranslator) And (LRSTranslator is TResTranslator) Then
+    With LRSTranslator as TResTranslator Do
+      If Modified Then
         SaveFile(FileName);
-end;
+End;
 
-function TranslateString(const Value: AnsiString; IsExternal: boolean): AnsiString;
-begin
-  if Assigned(LRSTranslator) and (LRSTranslator is TResTranslator) then
-    with LRSTranslator as TResTranslator do
+Function TranslateString(Const Value: AnsiString; IsExternal: boolean):
+
+                                                                      AnsiString
+;
+Begin
+  If Assigned(LRSTranslator) And (LRSTranslator is TResTranslator) Then
+    With LRSTranslator as TResTranslator Do
       result := InternalTranslateString(Value, IsExternal)
-  else
-    result := Value;
-end;
+      Else
+        result := Value;
+End;
 
 { TTranslateStringList }
 
-function TTranslateStringList.CorrectGetValue(const Name: string): string;
-var
+Function TTranslateStringList.CorrectGetValue(Const Name: String): string;
+
+Var 
   Index: integer;
   offset: integer;
-begin
+Begin
   Index := IndexOfName(Name, offset);
-  if Index >= 0  then begin
-    Result := Copy(Strings[Index], offset, MaxInt);
-    Options[Index]:=Options[Index] + [tsoUsed];
-  end
-  else
+  If Index >= 0  Then
+    Begin
+      Result := Copy(Strings[Index], offset, MaxInt);
+      Options[Index] := Options[Index] + [tsoUsed];
+    End
+  Else
     result := '';
-end;
+End;
 
-function TTranslateStringList.GetOptions(Index: integer): TTranslateStringOptions;
-begin
-  Result:=TTranslateStringOptions(cardinal(ptruint(Objects[Index])));
-end;
+Function TTranslateStringList.GetOptions(Index: integer):
 
-function TTranslateStringList.CorrectGetName(Index: integer): string;
-var
+                                                         TTranslateStringOptions
+;
+Begin
+  Result := TTranslateStringOptions(cardinal(ptruint(Objects[Index])));
+End;
+
+Function TTranslateStringList.CorrectGetName(Index: integer): string;
+
+Var 
   Offset: integer;
   s: string;
-begin
+Begin
   CheckSpecialChars;
   Result := '';
   s := Strings[Index];
   Offset := ScanQuotSep(PChar(s));
-  if (Offset > 0) then
+  If (Offset > 0) Then
     Result := NormaliseQuotedStr(LeftStr(s, offset));
-end;
+End;
 
-function TTranslateStringList.ScanQuotSep(P: PChar): integer;
-var
- i, len: integer;
- QuoteCount: integer;
-begin
+Function TTranslateStringList.ScanQuotSep(P: PChar): integer;
+
+Var 
+  i, len: integer;
+  QuoteCount: integer;
+Begin
   result := 0;
   QuoteCount := 0;
   i := 0;
-  len:=strlen(P);
-  while (i < len) and (result = 0) do begin
-    if P[i] = QuoteChar then
-      inc(QuoteCount)
-    else if (P[i] = NameValueSeparator) and not odd(QuoteCount) then
-      result := i;
-    inc(i);
-  end;
-end;
+  len := strlen(P);
+  While (i < len) And (result = 0) Do
+    Begin
+      If P[i] = QuoteChar Then
+        inc(QuoteCount)
+      Else If (P[i] = NameValueSeparator) And Not odd(QuoteCount) Then
+             result := i;
+      inc(i);
+    End;
+End;
 
-procedure TTranslateStringList.SetOptions(Index: integer; const AValue: TTranslateStringOptions);
-begin
-  Objects[Index]:=TObject(ptruint(cardinal(AValue)));
-end;
+Procedure TTranslateStringList.SetOptions(Index: integer; Const AValue:
+                                          TTranslateStringOptions);
+Begin
+  Objects[Index] := TObject(ptruint(cardinal(AValue)));
+End;
 
-function TTranslateStringList.DoCompareText(const s1, s2: string): PtrInt;
-begin
- if CaseSensitive then
-  result:=AnsiCompareText(s1,s2)
- else
-  result:=AnsiCompareText(UTF8UpperCase(s1),UTF8UpperCase(s2));
-end;
+Function TTranslateStringList.DoCompareText(Const s1, s2: String): PtrInt;
+Begin
+  If CaseSensitive Then
+    result := AnsiCompareText(s1,s2)
+  Else
+    result := AnsiCompareText(UTF8UpperCase(s1),UTF8UpperCase(s2));
+End;
 
-constructor TTranslateStringList.Create(const FileName: string);
-begin
+constructor TTranslateStringList.Create(Const FileName: String);
+Begin
   inherited Create;
   CheckSpecialChars;
   LoadFromFile(FileName);
-end;
+End;
 
-function TTranslateStringList.NormaliseQuotedStr(const S: string): string;
-begin
-  if not HasSeparator(S, NameValueSeparator) then
+Function TTranslateStringList.NormaliseQuotedStr(Const S: String): string;
+Begin
+  If Not HasSeparator(S, NameValueSeparator) Then
     Result := AnsiDequotedStr(S, QuoteChar)
-  else if not IsQuoted(S, QuoteChar) then
-    Result := AnsiQuotedStr(S, QuoteChar)
-  else
+  Else If Not IsQuoted(S, QuoteChar) Then
+         Result := AnsiQuotedStr(S, QuoteChar)
+  Else
     Result := S;
-end;
+End;
 
-function TTranslateStringList.IndexOfName(const Name: string; var Offset: integer): integer;
-var
+Function TTranslateStringList.IndexOfName(Const Name: String; Var Offset:
+                                          integer): integer;
+
+Var 
   s, n: string;
-begin
+Begin
   CheckSpecialChars;
   result := 0;
-  n:=NormaliseQuotedStr(Name);
-  while (result < Count) do begin
-    s:=Strings[result];
-    Offset := ScanQuotSep(PChar(s));
-    if (Offset > 0) and (n = Copy(s, 1, Offset)) then begin
-      inc(Offset, 2);
-      exit;
-    end;
-    inc(result);
-  end;
+  n := NormaliseQuotedStr(Name);
+  While (result < Count) Do
+    Begin
+      s := Strings[result];
+      Offset := ScanQuotSep(PChar(s));
+      If (Offset > 0) And (n = Copy(s, 1, Offset)) Then
+        Begin
+          inc(Offset, 2);
+          exit;
+        End;
+      inc(result);
+    End;
   result := -1;
-end;
+End;
 
-function TTranslateStringList.IndexOfName(const Name: string): integer;
-var
+Function TTranslateStringList.IndexOfName(Const Name: String): integer;
+
+Var 
   i: integer;
-begin
-  Result:=IndexOfName(Name, i);
-end;
+Begin
+  Result := IndexOfName(Name, i);
+End;
 
-procedure TTranslateStringList.LoadFromFile(const FileName: string);
-var
+Procedure TTranslateStringList.LoadFromFile(Const FileName: String);
+
+Var 
   FS: TFileStreamUTF8;
-  buff: array[1..3] of char;
+  buff: array[1..3] Of char;
   i, j, k: integer;
   s, esep: string;
-begin
-  FS:= TFileStreamUTF8.Create(FileName, fmOpenRead);
-  try
+Begin
+  FS := TFileStreamUTF8.Create(FileName, fmOpenRead);
+  Try
     // Skip UTF8 header
     buff := '';
     FS.Read(buff, SizeOf(UTF8FileHeader));
-    if buff <> UTF8FileHeader then
-      FS.Position:=0;
+    If buff <> UTF8FileHeader Then
+      FS.Position := 0;
     LoadFromStream(FS);
-  finally
+  Finally
     FS.Free;
-  end;
+End;
 
-  i:=IndexOf(LineSeparator);
-  if i >= 0 then
-    Delete(i);
+i := IndexOf(LineSeparator);
+If i >= 0 Then
+  Delete(i);
 
-  // Normalize quotations
-  esep:=NameValueSeparator + NameValueSeparator;
-  for i:=0 to Count - 1 do begin
-    s:=Strings[i];
-    j:=ScanQuotSep(PChar(s));
-    if j > 0 then begin
-      k:=j + 2;
-      if Copy(s, j + 1, 2) = esep then begin
-        Options[i]:=[tsoExternal];
-        Inc(k);
-      end;
-      Strings[i]:=NormaliseQuotedStr(Copy(s, 1, j)) + NameValueSeparator + NormaliseQuotedStr(Copy(s, k, MaxInt));
-    end;
-  end;
-end;
+// Normalize quotations
+esep := NameValueSeparator + NameValueSeparator;
+For i:=0 To Count - 1 Do
+  Begin
+    s := Strings[i];
+    j := ScanQuotSep(PChar(s));
+    If j > 0 Then
+      Begin
+        k := j + 2;
+        If Copy(s, j + 1, 2) = esep Then
+          Begin
+            Options[i] := [tsoExternal];
+            Inc(k);
+          End;
+        Strings[i] := NormaliseQuotedStr(Copy(s, 1, j)) + NameValueSeparator +
+                      NormaliseQuotedStr(Copy(s, k, MaxInt));
+      End;
+  End;
+End;
 
-procedure TTranslateStringList.SaveToFile(const FileName: string);
-var
+Procedure TTranslateStringList.SaveToFile(Const FileName: String);
+
+Var 
   FS: TFileStreamUTF8;
   i, j: integer;
   s, esep: string;
-begin
+Begin
   ForceDirectories(ExtractFilePath(FileName));
   FS := TFileStreamUTF8.Create(FileName, fmCreate);
-  try
+  Try
     FS.WriteBuffer(UTF8FileHeader, SizeOf(UTF8FileHeader));
-    esep:=NameValueSeparator + NameValueSeparator;
-    for i:=0 to Count - 1 do begin
-      s:=Strings[i];
-      if tsoExternal in Options[i] then begin
-        j:=ScanQuotSep(PChar(s));
-        if j > 0 then
-          s:=NormaliseQuotedStr(Copy(s, 1, j)) + esep + NormaliseQuotedStr(Copy(s, j + 2, MaxInt));
-      end;
-      if s <> '' then
+    esep := NameValueSeparator + NameValueSeparator;
+    For i:=0 To Count - 1 Do
+      Begin
+        s := Strings[i];
+        If tsoExternal In Options[i] Then
+          Begin
+            j := ScanQuotSep(PChar(s));
+            If j > 0 Then
+              s := NormaliseQuotedStr(Copy(s, 1, j)) + esep + NormaliseQuotedStr
+                   (Copy(s, j + 2, MaxInt));
+          End;
+        If s <> '' Then
+          FS.WriteBuffer(s[1], Length(s));
+        s := LineEnding;
         FS.WriteBuffer(s[1], Length(s));
-      s:=LineEnding;
-      FS.WriteBuffer(s[1], Length(s));
-    end;
-  finally
+      End;
+  Finally
     FS.Free;
-  end;
-end;
+End;
+End;
 
-procedure TTranslateStringList.Merge(Source: TTranslateStringList; const NamesOnly: boolean = false);
-var
+Procedure TTranslateStringList.Merge(Source: TTranslateStringList; Const
+                                     NamesOnly: boolean = false);
+
+Var 
   i, j: integer;
   n: string;
-begin
+Begin
   CheckSpecialChars;
   Source.Sort;
-  for i:=0 to Count - 1 do
-    Options[i]:=[];
-  for i:=0 to Source.Count - 1 do begin
-    if Source.Options[i]*[tsoUsed, tsoExternal] = [] then
-      continue;
-    n:=Source.CNames[i];
-    if n <> '' then begin
-      j:=IndexOfName(n);
-      if j < 0 then begin
-        // New string
-        if NamesOnly then
-          j:=Add(n + NameValueSeparator + n)
-        else
-          j:=Add(Source.Strings[i]);
-      end;
-      Options[j]:=Source.Options[i] + [tsoUsed];
-    end;
-  end;
+  For i:=0 To Count - 1 Do
+    Options[i] := [];
+  For i:=0 To Source.Count - 1 Do
+    Begin
+      If Source.Options[i]*[tsoUsed, tsoExternal] = [] Then
+        continue;
+      n := Source.CNames[i];
+      If n <> '' Then
+        Begin
+          j := IndexOfName(n);
+          If j < 0 Then
+            Begin
+              // New string
+              If NamesOnly Then
+                j := Add(n + NameValueSeparator + n)
+              Else
+                j := Add(Source.Strings[i]);
+            End;
+          Options[j] := Source.Options[i] + [tsoUsed];
+        End;
+    End;
   // Delete unused strings
-  i:=0;
-  while i < Count do begin
-    n:=CNames[i];
-    if (Options[i] = []) and (n <> '') and (CompareText(n, sLanguageIDName) <> 0) then
-      Delete(i)
-    else
-      Inc(i);
-  end;
-end;
+  i := 0;
+  While i < Count Do
+    Begin
+      n := CNames[i];
+      If (Options[i] = []) And (n <> '') And (CompareText(n, sLanguageIDName) <>
+         0) Then
+        Delete(i)
+      Else
+        Inc(i);
+    End;
+End;
 
 { TResTranslator }
 
 constructor TResTranslator.Create(TranslationFile: AnsiString);
-begin
+Begin
   inherited Create;
   FTranslationFile := TranslationFile;
   FIgnoreDelimiters := [wdIgnoreTrailing];
   FWordDelims := ['.', ',', ':'];
 
   FStrResLst  := TTranslateStringList.Create;
-  with FStrResLst do begin
-    Duplicates := dupIgnore;
-    CaseSensitive := False;
-    CheckSpecialChars;
-    if FileExistsUTF8(FTranslationFile) then begin
-      LoadFromFile(FTranslationFile);
-      FTranslationLanguage := AnsiDequotedStr(CValues[AnsiQuotedStr(sLanguageIDName, QuoteChar)], QuoteChar);
-    end;
-  end;
-end;
+  With FStrResLst Do
+    Begin
+      Duplicates := dupIgnore;
+      CaseSensitive := False;
+      CheckSpecialChars;
+      If FileExistsUTF8(FTranslationFile) Then
+        Begin
+          LoadFromFile(FTranslationFile);
+          FTranslationLanguage := AnsiDequotedStr(CValues[AnsiQuotedStr(
+                                  sLanguageIDName, QuoteChar)], QuoteChar);
+        End;
+    End;
+End;
 
 destructor TResTranslator.Destroy;
-begin
+Begin
   FStrResLst.Free;
   inherited Destroy;
-end;
+End;
 
-function TResTranslator.InternalTranslateString(const Value: AnsiString; IsExternal: boolean): AnsiString;
+Function TResTranslator.InternalTranslateString(Const Value: AnsiString;
+                                                IsExternal: boolean): AnsiString
+;
 
-  function IsAlpha(Ch: char): boolean; inline;
-  begin
-    Result := Ch in ['A'..'Z', 'a'..'z'];
-  end;
+Function IsAlpha(Ch: char): boolean;
+inline;
+Begin
+  Result := Ch In ['A'..'Z', 'a'..'z'];
+End;
 
-  function HasAlpha: boolean;
-  var
-    i: integer;
-  begin
-    Result := False;
-    i      := 1;
-    while not Result and (i <= Length(Value)) do begin
+Function HasAlpha: boolean;
+
+Var 
+  i: integer;
+Begin
+  Result := False;
+  i      := 1;
+  While Not Result And (i <= Length(Value)) Do
+    Begin
       Result := IsAlpha(Value[i]);
       Inc(i);
-    end;
-  end;
+    End;
+End;
 
-var
+Var 
   ClearValue: AnsiString;
   Original, s, n: AnsiString;
   i: integer;
-begin
+Begin
   Original := Value;
-  ClearValue := StringReplace(AdjustLineBreaks(Value), LineEnding, '~', [rfReplaceAll]);
+  ClearValue := StringReplace(AdjustLineBreaks(Value), LineEnding, '~', [
+                rfReplaceAll]);
   Result := ClearValue;
 
-  if wdIgnoreLeading in IgnoreDelimiters then
+  If wdIgnoreLeading In IgnoreDelimiters Then
     RemoveLeadingChars(ClearValue, FWordDelims);
 
-  if wdIgnoreTrailing in IgnoreDelimiters then
+  If wdIgnoreTrailing In IgnoreDelimiters Then
     RemoveTrailingChars(ClearValue, FWordDelims);
-  if HasAlpha then
-  begin
-    with FStrResLst do begin
-      if HasSeparator(ClearValue, NameValueSeparator) then
-        n := AnsiQuotedStr(ClearValue, QuoteChar)
-      else
-        n := ClearValue;
+  If HasAlpha Then
+    Begin
+      With FStrResLst Do
+        Begin
+          If HasSeparator(ClearValue, NameValueSeparator) Then
+            n := AnsiQuotedStr(ClearValue, QuoteChar)
+          Else
+            n := ClearValue;
 
-      s:=CValues[n];
-      if (s = '') then begin
-        i:=Add(n + NameValueSeparator + n);
-        Options[i]:=[tsoNew, tsoUsed];
-        FModified := True;
-        Result := Original;
-      end
-      else begin
-        Result := StringReplace(Result, ClearValue, AnsiDequotedStr(s, QuoteChar), [rfReplaceAll]);
-        Result := StringReplace(Result, '~', LineEnding, [rfReplaceAll]);
-      end;
-      if IsExternal then begin
-        i:=IndexOfName(n);
-        if i >= 0 then
-          Options[i]:=Options[i] + [tsoExternal];
-      end;
-    end;
-  end;
-end;
+          s := CValues[n];
+          If (s = '') Then
+            Begin
+              i := Add(n + NameValueSeparator + n);
+              Options[i] := [tsoNew, tsoUsed];
+              FModified := True;
+              Result := Original;
+            End
+          Else
+            Begin
+              Result := StringReplace(Result, ClearValue, AnsiDequotedStr(s,
+                        QuoteChar), [rfReplaceAll]);
+              Result := StringReplace(Result, '~', LineEnding, [rfReplaceAll]);
+            End;
+          If IsExternal Then
+            Begin
+              i := IndexOfName(n);
+              If i >= 0 Then
+                Options[i] := Options[i] + [tsoExternal];
+            End;
+        End;
+    End;
+End;
 
-procedure TResTranslator.SetIgnoreDelimiters(const AValue: TWordDelimitersOptions);
-begin
-  if FIgnoreDelimiters = AValue then
+Procedure TResTranslator.SetIgnoreDelimiters(Const AValue:
+                                             TWordDelimitersOptions);
+Begin
+  If FIgnoreDelimiters = AValue Then
     exit;
   FIgnoreDelimiters := AValue;
-end;
+End;
 
-function TResTranslator.GetStrings: TStringList;
-begin
+Function TResTranslator.GetStrings: TStringList;
+Begin
   Result := FStrResLst;
-end;
+End;
 
-procedure TResTranslator.SetOnTranslateString(const AValue: TTranslateStringEvent);
-begin
-  if FOnTranslateString = AValue then
+Procedure TResTranslator.SetOnTranslateString(Const AValue:
+                                              TTranslateStringEvent);
+Begin
+  If FOnTranslateString = AValue Then
     exit;
   FOnTranslateString := AValue;
-end;
+End;
 
-procedure TResTranslator.SetWordDelims(const AValue: TSysCharset);
-begin
-  if FWordDelims = AValue then
+Procedure TResTranslator.SetWordDelims(Const AValue: TSysCharset);
+Begin
+  If FWordDelims = AValue Then
     exit;
   FWordDelims := AValue;
-end;
+End;
 
-procedure TResTranslator.TranslateStringProperty(Sender: TObject; const Instance: TPersistent; PropInfo: PPropInfo; var Content: string);
-var
+Procedure TResTranslator.TranslateStringProperty(Sender: TObject; Const Instance
+                                                 : TPersistent; PropInfo:
+                                                 PPropInfo; Var Content: String)
+;
+
+Var 
   Accept: boolean;
   ResourceName: AnsiString;
   OwnerName: AnsiString;
-begin
-  if Sender is TReader and Assigned(TReader(Sender).Owner) then
+Begin
+  If Sender is TReader And Assigned(TReader(Sender).Owner) Then
     OwnerName := TReader(Sender).Owner.GetNamePath;
 
-  if Instance.InheritsFrom(TForm) then
+  If Instance.InheritsFrom(TForm) Then
     ResourceName := OwnerName + '.' + PropInfo^.Name
-  else
-    ResourceName := OwnerName + '.' + Instance.GetNamePath + '.' + PropInfo^.Name;
+  Else
+    ResourceName := OwnerName + '.' + Instance.GetNamePath + '.' + PropInfo^.
+                    Name;
 
   Accept := True;
 
-  if Assigned(OnTranslateString) then
+  If Assigned(OnTranslateString) Then
     OnTranslateString(Self, ResourceName, Accept);
 
-  if (PropInfo^.Name = 'Caption') and (Instance.GetNamePath = Content) then
-    Accept:=False
-  else
-    if PropInfo^.Name = 'Name' then
-      Accept:=False;
+  If (PropInfo^.Name = 'Caption') And (Instance.GetNamePath = Content) Then
+    Accept := False
+  Else
+    If PropInfo^.Name = 'Name' Then
+      Accept := False;
 
-  if Accept then
+  If Accept Then
     Content := InternalTranslateString(Content);
-end;
+End;
 
-procedure TResTranslator.SaveFile;
-begin
+Procedure TResTranslator.SaveFile;
+Begin
   SaveTranslationFile(FTranslationFile);
-end;
+End;
 
-procedure TResTranslator.SaveFile(const aFileName: string);
-begin
+Procedure TResTranslator.SaveFile(Const aFileName: String);
+Begin
   FStrResLst.SaveToFile(aFileName);
-end;
+End;
 
 finalization
-  FreeAndNil(LRSTranslator);
+FreeAndNil(LRSTranslator);
 
-end.
+End.

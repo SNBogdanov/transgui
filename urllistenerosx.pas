@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -28,50 +30,64 @@
   statement from your version.  If you delete this exception statement from all
   source files in the program, then also delete it here.
 *************************************************************************************}
-unit URLListenerOSX;
+
+Unit URLListenerOSX;
 {$mode objfpc}{$H+}
 {$modeswitch objectivec2}
 
-interface
+Interface
 
-uses
-  Classes, SysUtils, CocoaAll, InternetConfig, AppleEvents;
+Uses 
+Classes, SysUtils, CocoaAll, InternetConfig, AppleEvents;
 
-type
-  THandlerProc = procedure(const url: string);
+Type 
+  THandlerProc = Procedure (Const url: String);
 
   { TAppURLHandler }
 
   TAppURLHandler = objcclass(NSObject)
-  public
-    procedure  getUrlwithReplyEvent(event: NSAppleEventDescriptor; eventReply: NSAppleEventDescriptor); message 'getUrl:withReplyEvent:';
-  public
-    callBack: THandlerProc;
-  end;
+                   Public 
+                     Procedure  getUrlwithReplyEvent(event:
+                                                     NSAppleEventDescriptor;
+                                                     eventReply:
+                                                     NSAppleEventDescriptor);
+                     message 'getUrl:withReplyEvent:';
+                   Public 
+                     callBack: THandlerProc;
+End;
 
-procedure RegisterURLHandler(HandlerProc: THandlerProc);
-var
+Procedure RegisterURLHandler(HandlerProc: THandlerProc);
+
+Var 
   handler : TAppURLHandler;
   eventManager: NSAppleEventManager;
 
-implementation
+Implementation
 
 { TAppURLHandler }
 
-procedure TAppURLHandler.getUrlwithReplyEvent(event: NSAppleEventDescriptor; eventReply: NSAppleEventDescriptor);
-var
+Procedure TAppURLHandler.getUrlwithReplyEvent(event: NSAppleEventDescriptor;
+                                              eventReply: NSAppleEventDescriptor
+);
+
+Var 
   url : NSString;
-begin
-  url:=event.paramDescriptorForKeyword(keyDirectObject).stringValue;
+Begin
+  url := event.paramDescriptorForKeyword(keyDirectObject).stringValue;
   callBack(url.UTF8String);
-end;
+End;
 
-procedure RegisterURLHandler(HandlerProc: THandlerProc);
-begin
-  handler:=TAppURLHandler.alloc.init;
-  handler.callBack:=HandlerProc;
-  eventManager:=NSAppleEventManager.sharedAppleEventManager;
-  eventManager.setEventHandler_andSelector_forEventClass_andEventID(handler,ObjCSelector(handler.getUrlwithReplyEvent), kInternetEventClass,kAEGetURL);
-end;
+Procedure RegisterURLHandler(HandlerProc: THandlerProc);
+Begin
+  handler := TAppURLHandler.alloc.init;
+  handler.callBack := HandlerProc;
+  eventManager := NSAppleEventManager.sharedAppleEventManager;
+  eventManager.setEventHandler_andSelector_forEventClass_andEventID(handler,
+                                                                    ObjCSelector
+                                                                    (handler.
 
-end.
+                                                            getUrlwithReplyEvent
+  ), kInternetEventClass,kAEGetURL);
+End;
+
+End.

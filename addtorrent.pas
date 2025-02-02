@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -30,1323 +32,1518 @@
 
 *************************************************************************************}
 
-unit AddTorrent;
+Unit AddTorrent;
 
 {$mode objfpc}{$H+}
 
-interface
+Interface
 
-uses
-  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, Spin, VarGrid, Grids, ButtonPanel, ExtCtrls, Buttons, BaseForm,
-  varlist, fpjson, StrUtils, DateUtils, LazUTF8;
+Uses 
+Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+StdCtrls, Spin, VarGrid, Grids, ButtonPanel, ExtCtrls, Buttons, BaseForm,
+varlist, fpjson, StrUtils, DateUtils, LazUTF8;
 
 resourcestring
-  SSize = 'Size';
-  SSelectDownloadFolder = 'Select a folder for download';
-  SInvalidName = 'Invalid name specified.';
+SSize = 'Size';
+SSelectDownloadFolder = 'Select a folder for download';
+SInvalidName = 'Invalid name specified.';
 
-type
-  TFilesTree = class;
+Type 
+  TFilesTree = Class;
 
   { TAddTorrentForm }
 
-  TAddTorrentForm = class(TBaseForm)
-    DelButton: TBitBtn;
-    btSelectAll: TButton;
-    btSelectNone: TButton;
-    btBrowse: TButton;
-    Buttons: TButtonPanel;
-    cbStartTorrent: TCheckBox;
-    cbSequentialDownload: TCheckBox;
-    cbDestFolder: TComboBox;
-    edSaveAs: TEdit;
-    edLabel: TEdit;
-    edExtension: TEdit;
-    gbSaveAs: TGroupBox;
-    gbContents: TGroupBox;
-    edPeerLimit: TSpinEdit;
-    DiskSpaceTimer: TTimer;
-    txSaveAs: TLabel;
-    txLabel: TLabel;
-    txSaveAs1: TLabel;
-    txSize: TLabel;
-    txDiskSpace: TLabel;
-    txPeerLimit: TLabel;
-    lvFiles: TVarGrid;
-    txDestFolder: TLabel;
-    procedure btBrowseClick(Sender: TObject);
-    procedure btSelectAllClick(Sender: TObject);
-    procedure btSelectNoneClick(Sender: TObject);
-    procedure cbDestFolderChange(Sender: TObject);
-    procedure cbStartTorrentChange(Sender: TObject);
-    procedure cbSequentialDownloadChange(Sender: TObject);
-    procedure DelButtonClick(Sender: TObject);
-    procedure DiskSpaceTimerTimer(Sender: TObject);
-    procedure edSaveAsChange(Sender: TObject);
-    procedure edLabelChange(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
-    procedure FormShow(Sender: TObject);
-    procedure OKButtonClick(Sender: TObject);
-    procedure SearchGoodExtension ();
-    function  GetTempate (ext:string; var e: array of string):integer;
-    function  IsFileTemplate(filename:string; cntE : integer; e: array of string):boolean;
-    function  CorrectPath (path: string): string;
-    procedure DeleteDirs(maxdel : Integer);
+    TAddTorrentForm = Class(TBaseForm)
+      DelButton: TBitBtn;
+      btSelectAll: TButton;
+      btSelectNone: TButton;
+      btBrowse: TButton;
+      Buttons: TButtonPanel;
+      cbStartTorrent: TCheckBox;
+      cbSequentialDownload: TCheckBox;
+      cbDestFolder: TComboBox;
+      edSaveAs: TEdit;
+      edLabel: TEdit;
+      edExtension: TEdit;
+      gbSaveAs: TGroupBox;
+      gbContents: TGroupBox;
+      edPeerLimit: TSpinEdit;
+      DiskSpaceTimer: TTimer;
+      txSaveAs: TLabel;
+      txLabel: TLabel;
+      txSaveAs1: TLabel;
+      txSize: TLabel;
+      txDiskSpace: TLabel;
+      txPeerLimit: TLabel;
+      lvFiles: TVarGrid;
+      txDestFolder: TLabel;
+      Procedure btBrowseClick(Sender: TObject);
+      Procedure btSelectAllClick(Sender: TObject);
+      Procedure btSelectNoneClick(Sender: TObject);
+      Procedure cbDestFolderChange(Sender: TObject);
+      Procedure cbStartTorrentChange(Sender: TObject);
+      Procedure cbSequentialDownloadChange(Sender: TObject);
+      Procedure DelButtonClick(Sender: TObject);
+      Procedure DiskSpaceTimerTimer(Sender: TObject);
+      Procedure edSaveAsChange(Sender: TObject);
+      Procedure edLabelChange(Sender: TObject);
+      Procedure FormCreate(Sender: TObject);
+      Procedure FormShow(Sender: TObject);
+      Procedure OKButtonClick(Sender: TObject);
+      Procedure SearchGoodExtension ();
+      Function  GetTempate (ext:String; Var e: Array Of String): integer;
+      Function  IsFileTemplate(filename:String; cntE : integer; e: Array Of
+                               String): boolean;
+      Function  CorrectPath (path: String): string;
+      Procedure DeleteDirs(maxdel : Integer);
 
-  private
-    FDiskSpaceCaption: string;
-    FTree: TFilesTree;
-    procedure TreeStateChanged(Sender: TObject);
-    procedure UpdateSize;
-  public
-    OrigCaption: string;
-    Extension : string;
-    property FilesTree: TFilesTree read FTree;
-  end;
+      Private 
+        FDiskSpaceCaption: string;
+        FTree: TFilesTree;
+        Procedure TreeStateChanged(Sender: TObject);
+        Procedure UpdateSize;
+      Public 
+        OrigCaption: string;
+        Extension : string;
+        property FilesTree: TFilesTree read FTree;
+    End;
 
-  TFolderInfo = record
-    Size: double;
-    DoneSize: double;
-    Priority: integer;
-    chk: TCheckBoxState;
-  end;
+    TFolderInfo = Record
+      Size: double;
+      DoneSize: double;
+      Priority: integer;
+      chk: TCheckBoxState;
+    End;
 
   { TFilesTree }
 
-  TFilesTree = class(TComponent)
-  private
-    FCheckboxes: boolean;
-    FDownloadDir: string;
-    FGrid: TVarGrid;
-    FHasFolders: boolean;
-    FIsPlain: boolean;
-    FOnStateChange: TNotifyEvent;
-    FFiles: TVarList;
-    FTorrentId: integer;
-    FLastFileCount: integer;
-//    LastFilterIdx:integer;
-    FCommonPathLen: integer;
-    FHasDone: boolean;
-    FHasPriority: boolean;
+    TFilesTree = Class(TComponent)
+      Private 
+        FCheckboxes: boolean;
+        FDownloadDir: string;
+        FGrid: TVarGrid;
+        FHasFolders: boolean;
+        FIsPlain: boolean;
+        FOnStateChange: TNotifyEvent;
+        FFiles: TVarList;
+        FTorrentId: integer;
+        FLastFileCount: integer;
+        //    LastFilterIdx:integer;
+        FCommonPathLen: integer;
+        FHasDone: boolean;
+        FHasPriority: boolean;
 
-    procedure CollapseFolder(ARow: integer);
-    procedure DoCellAttributes(Sender: TVarGrid; ACol, ARow, ADataCol: integer; AState: TGridDrawState; var CellAttribs: TCellAttributes);
-    procedure DoCheckBoxClick(Sender: TVarGrid; ACol, ARow, ADataCol: integer);
-    procedure DoDrawCell(Sender: TVarGrid; ACol, ARow, ADataCol: integer; AState: TGridDrawState; const R: TRect; var ADefaultDrawing: boolean);
-    procedure DoQuickSearch(Sender: TVarGrid; var SearchText: string; var ARow: integer);
-    procedure DoTreeButtonClick(Sender: TVarGrid; ACol, ARow, ADataCol: integer);
-    procedure DoAfterSort(Sender: TObject);
-    procedure ExpandFolder(ARow: integer);
-    function GetChecked(ARow: integer): TCheckBoxState;
-    function GetExpanded(ARow: integer): boolean;
-    function GetLevel(ARow: integer): integer;
-    procedure SetCheckboxes(const AValue: boolean);
-    procedure IntSetChecked(ARow: integer; const AValue: TCheckBoxState);
-    procedure SetChecked(ARow: integer; const AValue: TCheckBoxState);
-    procedure SetExpanded(ARow: integer; const AValue: boolean);
-    procedure SetIsPlain(const AValue: boolean);
-    procedure TreeChanged;
-    procedure DoOnStateChange;
-    function DoCompareVarRows(Sender: TVarList; Row1, Row2: PVariant; DescendingSort: boolean): integer;
-    procedure SetRowOption(ARow, AOption: integer; DoSet: boolean);
-  public
-    constructor Create(AGrid: TVarGrid); reintroduce;
-    destructor Destroy; override;
-    function IsFolder(ARow: integer): boolean;
-    procedure CollapseAll;
-    procedure FillTree(ATorrentId: integer; files, priorities, wanted: TJSONArray;RebuildTree:boolean);
-    procedure SetStateAll(AState: TCheckBoxState);
-    procedure EnsureRowVisible(ARow: integer);
-    function GetFullPath(ARow: integer; AbsolutePath: boolean = True): string;
-    function GetIncompleteFullPath(ARow: integer; AbsolutePath: boolean = True): string;
-    function UpdateSummary: TFolderInfo;
-    procedure Clear;
-    property Grid: TVarGrid read FGrid;
-    property HasFolders: boolean read FHasFolders;
-    property Checkboxes: boolean read FCheckboxes write SetCheckboxes;
-    property IsPlain: boolean read FIsPlain write SetIsPlain;
-    property DownloadDir: string read FDownloadDir write FDownloadDir;
-    property Expanded[ARow: integer]: boolean read GetExpanded write SetExpanded;
-    property Checked[ARow: integer]: TCheckBoxState read GetChecked write SetChecked;
-    property RowLevel[ARow: integer]: integer read GetLevel;
-    property OnStateChange: TNotifyEvent read FOnStateChange write FOnStateChange;
-  end;
+        Procedure CollapseFolder(ARow: integer);
+        Procedure DoCellAttributes(Sender: TVarGrid; ACol, ARow, ADataCol:
+                                   integer; AState: TGridDrawState; Var
+                                   CellAttribs: TCellAttributes);
+        Procedure DoCheckBoxClick(Sender: TVarGrid; ACol, ARow, ADataCol:
+                                  integer);
+        Procedure DoDrawCell(Sender: TVarGrid; ACol, ARow, ADataCol: integer;
+                             AState: TGridDrawState; Const R: TRect; Var
+                             ADefaultDrawing: boolean);
+        Procedure DoQuickSearch(Sender: TVarGrid; Var SearchText: String; Var
+                                ARow: integer);
+        Procedure DoTreeButtonClick(Sender: TVarGrid; ACol, ARow, ADataCol:
+                                    integer);
+        Procedure DoAfterSort(Sender: TObject);
+        Procedure ExpandFolder(ARow: integer);
+        Function GetChecked(ARow: integer): TCheckBoxState;
+        Function GetExpanded(ARow: integer): boolean;
+        Function GetLevel(ARow: integer): integer;
+        Procedure SetCheckboxes(Const AValue: boolean);
+        Procedure IntSetChecked(ARow: integer; Const AValue: TCheckBoxState);
+        Procedure SetChecked(ARow: integer; Const AValue: TCheckBoxState);
+        Procedure SetExpanded(ARow: integer; Const AValue: boolean);
+        Procedure SetIsPlain(Const AValue: boolean);
+        Procedure TreeChanged;
+        Procedure DoOnStateChange;
+        Function DoCompareVarRows(Sender: TVarList; Row1, Row2: PVariant;
+                                  DescendingSort: boolean): integer;
+        Procedure SetRowOption(ARow, AOption: integer; DoSet: boolean);
+      Public 
+        constructor Create(AGrid: TVarGrid);
+        reintroduce;
+        destructor Destroy;
+        override;
+        Function IsFolder(ARow: integer): boolean;
+        Procedure CollapseAll;
+        Procedure FillTree(ATorrentId: integer; files, priorities, wanted:
+                           TJSONArray;RebuildTree:boolean);
+        Procedure SetStateAll(AState: TCheckBoxState);
+        Procedure EnsureRowVisible(ARow: integer);
+        Function GetFullPath(ARow: integer; AbsolutePath: boolean = True):
 
-const
-  // Files list columns
-  idxFileName      = 0;
-  idxFileSize      = 1;
-  idxFileDone      = 2;
-  idxFileProgress  = 3;
-  idxFilePriority  = 4;
-  idxFileId        = -4;
-  idxFileId1       = 5;
-  idxFileFullPath  = -1;
-  idxFileLevel     = -2;
-  idxFileIndex     = -3;
+                                                                          string
+        ;
+        Function GetIncompleteFullPath(ARow: integer; AbsolutePath: boolean =
+                                       True): string;
+        Function UpdateSummary: TFolderInfo;
+        Procedure Clear;
+        property Grid: TVarGrid read FGrid;
+        property HasFolders: boolean read FHasFolders;
+        property Checkboxes: boolean read FCheckboxes write SetCheckboxes;
+        property IsPlain: boolean read FIsPlain write SetIsPlain;
+        property DownloadDir: string read FDownloadDir write FDownloadDir;
+        property Expanded[ARow: integer]: boolean read GetExpanded write
+                                          SetExpanded;
+        property Checked[ARow: integer]: TCheckBoxState read GetChecked write
+                                         SetChecked;
+        property RowLevel[ARow: integer]: integer read GetLevel;
+        property OnStateChange: TNotifyEvent read FOnStateChange write
+                                FOnStateChange;
+    End;
 
-  FilesExtraColumns = 4;
+    Const 
+      // Files list columns
+      idxFileName      = 0;
+      idxFileSize      = 1;
+      idxFileDone      = 2;
+      idxFileProgress  = 3;
+      idxFilePriority  = 4;
+      idxFileId        = -4;
+      idxFileId1       = 5;
+      idxFileFullPath  = -1;
+      idxFileLevel     = -2;
+      idxFileIndex     = -3;
 
-implementation
+      FilesExtraColumns = 4;
 
-uses lclintf, lcltype, main, variants, Utils, rpc, lclproc;
+    Implementation
 
-const
-  roChecked   = $030000;
-  roCollapsed = $040000;
-  roHidden    = $080000;
-  roTag       = $100000;
+    Uses lclintf, lcltype, main, variants, Utils, rpc, lclproc;
 
-  roCheckedShift = 16;
+    Const 
+      roChecked   = $030000;
+      roCollapsed = $040000;
+      roHidden    = $080000;
+      roTag       = $100000;
 
-  TR_PRI_MIXED = -1001;  // psedudo priority
+      roCheckedShift = 16;
+
+      TR_PRI_MIXED = -1001;
+      // psedudo priority
 
 { TFilesTree }
 
-constructor TFilesTree.Create(AGrid: TVarGrid);
-begin
-  inherited Create(AGrid);
-  FGrid:=AGrid;
-  FFiles:=FGrid.Items;
-  FGrid.OnCheckBoxClick:=@DoCheckBoxClick;
-  FGrid.OnTreeButtonClick:=@DoTreeButtonClick;
-  FGrid.OnCellAttributes:=@DoCellAttributes;
-  FGrid.OnAfterSort:=@DoAfterSort;
-  FGrid.OnQuickSearch:=@DoQuickSearch;
-  FGrid.OnDrawCell:=@DoDrawCell;
-end;
+      constructor TFilesTree.Create(AGrid: TVarGrid);
+    Begin
+      inherited Create(AGrid);
+      FGrid := AGrid;
+      FFiles := FGrid.Items;
+      FGrid.OnCheckBoxClick := @DoCheckBoxClick;
+      FGrid.OnTreeButtonClick := @DoTreeButtonClick;
+      FGrid.OnCellAttributes := @DoCellAttributes;
+      FGrid.OnAfterSort := @DoAfterSort;
+      FGrid.OnQuickSearch := @DoQuickSearch;
+      FGrid.OnDrawCell := @DoDrawCell;
+    End;
 
-destructor TFilesTree.Destroy;
-begin
-  inherited Destroy;
-end;
+    destructor TFilesTree.Destroy;
+    Begin
+      inherited Destroy;
+    End;
 
-function TFilesTree.IsFolder(ARow: integer): boolean;
-begin
-  Result:=VarIsEmpty(FGrid.Items[idxFileId, ARow]);
-end;
+    Function TFilesTree.IsFolder(ARow: integer): boolean;
+    Begin
+      Result := VarIsEmpty(FGrid.Items[idxFileId, ARow]);
+    End;
 
-procedure TFilesTree.CollapseAll;
-var
-  i: integer;
-begin
-  FGrid.BeginUpdate;
-  try
-    for i:=0 to FGrid.Items.Count - 1 do begin
-      if IsFolder(i) then
-        SetRowOption(i, roCollapsed, True);
-      if integer(FGrid.Items[idxFileLevel, i]) > 0 then begin
-        FGrid.RowVisible[i]:=False;
-        FGrid.RowSelected[i]:=False;
-        SetRowOption(i, roHidden, True);
-      end;
-    end;
-    TreeChanged;
-  finally
-    FGrid.EndUpdate;
-  end;
-end;
+    Procedure TFilesTree.CollapseAll;
 
-procedure TFilesTree.FillTree(ATorrentId: integer; files, priorities, wanted: TJSONArray;RebuildTree:boolean);
+    Var 
+      i: integer;
+    Begin
+      FGrid.BeginUpdate;
+      Try
+        For i:=0 To FGrid.Items.Count - 1 Do
+          Begin
+            If IsFolder(i) Then
+              SetRowOption(i, roCollapsed, True);
+            If integer(FGrid.Items[idxFileLevel, i]) > 0 Then
+              Begin
+                FGrid.RowVisible[i] := False;
+                FGrid.RowSelected[i] := False;
+                SetRowOption(i, roHidden, True);
+              End;
+          End;
+        TreeChanged;
+      Finally
+        FGrid.EndUpdate;
+    End;
+  End;
 
-  procedure _AddFolders(list: TVarList; const path: string; var idx: integer; cnt, level: integer);
-  var
-    s, ss: string;
-    j: integer;
-    p: PChar;
-    ww: widestring;
-  begin
-    while idx < cnt do begin
+Procedure TFilesTree.FillTree(ATorrentId: integer; files, priorities, wanted:
+                              TJSONArray;RebuildTree:boolean);
+
+Procedure _AddFolders(list: TVarList; Const path: String; Var idx: integer; cnt,
+                      level: integer);
+
+Var 
+  s, ss: string;
+  j: integer;
+  p: PChar;
+  ww: widestring;
+Begin
+  While idx < cnt Do
+    Begin
 
       ww := widestring(list[idxFileFullPath, idx]);
 
-      s  := StringReplace(UTF8Encode(ww), ':', '_', [rfReplaceAll, rfIgnoreCase]);
-      s  := ExtractFilePath(s); // fixed an incorrect search if there is a ":"
+      s  := StringReplace(UTF8Encode(ww), ':', '_', [rfReplaceAll, rfIgnoreCase]
+            );
+      s  := ExtractFilePath(s);
+      // fixed an incorrect search if there is a ":"
 
-      if s = '' then begin
-        Inc(idx);
-        continue;
-      end;
-      if (path <> '') and (Pos(path, s) <> 1)  then
+      If s = '' Then
+        Begin
+          Inc(idx);
+          continue;
+        End;
+      If (path <> '') And (Pos(path, s) <> 1)  Then
         break;
-      if s = path then begin
-        list[idxFileLevel, idx]:=level;
-        Inc(idx);
-      end
-      else begin
-        ss:=Copy(s, Length(path) + 1, MaxInt);
-        p:=PChar(ss);
-        while (p^ <> #0) and not (p^ in ['/','\']) do
-          Inc(p);
-        if p^ <> #0 then begin
-          SetLength(ss, p - PChar(ss) + 1);
-          j:=list.Count;
-          list[idxFileLevel, j]:=level;
-          list[idxFileFullPath, j]:=UTF8Decode(path + ss);
-          _AddFolders(list, path + ss, idx, cnt, level + 1);
-          ss:=ExcludeTrailingPathDelimiter(ss);
-          list[idxFileName, j]:=UTF8Decode(ExtractFileName(ss));
-        end;
-      end;
-    end;
-  end;
+      If s = path Then
+        Begin
+          list[idxFileLevel, idx] := level;
+          Inc(idx);
+        End
+      Else
+        Begin
+          ss := Copy(s, Length(path) + 1, MaxInt);
+          p := PChar(ss);
+          While (p^ <> #0) And Not (p^ In ['/','\']) Do
+            Inc(p);
+          If p^ <> #0 Then
+            Begin
+              SetLength(ss, p - PChar(ss) + 1);
+              j := list.Count;
+              list[idxFileLevel, j] := level;
+              list[idxFileFullPath, j] := UTF8Decode(path + ss);
+              _AddFolders(list, path + ss, idx, cnt, level + 1);
+              ss := ExcludeTrailingPathDelimiter(ss);
+              list[idxFileName, j] := UTF8Decode(ExtractFileName(ss));
+            End;
+        End;
+    End;
+End;
 
-var
+Var 
   i, row: integer;
   FullRefresh: boolean;
   f: TJSONObject;
   s, ss, path: string;
   ff: double;
-begin
-  if files = nil then begin
-    FGrid.Items.Clear;
-    exit;
-  end;
-  FHasDone:=FGrid.Columns.Count > idxFileDone;
-  FHasPriority:=FHasDone and (priorities <> nil) and (wanted <> nil);
-  FullRefresh:=(FTorrentId <> ATorrentId) or (FLastFileCount <> files.Count) or RebuildTree;
-  FLastFileCount:=files.Count;
+Begin
+  If files = Nil Then
+    Begin
+      FGrid.Items.Clear;
+      exit;
+    End;
+  FHasDone := FGrid.Columns.Count > idxFileDone;
+  FHasPriority := FHasDone And (priorities <> Nil) And (wanted <> Nil);
+  FullRefresh := (FTorrentId <> ATorrentId) Or (FLastFileCount <> files.Count)
+                 Or RebuildTree;
+  FLastFileCount := files.Count;
 
-  FTorrentId:=ATorrentId;
-  FIsPlain:=FGrid.SortColumn <> idxFileName;
+  FTorrentId := ATorrentId;
+  FIsPlain := FGrid.SortColumn <> idxFileName;
   FFiles.BeginUpdate;
-  try
-    FFiles.OnCompareVarRows:=nil;
-    if FullRefresh then
+  Try
+    FFiles.OnCompareVarRows := Nil;
+    If FullRefresh Then
       FFiles.Clear
-    else begin
-      for i:=0 to FFiles.Count - 1 do
-        SetRowOption(i, roTag, False);
-      FFiles.Sort(idxFileId);
-    end;
+    Else
+      Begin
+        For i:=0 To FFiles.Count - 1 Do
+          SetRowOption(i, roTag, False);
+        FFiles.Sort(idxFileId);
+      End;
 
     // Detecting top level folder to be removed
-    FCommonPathLen:=0;
-    path:='';
-    if files.Count > 0 then begin
-      s:=UTF8Encode(files.Objects[0].Strings['name']);
-      s:=ExcludeInvalidChar(s); // petrov - Exclude prohibited characters
-      FCommonPathLen:=Pos(RemotePathDelimiter, s);
-      if FCommonPathLen > 0 then
-        path:=Copy(s, 1, FCommonPathLen);
-    end;
+    FCommonPathLen := 0;
+    path := '';
+    If files.Count > 0 Then
+      Begin
+        s := UTF8Encode(files.Objects[0].Strings['name']);
+        s := ExcludeInvalidChar(s);
+        // petrov - Exclude prohibited characters
+        FCommonPathLen := Pos(RemotePathDelimiter, s);
+        If FCommonPathLen > 0 Then
+          path := Copy(s, 1, FCommonPathLen);
+      End;
 
-    FHasFolders:=False;
-    for i:=0 to files.Count - 1 do begin
-      f:=files.Objects[i];
-      if FullRefresh then begin
-        row:=i;
-        FFiles[idxFileLevel, row]:=0;
-      end
-      else
-        if not FFiles.Find(idxFileId, i, row) then begin
-          FFiles.InsertRow(row);
-          FFiles[idxFileLevel, row]:=0;
-        end;
-      SetRowOption(row, roTag, True);
-      FFiles[idxFileId, row]:=i;
-      if FFiles.ColCnt>5 Then FFiles[idxFileId1, row]:=i;
+    FHasFolders := False;
+    For i:=0 To files.Count - 1 Do
+      Begin
+        f := files.Objects[i];
+        If FullRefresh Then
+          Begin
+            row := i;
+            FFiles[idxFileLevel, row] := 0;
+          End
+        Else
+          If Not FFiles.Find(idxFileId, i, row) Then
+            Begin
+              FFiles.InsertRow(row);
+              FFiles[idxFileLevel, row] := 0;
+            End;
+        SetRowOption(row, roTag, True);
+        FFiles[idxFileId, row] := i;
+        If FFiles.ColCnt>5 Then FFiles[idxFileId1, row] := i;
 
-      s:=UTF8Encode(f.Strings['name']);
-      s:=ExcludeInvalidChar(s); // petrov - Exclude prohibited characters
-      ss:=UTF8Decode(ExtractFilePath(s));
-      FFiles[idxFileFullPath, row]:=UTF8Decode(ExtractFilePath(s));
-      if FCommonPathLen > 0 then
-        s:=Copy(s, FCommonPathLen + 1, MaxInt);
-      ss:=ExtractFileName(s);
-      if ss <> s then
-        FHasFolders:=True;
+        s := UTF8Encode(f.Strings['name']);
+        s := ExcludeInvalidChar(s);
+        // petrov - Exclude prohibited characters
+        ss := UTF8Decode(ExtractFilePath(s));
+        FFiles[idxFileFullPath, row] := UTF8Decode(ExtractFilePath(s));
+        If FCommonPathLen > 0 Then
+          s := Copy(s, FCommonPathLen + 1, MaxInt);
+        ss := ExtractFileName(s);
+        If ss <> s Then
+          FHasFolders := True;
 
-      FFiles[idxFileName, row]:=UTF8Decode(ss);
-      ff:=f.Floats['length'];
-      FFiles[idxFileSize, row]:=ff;
+        FFiles[idxFileName, row] := UTF8Decode(ss);
+        ff := f.Floats['length'];
+        FFiles[idxFileSize, row] := ff;
 
-      if FHasDone then begin
-        FFiles[idxFileDone, row]:=f.Floats['bytesCompleted'];
-        if ff = 0 then
-          ff:=100.0
-        else
-          ff:=double(FFiles[idxFileDone, row])*100.0/ff;
-        FFiles[idxFileProgress, row]:=Int(ff*10.0)/10.0;
+        If FHasDone Then
+          Begin
+            FFiles[idxFileDone, row] := f.Floats['bytesCompleted'];
+            If ff = 0 Then
+              ff := 100.0
+            Else
+              ff := double(FFiles[idxFileDone, row])*100.0/ff;
+            FFiles[idxFileProgress, row] := Int(ff*10.0)/10.0;
 
-        if FHasPriority then begin
-          if wanted.Integers[i] = 0 then begin
-            FFiles[idxFilePriority, row]:=TR_PRI_SKIP;
-            IntSetChecked(row, cbUnchecked);
-          end
-          else begin
-            FFiles[idxFilePriority, row]:=priorities.Integers[i];
-            IntSetChecked(row, cbChecked);
-          end;
-        end;
-      end;
-    end;
+            If FHasPriority Then
+              Begin
+                If wanted.Integers[i] = 0 Then
+                  Begin
+                    FFiles[idxFilePriority, row] := TR_PRI_SKIP;
+                    IntSetChecked(row, cbUnchecked);
+                  End
+                Else
+                  Begin
+                    FFiles[idxFilePriority, row] := priorities.Integers[i];
+                    IntSetChecked(row, cbChecked);
+                  End;
+              End;
+          End;
+      End;
 
-    if not FullRefresh then begin
-      i:=0;
-      while i < FFiles.Count do
-        if not IsFolder(i) and not LongBool(FFiles.RowOptions[i] and roTag) then
-          FFiles.Delete(i)
-        else
-          Inc(i);
-    end;
+    If Not FullRefresh Then
+      Begin
+        i := 0;
+        While i < FFiles.Count Do
+          If Not IsFolder(i) And Not LongBool(FFiles.RowOptions[i] And roTag)
+            Then
+            FFiles.Delete(i)
+          Else
+            Inc(i);
+      End;
 
-    if HasFolders and FullRefresh then begin
-      FFiles.Sort(idxFileFullPath);
-      i:=0;
-      _AddFolders(FFiles, path, i, FFiles.Count, 0);
-    end;
+    If HasFolders And FullRefresh Then
+      Begin
+        FFiles.Sort(idxFileFullPath);
+        i := 0;
+        _AddFolders(FFiles, path, i, FFiles.Count, 0);
+      End;
 
-    FFiles.OnCompareVarRows:=@DoCompareVarRows;
+    FFiles.OnCompareVarRows := @DoCompareVarRows;
     FGrid.Sort;
-    if FullRefresh and (FFiles.Count > 0) then begin
-      FGrid.Row:=0;
-      if HasFolders then begin
-        i:=FFiles.RowCnt + FGrid.FixedRows;
-        if FGrid.RowCount <> i then
-          FGrid.RowCount:=i;
-        CollapseAll;
-      end
-      else
-        TreeChanged;
-    end
-    else
+    If FullRefresh And (FFiles.Count > 0) Then
+      Begin
+        FGrid.Row := 0;
+        If HasFolders Then
+          Begin
+            i := FFiles.RowCnt + FGrid.FixedRows;
+            If FGrid.RowCount <> i Then
+              FGrid.RowCount := i;
+            CollapseAll;
+          End
+        Else
+          TreeChanged;
+      End
+    Else
       TreeChanged;
-    if not IsPlain then
+    If Not IsPlain Then
       UpdateSummary;
-  finally
+  Finally
     FFiles.EndUpdate;
-  end;
-end;
+End;
+End;
 
-procedure TFilesTree.SetStateAll(AState: TCheckBoxState);
-var
+Procedure TFilesTree.SetStateAll(AState: TCheckBoxState);
+
+Var 
   i: integer;
-begin
+Begin
   FFiles.BeginUpdate;
-  try
-    for i:=0 to FFiles.Count - 1 do
+  Try
+    For i:=0 To FFiles.Count - 1 Do
       IntSetChecked(i, AState);
-  finally
+  Finally
     FFiles.EndUpdate;
-  end;
-  DoOnStateChange;
-end;
+End;
+DoOnStateChange;
+End;
 
-procedure TFilesTree.EnsureRowVisible(ARow: integer);
-var
+Procedure TFilesTree.EnsureRowVisible(ARow: integer);
+
+Var 
   i, level: integer;
-begin
-  if not FGrid.RowVisible[ARow] then begin
-    FGrid.BeginUpdate;
-    try
-      level:=FFiles[idxFileLevel, ARow] - 1;
-      for i:=ARow downto 0 do begin
-        if IsFolder(i) and (FFiles[idxFileLevel, i] = level) then begin
-          ExpandFolder(i);
-          if level = 0 then
-            break;
-          Dec(level);
-        end;
-      end;
-    finally
-      FGrid.EndUpdate;
-    end;
-  end;
-  FGrid.EnsureRowVisible(ARow);
-end;
+Begin
+  If Not FGrid.RowVisible[ARow] Then
+    Begin
+      FGrid.BeginUpdate;
+      Try
+        level := FFiles[idxFileLevel, ARow] - 1;
+        For i:=ARow Downto 0 Do
+          Begin
+            If IsFolder(i) And (FFiles[idxFileLevel, i] = level) Then
+              Begin
+                ExpandFolder(i);
+                If level = 0 Then
+                  break;
+                Dec(level);
+              End;
+          End;
+      Finally
+        FGrid.EndUpdate;
+    End;
+End;
+FGrid.EnsureRowVisible(ARow);
+End;
 
-function TFilesTree.GetFullPath(ARow: integer; AbsolutePath: boolean): string;
-begin
-  if AbsolutePath then begin
-    Result:=FDownloadDir;
-    if Copy(Result, Length(Result), 1) <> RemotePathDelimiter then
-      Result:=Result + RemotePathDelimiter;
-  end
-  else
-    Result:='';
-    Result:=Result + UTF8Encode(widestring(FFiles[idxFileFullPath, ARow]));
+Function TFilesTree.GetFullPath(ARow: integer; AbsolutePath: boolean): string;
+Begin
+  If AbsolutePath Then
+    Begin
+      Result := FDownloadDir;
+      If Copy(Result, Length(Result), 1) <> RemotePathDelimiter Then
+        Result := Result + RemotePathDelimiter;
+    End
+  Else
+    Result := '';
+  Result := Result + UTF8Encode(widestring(FFiles[idxFileFullPath, ARow]));
 
-  if IsFolder(ARow) then
-      Result:=Copy(Result, 1, Length(Result) - 1)
-  else
-      Result:=Result + UTF8Encode(widestring(FFiles[idxFileName, ARow]));
-end;
-function TFilesTree.GetIncompleteFullPath(ARow: integer; AbsolutePath: boolean): string;
-begin
-  if AbsolutePath then begin
-    Result:=RpcObj.IncompleteDir;
-    if Copy(Result, Length(Result), 1) <> RemotePathDelimiter then
-      Result:=Result + RemotePathDelimiter;
-  end
-  else
-    Result:='';
-    Result:=Result + UTF8Encode(widestring(FFiles[idxFileFullPath, ARow]));
+  If IsFolder(ARow) Then
+    Result := Copy(Result, 1, Length(Result) - 1)
+  Else
+    Result := Result + UTF8Encode(widestring(FFiles[idxFileName, ARow]));
+End;
+Function TFilesTree.GetIncompleteFullPath(ARow: integer; AbsolutePath: boolean):
 
-  if IsFolder(ARow) then
-      Result:=Copy(Result, 1, Length(Result) - 1)
-  else
-      Result:=Result + UTF8Encode(widestring(FFiles[idxFileName, ARow]));
-end;
+                                                                          string
+;
+Begin
+  If AbsolutePath Then
+    Begin
+      Result := RpcObj.IncompleteDir;
+      If Copy(Result, Length(Result), 1) <> RemotePathDelimiter Then
+        Result := Result + RemotePathDelimiter;
+    End
+  Else
+    Result := '';
+  Result := Result + UTF8Encode(widestring(FFiles[idxFileFullPath, ARow]));
 
-function TFilesTree.UpdateSummary: TFolderInfo;
+  If IsFolder(ARow) Then
+    Result := Copy(Result, 1, Length(Result) - 1)
+  Else
+    Result := Result + UTF8Encode(widestring(FFiles[idxFileName, ARow]));
+End;
 
-  function _UpdateSummary(var idx: integer; cnt, level: integer): TFolderInfo;
-  var
-    i, j: integer;
-    IsFirst: boolean;
-  begin
-    FillChar(Result, SizeOf(Result), 0);
-    IsFirst:=True;
-    while idx < cnt do begin
-      if FFiles[idxFileLevel, idx] <> level then
+Function TFilesTree.UpdateSummary: TFolderInfo;
+
+Function _UpdateSummary(Var idx: integer; cnt, level: integer): TFolderInfo;
+
+Var 
+  i, j: integer;
+  IsFirst: boolean;
+Begin
+  FillChar(Result, SizeOf(Result), 0);
+  IsFirst := True;
+  While idx < cnt Do
+    Begin
+      If FFiles[idxFileLevel, idx] <> level Then
         break;
-      i:=idx;
+      i := idx;
       Inc(idx);
 
-      if IsFolder(i) then begin
-        with _UpdateSummary(idx, cnt, level + 1) do begin
-          FFiles[idxFileSize, i]:=Size;
-          if FHasDone then begin
-            FFiles[idxFileDone, i]:=DoneSize;
-            if Size = 0 then
-              DoneSize:=100.0
-            else
-              DoneSize:=DoneSize*100.0/Size;
-            FFiles[idxFileProgress, i]:=Int(DoneSize*10.0)/10.0;
-          end;
-          if FHasPriority then begin
-            FFiles[idxFilePriority, i]:=Priority;
-            IntSetChecked(i, chk);
-          end;
-        end;
-      end;
+      If IsFolder(i) Then
+        Begin
+          With _UpdateSummary(idx, cnt, level + 1) Do
+            Begin
+              FFiles[idxFileSize, i] := Size;
+              If FHasDone Then
+                Begin
+                  FFiles[idxFileDone, i] := DoneSize;
+                  If Size = 0 Then
+                    DoneSize := 100.0
+                  Else
+                    DoneSize := DoneSize*100.0/Size;
+                  FFiles[idxFileProgress, i] := Int(DoneSize*10.0)/10.0;
+                End;
+              If FHasPriority Then
+                Begin
+                  FFiles[idxFilePriority, i] := Priority;
+                  IntSetChecked(i, chk);
+                End;
+            End;
+        End;
 
-      with Result do begin
-        Size:=Size + FFiles[idxFileSize, i];
-        if FHasDone then
-          DoneSize:=DoneSize + FFiles[idxFileDone, i];
-        if FHasPriority then begin
-          j:=FFiles[idxFilePriority, i];
-          if IsFirst then begin
-            IsFirst:=False;
-            Priority:=j;
-            chk:=Checked[i];
-          end
-          else begin
-            if Priority <> j then
-              Priority:=TR_PRI_MIXED;
-            if chk <> Checked[i] then
-              chk:=cbGrayed;
-          end;
-        end;
-      end;
-    end;
-  end;
+      With Result Do
+        Begin
+          Size := Size + FFiles[idxFileSize, i];
+          If FHasDone Then
+            DoneSize := DoneSize + FFiles[idxFileDone, i];
+          If FHasPriority Then
+            Begin
+              j := FFiles[idxFilePriority, i];
+              If IsFirst Then
+                Begin
+                  IsFirst := False;
+                  Priority := j;
+                  chk := Checked[i];
+                End
+              Else
+                Begin
+                  If Priority <> j Then
+                    Priority := TR_PRI_MIXED;
+                  If chk <> Checked[i] Then
+                    chk := cbGrayed;
+                End;
+            End;
+        End;
+    End;
+End;
 
-var
+Var 
   i: integer;
-begin
+Begin
   FFiles.BeginUpdate;
-  try
-    i:=0;
-    Result:=_UpdateSummary(i, FFiles.Count, 0);
-  finally
+  Try
+    i := 0;
+    Result := _UpdateSummary(i, FFiles.Count, 0);
+  Finally
     FFiles.EndUpdate;
-  end;
-end;
+End;
+End;
 
-procedure TFilesTree.Clear;
-begin
-  FLastFileCount:=0;
-  FTorrentId:=0;
+Procedure TFilesTree.Clear;
+Begin
+  FLastFileCount := 0;
+  FTorrentId := 0;
   FFiles.Clear;
-end;
+End;
 
-procedure TFilesTree.DoCheckBoxClick(Sender: TVarGrid; ACol, ARow, ADataCol: integer);
-begin
-  if Checked[ARow] = cbChecked then
-    Checked[ARow]:=cbUnchecked
-  else
-    Checked[ARow]:=cbChecked;
-end;
+Procedure TFilesTree.DoCheckBoxClick(Sender: TVarGrid; ACol, ARow, ADataCol:
+                                     integer);
+Begin
+  If Checked[ARow] = cbChecked Then
+    Checked[ARow] := cbUnchecked
+  Else
+    Checked[ARow] := cbChecked;
+End;
 
-procedure TFilesTree.DoTreeButtonClick(Sender: TVarGrid; ACol, ARow, ADataCol: integer);
-begin
-  Expanded[ARow]:=not Expanded[ARow];
-end;
+Procedure TFilesTree.DoTreeButtonClick(Sender: TVarGrid; ACol, ARow, ADataCol:
+                                       integer);
+Begin
+  Expanded[ARow] := Not Expanded[ARow];
+End;
 
-procedure TFilesTree.DoAfterSort(Sender: TObject);
-var
+Procedure TFilesTree.DoAfterSort(Sender: TObject);
+
+Var 
   p: boolean;
-begin
-  p:=FGrid.SortColumn <> idxFileName;
-  if p <> IsPlain then
-    IsPlain:=p
-  else
+Begin
+  p := FGrid.SortColumn <> idxFileName;
+  If p <> IsPlain Then
+    IsPlain := p
+  Else
     TreeChanged;
-end;
+End;
 
-procedure TFilesTree.CollapseFolder(ARow: integer);
-var
+Procedure TFilesTree.CollapseFolder(ARow: integer);
+
+Var 
   i, lev: integer;
-begin
+Begin
   AppBusy;
   FGrid.BeginUpdate;
-  try
-    lev:=FGrid.Items[idxFileLevel, ARow];
+  Try
+    lev := FGrid.Items[idxFileLevel, ARow];
     SetRowOption(ARow, roCollapsed, True);
-    for i:=ARow + 1 to FGrid.Items.Count - 1 do
-      if integer(FGrid.Items[idxFileLevel, i]) > lev then begin
-        FGrid.RowVisible[i]:=False;
-        FGrid.RowSelected[i]:=False;
-        SetRowOption(i, roHidden, True);
-      end
-      else
+    For i:=ARow + 1 To FGrid.Items.Count - 1 Do
+      If integer(FGrid.Items[idxFileLevel, i]) > lev Then
+        Begin
+          FGrid.RowVisible[i] := False;
+          FGrid.RowSelected[i] := False;
+          SetRowOption(i, roHidden, True);
+        End
+      Else
         break;
     TreeChanged;
-  finally
+  Finally
     FGrid.EndUpdate;
-  end;
-  AppNormal;
-end;
+End;
+AppNormal;
+End;
 
-procedure TFilesTree.ExpandFolder(ARow: integer);
-var
+Procedure TFilesTree.ExpandFolder(ARow: integer);
+
+Var 
   i, j, lev: integer;
-begin
+Begin
   AppBusy;
   FGrid.BeginUpdate;
-  try
-    lev:=FGrid.Items[idxFileLevel, ARow] + 1;
+  Try
+    lev := FGrid.Items[idxFileLevel, ARow] + 1;
     SetRowOption(ARow, roCollapsed, False);
-    for i:=ARow + 1 to FGrid.Items.Count - 1 do begin
-      j:=integer(FGrid.Items[idxFileLevel, i]);
-      if j = lev then begin
-        FGrid.RowVisible[i]:=True;
-        SetRowOption(i, roHidden, False);
-        if IsFolder(i) and Expanded[i] then
-          ExpandFolder(i);
-      end
-      else
-        if j <= lev then
-          break;
-    end;
+    For i:=ARow + 1 To FGrid.Items.Count - 1 Do
+      Begin
+        j := integer(FGrid.Items[idxFileLevel, i]);
+        If j = lev Then
+          Begin
+            FGrid.RowVisible[i] := True;
+            SetRowOption(i, roHidden, False);
+            If IsFolder(i) And Expanded[i] Then
+              ExpandFolder(i);
+          End
+        Else
+          If j <= lev Then
+            break;
+      End;
     TreeChanged;
-  finally
+  Finally
     FGrid.EndUpdate;
-  end;
-  AppNormal;
-end;
+End;
+AppNormal;
+End;
 
-function TFilesTree.GetChecked(ARow: integer): TCheckBoxState;
-begin
-  Result:=TCheckBoxState((FFiles.RowOptions[ARow] and roChecked) shr roCheckedShift);
-end;
+Function TFilesTree.GetChecked(ARow: integer): TCheckBoxState;
+Begin
+  Result := TCheckBoxState((FFiles.RowOptions[ARow] And roChecked) shr
+            roCheckedShift);
+End;
 
-function TFilesTree.GetExpanded(ARow: integer): boolean;
-begin
-  Result:=not LongBool(FFiles.RowOptions[ARow] and roCollapsed);
-end;
+Function TFilesTree.GetExpanded(ARow: integer): boolean;
+Begin
+  Result := Not LongBool(FFiles.RowOptions[ARow] And roCollapsed);
+End;
 
-function TFilesTree.GetLevel(ARow: integer): integer;
-begin
-  Result:=FFiles[idxFileLevel, ARow];
-end;
+Function TFilesTree.GetLevel(ARow: integer): integer;
+Begin
+  Result := FFiles[idxFileLevel, ARow];
+End;
 
-procedure TFilesTree.SetCheckboxes(const AValue: boolean);
-begin
-  if FCheckboxes = AValue then exit;
-  FCheckboxes:=AValue;
-end;
+Procedure TFilesTree.SetCheckboxes(Const AValue: boolean);
+Begin
+  If FCheckboxes = AValue Then exit;
+  FCheckboxes := AValue;
+End;
 
-procedure TFilesTree.IntSetChecked(ARow: integer; const AValue: TCheckBoxState);
-begin
-  FFiles.RowOptions[ARow]:=(FFiles.RowOptions[ARow] and not roChecked) or (integer(AValue) shl roCheckedShift);
-end;
+Procedure TFilesTree.IntSetChecked(ARow: integer; Const AValue: TCheckBoxState);
+Begin
+  FFiles.RowOptions[ARow] := (FFiles.RowOptions[ARow] And Not roChecked) Or (
+                             integer(AValue) shl roCheckedShift);
+End;
 
-procedure TFilesTree.SetChecked(ARow: integer; const AValue: TCheckBoxState);
-var
+Procedure TFilesTree.SetChecked(ARow: integer; Const AValue: TCheckBoxState);
+
+Var 
   i, lev: integer;
   st: TCheckBoxState;
-begin
-  st:=AValue;
-  if st = cbGrayed then
-    st:=cbUnchecked;
-  if Checked[ARow] = st then
+Begin
+  st := AValue;
+  If st = cbGrayed Then
+    st := cbUnchecked;
+  If Checked[ARow] = st Then
     exit;
   IntSetChecked(ARow, st);
   FGrid.InvalidateRow(ARow + FGrid.FixedRows);
 
-  if not IsPlain then begin
-    lev:=integer(FFiles[idxFileLevel, ARow]);
+  If Not IsPlain Then
+    Begin
+      lev := integer(FFiles[idxFileLevel, ARow]);
 
-    if IsFolder(ARow) then begin
-      FFiles.BeginUpdate;
-      for i:=ARow + 1 to FFiles.Count - 1 do
-        if integer(FFiles[idxFileLevel, i]) <= lev then
-          break
-        else
-          IntSetChecked(i, st);
-      FFiles.EndUpdate;
-    end;
+      If IsFolder(ARow) Then
+        Begin
+          FFiles.BeginUpdate;
+          For i:=ARow + 1 To FFiles.Count - 1 Do
+            If integer(FFiles[idxFileLevel, i]) <= lev Then
+              break
+            Else
+              IntSetChecked(i, st);
+          FFiles.EndUpdate;
+        End;
 
-    if lev > 0 then begin
-      i:=ARow + 1;
-      while (i < FFiles.Count) and (integer(FFiles[idxFileLevel, i]) >= lev) do
-        Inc(i);
+      If lev > 0 Then
+        Begin
+          i := ARow + 1;
+          While (i < FFiles.Count) And (integer(FFiles[idxFileLevel, i]) >= lev)
+            Do
+            Inc(i);
 
-      for i:=i - 1 downto 0 do begin
-        if IsFolder(i) and (integer(FFiles[idxFileLevel, i]) < lev) then begin
-          IntSetChecked(i, st);
-          FGrid.InvalidateRow(i + FGrid.FixedRows);
-          Dec(lev);
-          if lev = 0 then
-            break;
-        end
-        else
-          if Checked[i] <> st then
-            st:=cbGrayed;
-      end;
-    end;
-  end;
+          For i:=i - 1 Downto 0 Do
+            Begin
+              If IsFolder(i) And (integer(FFiles[idxFileLevel, i]) < lev) Then
+                Begin
+                  IntSetChecked(i, st);
+                  FGrid.InvalidateRow(i + FGrid.FixedRows);
+                  Dec(lev);
+                  If lev = 0 Then
+                    break;
+                End
+              Else
+                If Checked[i] <> st Then
+                  st := cbGrayed;
+            End;
+        End;
+    End;
   DoOnStateChange;
-end;
+End;
 
-procedure TFilesTree.SetExpanded(ARow: integer; const AValue: boolean);
-begin
-  if GetExpanded(ARow) <> AValue then
-    if AValue then
+Procedure TFilesTree.SetExpanded(ARow: integer; Const AValue: boolean);
+Begin
+  If GetExpanded(ARow) <> AValue Then
+    If AValue Then
       ExpandFolder(ARow)
-    else
-      CollapseFolder(ARow);
-end;
+  Else
+    CollapseFolder(ARow);
+End;
 
-procedure TFilesTree.SetIsPlain(const AValue: boolean);
-begin
-  if FIsPlain = AValue then exit;
-  FIsPlain:=AValue;
+Procedure TFilesTree.SetIsPlain(Const AValue: boolean);
+Begin
+  If FIsPlain = AValue Then exit;
+  FIsPlain := AValue;
   FFiles.BeginUpdate;
-  try
+  Try
     TreeChanged;
-    if not FIsPlain then
+    If Not FIsPlain Then
       UpdateSummary;
-  finally
+  Finally
     FFiles.EndUpdate;
-  end;
-  if FFiles.Count > 0 then
-    FGrid.Row:=0;
-end;
+End;
+If FFiles.Count > 0 Then
+  FGrid.Row := 0;
+End;
 
-procedure TFilesTree.TreeChanged;
-var
+Procedure TFilesTree.TreeChanged;
+
+Var 
   i, j: integer;
   f: boolean;
-begin
+Begin
   FGrid.Items.BeginUpdate;
-  try
-    FGrid.RowCount:=FFiles.RowCnt + FGrid.FixedRows;
-    j:=0;
-    for i:=0 to FGrid.Items.Count - 1 do begin
-      if IsPlain then
-        f:=not IsFolder(i)
-      else
-        f:=not LongBool(FFiles.RowOptions[i] and roHidden);
-      FGrid.RowVisible[i]:=f;
-      if f then begin
-        FGrid.Items[idxFileIndex, i]:=j;
-        Inc(j);
-      end;
-    end;
-  finally
+  Try
+    FGrid.RowCount := FFiles.RowCnt + FGrid.FixedRows;
+    j := 0;
+    For i:=0 To FGrid.Items.Count - 1 Do
+      Begin
+        If IsPlain Then
+          f := Not IsFolder(i)
+        Else
+          f := Not LongBool(FFiles.RowOptions[i] And roHidden);
+        FGrid.RowVisible[i] := f;
+        If f Then
+          Begin
+            FGrid.Items[idxFileIndex, i] := j;
+            Inc(j);
+          End;
+      End;
+  Finally
     FGrid.Items.EndUpdate;
-  end;
-end;
+End;
+End;
 
-procedure TFilesTree.DoOnStateChange;
-begin
-  if Assigned(FOnStateChange) then
+Procedure TFilesTree.DoOnStateChange;
+Begin
+  If Assigned(FOnStateChange) Then
     FOnStateChange(Self);
-end;
+End;
 
-function TFilesTree.DoCompareVarRows(Sender: TVarList; Row1, Row2: PVariant; DescendingSort: boolean): integer;
+Function TFilesTree.DoCompareVarRows(Sender: TVarList; Row1, Row2: PVariant;
+                                     DescendingSort: boolean): integer;
 //var
 //v:variant;
-begin
-  if FGrid.SortColumn <> idxFileName then begin
+Begin
+  If FGrid.SortColumn <> idxFileName Then
+    Begin
+
+
 //    Result:=(integer(VarIsEmpty(Sender.GetRowItem(Row1, idxFileId))) and 1) - (integer(VarIsEmpty(Sender.GetRowItem(Row2, idxFileId))) and 1);
-    Result:=CompareVariants(Sender.GetRowItem(Row1, FGrid.SortColumn), Sender.GetRowItem(Row2, FGrid.SortColumn));
-    if FGrid.SortColumn = idxFilePriority then
-      Result:=-Result;
-    if DescendingSort then
-      Result:=-Result;
-    if Result <> 0 then
+      Result := CompareVariants(Sender.GetRowItem(Row1, FGrid.SortColumn),
+                Sender.GetRowItem(Row2, FGrid.SortColumn));
+      If FGrid.SortColumn = idxFilePriority Then
+        Result := -Result;
+      If DescendingSort Then
+        Result := -Result;
+      If Result <> 0 Then
+        exit;
+      Result := CompareVariants(Sender.GetRowItem(Row1, idxFileFullPath), Sender
+                .GetRowItem(Row2, idxFileFullPath));
+      If DescendingSort Then
+        Result := -Result;
       exit;
-    Result:=CompareVariants(Sender.GetRowItem(Row1, idxFileFullPath), Sender.GetRowItem(Row2, idxFileFullPath));
-    if DescendingSort then
-      Result:=-Result;
-    exit;
-  end;
+    End;
 
-  Result:=CompareVariants(Sender.GetRowItem(Row1, idxFileFullPath), Sender.GetRowItem(Row2, idxFileFullPath));
-  if DescendingSort then
-    Result:=-Result;
-  if Result <> 0 then
+  Result := CompareVariants(Sender.GetRowItem(Row1, idxFileFullPath), Sender.
+            GetRowItem(Row2, idxFileFullPath));
+  If DescendingSort Then
+    Result := -Result;
+  If Result <> 0 Then
     exit;
-  Result:=(integer(VarIsEmpty(Sender.GetRowItem(Row2, idxFileId))) and 1) - (integer(VarIsEmpty(Sender.GetRowItem(Row1, idxFileId))) and 1);
-  if DescendingSort then
-    Result:=-Result;
-  if Result <> 0 then
+  Result := (integer(VarIsEmpty(Sender.GetRowItem(Row2, idxFileId))) And 1) - (
+            integer(VarIsEmpty(Sender.GetRowItem(Row1, idxFileId))) And 1);
+  If DescendingSort Then
+    Result := -Result;
+  If Result <> 0 Then
     exit;
-  Result:=CompareVariants(Sender.GetRowItem(Row1, idxFileName), Sender.GetRowItem(Row2, idxFileName));
-  if DescendingSort then
-    Result:=-Result;
-end;
+  Result := CompareVariants(Sender.GetRowItem(Row1, idxFileName), Sender.
+            GetRowItem(Row2, idxFileName));
+  If DescendingSort Then
+    Result := -Result;
+End;
 
-procedure TFilesTree.SetRowOption(ARow, AOption: integer; DoSet: boolean);
-var
+Procedure TFilesTree.SetRowOption(ARow, AOption: integer; DoSet: boolean);
+
+Var 
   i: integer;
-begin
-  i:=FFiles.RowOptions[ARow];
-  if DoSet then
-    FFiles.RowOptions[ARow]:=i or AOption
-  else
-    FFiles.RowOptions[ARow]:=i and not AOption;
-end;
+Begin
+  i := FFiles.RowOptions[ARow];
+  If DoSet Then
+    FFiles.RowOptions[ARow] := i Or AOption
+  Else
+    FFiles.RowOptions[ARow] := i And Not AOption;
+End;
 
-procedure TFilesTree.DoCellAttributes(Sender: TVarGrid; ACol, ARow, ADataCol: integer; AState: TGridDrawState; var CellAttribs: TCellAttributes);
-var
+Procedure TFilesTree.DoCellAttributes(Sender: TVarGrid; ACol, ARow, ADataCol:
+                                      integer; AState: TGridDrawState; Var
+                                      CellAttribs: TCellAttributes);
+
+Var 
   i: integer;
-begin
-  if ARow < 0 then exit;
-  with CellAttribs do begin
-    if not (gdSelected in AState) and (integer(Sender.Items[idxFileIndex, ARow]) and 1 = 1) then
-      Sender.Canvas.Brush.Color:=FAlterColor;
-    if Text = '' then exit;
-    case ADataCol of
-      0:
-        begin
+Begin
+  If ARow < 0 Then exit;
+  With CellAttribs Do
+    Begin
+      If Not (gdSelected In AState) And (integer(Sender.Items[idxFileIndex, ARow
+         ]) And 1 = 1) Then
+        Sender.Canvas.Brush.Color := FAlterColor;
+      If Text = '' Then exit;
+      Case ADataCol Of 
+        0:
+           Begin
+
+
 //        Text:=(Sender.Items[idxFileFullPath, ARow]) + ' (' + Text + ')';// Lazarus 1.4.4
 
-          if Checkboxes then begin
-            Options:=[coDrawCheckBox];
-            State:=Checked[ARow];
-          end;
-          if IsPlain then begin
-            Text:=Copy(UTF8Encode(widestring(Sender.Items[idxFileFullPath, ARow])), FCommonPathLen + 1, MaxInt) + Text;
-          end
-          else begin
-            Indent:=integer(Sender.Items[idxFileLevel, ARow])*16;
-            if IsFolder(ARow) then begin
-              Include(Options, coDrawTreeButton);
-              Expanded:=Self.Expanded[ARow];
-              ImageIndex:=22;
-            end
-            else
-              if HasFolders then
-                Inc(Indent, Sender.RowHeights[ARow + Sender.FixedRows]);
-          end;
-        end;
-      idxFileSize, idxFileDone:
-        Text:=(GetHumanSize(double(Sender.Items[ADataCol, ARow])));
-      idxFileProgress:
-        Text:=(Format('%.1f%%', [double(Sender.Items[ADataCol, ARow])]));
-      idxFilePriority:
-        begin
-          i:=Sender.Items[idxFilePriority, ARow];
-          if i = TR_PRI_MIXED then
-            Text:=''
-          else
-            Text:= (PriorityToStr(i, ImageIndex));
-        end;
-    end;
-  end;
-end;
+             If Checkboxes Then
+               Begin
+                 Options := [coDrawCheckBox];
+                 State := Checked[ARow];
+               End;
+             If IsPlain Then
+               Begin
+                 Text := Copy(UTF8Encode(widestring(Sender.Items[idxFileFullPath
+                         , ARow])), FCommonPathLen + 1, MaxInt) + Text;
+               End
+             Else
+               Begin
+                 Indent := integer(Sender.Items[idxFileLevel, ARow])*16;
+                 If IsFolder(ARow) Then
+                   Begin
+                     Include(Options, coDrawTreeButton);
+                     Expanded := Self.Expanded[ARow];
+                     ImageIndex := 22;
+                   End
+                 Else
+                   If HasFolders Then
+                     Inc(Indent, Sender.RowHeights[ARow + Sender.FixedRows]);
+               End;
+           End;
+        idxFileSize, idxFileDone:
+                                  Text := (GetHumanSize(double(Sender.Items[
+                                          ADataCol, ARow])));
+        idxFileProgress:
+                         Text := (Format('%.1f%%', [double(Sender.Items[ADataCol
+                                 , ARow])]));
+        idxFilePriority:
+                         Begin
+                           i := Sender.Items[idxFilePriority, ARow];
+                           If i = TR_PRI_MIXED Then
+                             Text := ''
+                           Else
+                             Text := (PriorityToStr(i, ImageIndex));
+                         End;
+      End;
+    End;
+End;
 
-procedure TFilesTree.DoDrawCell(Sender: TVarGrid; ACol, ARow, ADataCol: integer; AState: TGridDrawState; const R: TRect;
-  var ADefaultDrawing: boolean);
-begin
-  if ARow < 0 then exit;
-  if ADataCol = idxFileProgress then begin
-    ADefaultDrawing:=False;
-    DrawProgressCell(Sender, ACol, ARow, ADataCol, AState, R);
-  end;
-end;
+Procedure TFilesTree.DoDrawCell(Sender: TVarGrid; ACol, ARow, ADataCol: integer;
+                                AState: TGridDrawState; Const R: TRect;
+                                Var ADefaultDrawing: boolean);
+Begin
+  If ARow < 0 Then exit;
+  If ADataCol = idxFileProgress Then
+    Begin
+      ADefaultDrawing := False;
+      DrawProgressCell(Sender, ACol, ARow, ADataCol, AState, R);
+    End;
+End;
 
-procedure TFilesTree.DoQuickSearch(Sender: TVarGrid; var SearchText: string; var ARow: integer);
-var
+Procedure TFilesTree.DoQuickSearch(Sender: TVarGrid; Var SearchText: String; Var
+                                   ARow: integer);
+
+Var 
   i: integer;
   s: string;
   v: variant;
-begin
-  s:= LazUTF8.UTF8UpperCase(SearchText);
-  for i:=ARow to Sender.Items.Count - 1 do begin
-    v:=Sender.Items[idxFileName, i];
-    if VarIsEmpty(v) or VarIsNull(v) or (IsPlain and IsFolder(i)) then
-      continue;
-    if Pos(s, UTF8Trim(LazUTF8.UTF8UpperCase((widestring(v))))) > 0 then begin
-      ARow:=i;
-      EnsureRowVisible(ARow);
-      break;
-    end;
-  end;
-end;
+Begin
+  s := LazUTF8.UTF8UpperCase(SearchText);
+  For i:=ARow To Sender.Items.Count - 1 Do
+    Begin
+      v := Sender.Items[idxFileName, i];
+      If VarIsEmpty(v) Or VarIsNull(v) Or (IsPlain And IsFolder(i)) Then
+        continue;
+      If Pos(s, UTF8Trim(LazUTF8.UTF8UpperCase((widestring(v))))) > 0 Then
+        Begin
+          ARow := i;
+          EnsureRowVisible(ARow);
+          break;
+        End;
+    End;
+End;
 
 { TAddTorrentForm }
 
-procedure TAddTorrentForm.FormShow(Sender: TObject);
-begin
+Procedure TAddTorrentForm.FormShow(Sender: TObject);
+Begin
   AppBusy;
   lvFiles.BeginUpdate;
-  try
-    btSelectAllClick(nil);
+  Try
+    btSelectAllClick(Nil);
 {
     lvFiles.Sort;
     if lvFiles.Items.Count > 0 then
       lvFiles.Row:=0;
 }
-//    FTree.CollapseAll;
-  finally
+    //    FTree.CollapseAll;
+  Finally
     lvFiles.EndUpdate;
-  end;
+End;
 
-  // Search good extension
-  SearchGoodExtension ();
+// Search good extension
+SearchGoodExtension ();
 
-  DiskSpaceTimerTimer(nil);
-  AppNormal;
-end;
+DiskSpaceTimerTimer(Nil);
+AppNormal;
+End;
 
-function TAddTorrentForm.CorrectPath (path: string): string;
-var
+Function TAddTorrentForm.CorrectPath (path: String): string;
+
+Var 
   l_old: integer;
-begin
+Begin
   path  := StringReplace(path, '//', '/', [rfReplaceAll, rfIgnoreCase]);
-  Result:= path;
+  Result := path;
   l_old := length(path);
-  if l_old >= 1 then begin
-    if path[l_old]='/' then
+  If l_old >= 1 Then
+    Begin
+      If path[l_old]='/' Then
         path := MidStr(path,1,l_old-1);
-    Result:= path;
-  end;
-end;
+      Result := path;
+    End;
+End;
 
-procedure TAddTorrentForm.DeleteDirs(maxdel : Integer);
-var
+Procedure TAddTorrentForm.DeleteDirs(maxdel : Integer);
+
+Var 
   i,min,max,indx, fldr: integer;
   pFD : FolderData;
-begin
-    max:=Ini.ReadInteger('Interface', 'MaxFoldersHistory',  50);
-    Ini.WriteInteger    ('Interface', 'MaxFoldersHistory', max); // PETROV
+Begin
+  max := Ini.ReadInteger('Interface', 'MaxFoldersHistory',  50);
+  Ini.WriteInteger    ('Interface', 'MaxFoldersHistory', max);
+  // PETROV
 
-    try
-      while (cbDestFolder.Items.Count+maxdel) > max do begin
+  Try
+    While (cbDestFolder.Items.Count+maxdel) > max Do
+      Begin
         min := 9999999;
-        indx:=-1;
-        for i:=0 to cbDestFolder.Items.Count - 1 do begin
-          pFD := cbDestFolder.Items.Objects[i] as FolderData;
+        indx := -1;
+        For i:=0 To cbDestFolder.Items.Count - 1 Do
+          Begin
+            pFD := cbDestFolder.Items.Objects[i] as FolderData;
 
-          fldr := DaysBetween(SysUtils.Date,pFD.Lst);
-          if SysUtils.Date > pFD.Lst then
-            fldr := 0- fldr;
+            fldr := DaysBetween(SysUtils.Date,pFD.Lst);
+            If SysUtils.Date > pFD.Lst Then
+              fldr := 0- fldr;
 
-          fldr := fldr + pFD.Hit;
-          if fldr < min then begin
-            min := fldr;
-            indx:= i;
-          end;
-        end;
+            fldr := fldr + pFD.Hit;
+            If fldr < min Then
+              Begin
+                min := fldr;
+                indx := i;
+              End;
+          End;
 
-        if indx > -1 then
+        If indx > -1 Then
           cbDestFolder.Items.Delete(indx);
-      end;
-    except
-      MessageDlg('Error: LS-001. Please contact the developer', mtError, [mbOK], 0);
-    end;
-end;
+      End;
+  Except
+    MessageDlg('Error: LS-001. Please contact the developer', mtError, [mbOK], 0
+    );
+End;
+End;
 
-procedure TAddTorrentForm.OKButtonClick(Sender: TObject);
-var
+Procedure TAddTorrentForm.OKButtonClick(Sender: TObject);
+
+Var 
   s,e : string;
   i : integer;
   pFD : FolderData;
-begin
+Begin
 
   s := CorrectPath(cbDestFolder.Text);
   e := edExtension.Text;
-  try
-    DeleteDirs (0);               // check count items
+  Try
+    DeleteDirs (0);
+    // check count items
     i := cbDestFolder.Items.IndexOf(s);
-    if i < 0 then begin
-      DeleteDirs (1);               // prepare for new item
-      cbDestFolder.Items.Add (s);
-      i:=cbDestFolder.Items.IndexOf(s);
-      cbDestFolder.ItemIndex:= i; // Re-set item index in case DeleteDirs actually deleted a dir and removed the text from the combobox
-      pFD    := FolderData.create;
-      pFD.Hit:= 1;
-      pFD.Ext:= e;
-      pFD.Txt:= s;
-      pFD.Lst:= SysUtils.Date;
-      cbDestFolder.Items.Objects[i]:= pFD;
-    end else begin
-      pFD    := cbDestFolder.Items.Objects[i] as FolderData;
-      pFD.Hit:= pFD.Hit + 1;
-      pFD.Ext:= e;
-      pFD.Txt:= s;
-      pFD.Lst:= SysUtils.Date;
-      cbDestFolder.Items.Objects[i]:= pFD;
-      if cbDestFolder.ItemIndex < 0 then begin // as above, if DeleteDirs ended up deleting stuff...
-        cbDestFolder.ItemIndex:= i;
-      end;
-    end;
-  except
-    MessageDlg('Error: LS-002. Please contact the developer', mtError, [mbOK], 0);
-  end;
+    If i < 0 Then
+      Begin
+        DeleteDirs (1);
+        // prepare for new item
+        cbDestFolder.Items.Add (s);
+        i := cbDestFolder.Items.IndexOf(s);
+        cbDestFolder.ItemIndex := i;
 
-  // petrov - Exclude prohibited characters
-  edSaveAs.Text := ExcludeInvalidChar(edSaveAs.Text);
 
-  if edSaveAs.Enabled then begin
-    edSaveAs.Text:=Trim(edSaveAs.Text);
+// Re-set item index in case DeleteDirs actually deleted a dir and removed the text from the combobox
+        pFD    := FolderData.create;
+        pFD.Hit := 1;
+        pFD.Ext := e;
+        pFD.Txt := s;
+        pFD.Lst := SysUtils.Date;
+        cbDestFolder.Items.Objects[i] := pFD;
+      End
+    Else
+      Begin
+        pFD    := cbDestFolder.Items.Objects[i] as FolderData;
+        pFD.Hit := pFD.Hit + 1;
+        pFD.Ext := e;
+        pFD.Txt := s;
+        pFD.Lst := SysUtils.Date;
+        cbDestFolder.Items.Objects[i] := pFD;
+        If cbDestFolder.ItemIndex < 0 Then
+          Begin
+            // as above, if DeleteDirs ended up deleting stuff...
+            cbDestFolder.ItemIndex := i;
+          End;
+      End;
+  Except
+    MessageDlg('Error: LS-002. Please contact the developer', mtError, [mbOK], 0
+    );
+End;
 
-    if edSaveAs.Text = '' then begin
-      edSaveAs.SetFocus;
-      MessageDlg(SInvalidName, mtError, [mbOK], 0);
-      exit;
-    end;
-  end;
-  ModalResult:=mrOK;
-end;
+// petrov - Exclude prohibited characters
+edSaveAs.Text := ExcludeInvalidChar(edSaveAs.Text);
 
-procedure TAddTorrentForm.UpdateSize;
-var
+If edSaveAs.Enabled Then
+  Begin
+    edSaveAs.Text := Trim(edSaveAs.Text);
+
+    If edSaveAs.Text = '' Then
+      Begin
+        edSaveAs.SetFocus;
+        MessageDlg(SInvalidName, mtError, [mbOK], 0);
+        exit;
+      End;
+  End;
+ModalResult := mrOK;
+End;
+
+Procedure TAddTorrentForm.UpdateSize;
+
+Var 
   i: integer;
   d, sz, tsz: double;
   s: string;
-begin
-  sz:=0;
-  tsz:=0;
-  for i:=0 to lvFiles.Items.Count - 1 do
-    if not FTree.IsFolder(i) then begin
-      d:=double(lvFiles.Items[idxFileSize, i]);
-      tsz:=tsz + d;
-      if FTree.Checked[i] = cbChecked then
-        sz:=sz + d;
-    end;
+Begin
+  sz := 0;
+  tsz := 0;
+  For i:=0 To lvFiles.Items.Count - 1 Do
+    If Not FTree.IsFolder(i) Then
+      Begin
+        d := double(lvFiles.Items[idxFileSize, i]);
+        tsz := tsz + d;
+        If FTree.Checked[i] = cbChecked Then
+          sz := sz + d;
+      End;
 
-  s:=GetHumanSize(sz);
-  if s <> GetHumanSize(tsz) then
-    s:=s + ' / ' + GetHumanSize(tsz);
-  txSize.Caption:=Format('%s: %s', [SSize, s]);
-end;
+  s := GetHumanSize(sz);
+  If s <> GetHumanSize(tsz) Then
+    s := s + ' / ' + GetHumanSize(tsz);
+  txSize.Caption := Format('%s: %s', [SSize, s]);
+End;
 
-procedure TAddTorrentForm.btSelectAllClick(Sender: TObject);
-begin
+Procedure TAddTorrentForm.btSelectAllClick(Sender: TObject);
+Begin
   FTree.SetStateAll(cbChecked);
-end;
+End;
 
-procedure TAddTorrentForm.btBrowseClick(Sender: TObject);
-var
+Procedure TAddTorrentForm.btBrowseClick(Sender: TObject);
+
+Var 
   s: string;
-begin
-  s:=MainForm.SelectRemoteFolder(cbDestFolder.Text, SSelectDownloadFolder);
-  if s <> '' then begin
-    cbDestFolder.Text:=s;
-    cbDestFolderChange (nil);
-  end;
-end;
+Begin
+  s := MainForm.SelectRemoteFolder(cbDestFolder.Text, SSelectDownloadFolder);
+  If s <> '' Then
+    Begin
+      cbDestFolder.Text := s;
+      cbDestFolderChange (Nil);
+    End;
+End;
 
-procedure TAddTorrentForm.btSelectNoneClick(Sender: TObject);
-begin
+Procedure TAddTorrentForm.btSelectNoneClick(Sender: TObject);
+Begin
   FTree.SetStateAll(cbUnchecked);
-end;
+End;
 
-procedure TAddTorrentForm.cbDestFolderChange(Sender: TObject);
-var
+Procedure TAddTorrentForm.cbDestFolderChange(Sender: TObject);
+
+Var 
   s : string;
   i : integer;
   pFD : FolderData;
-begin
+Begin
   s := cbDestFolder.Text;
   i := cbDestFolder.Items.IndexOf(s);
-  if i < 0 then begin
-    edExtension.Text := '';
-  end else begin
-    pFD             := cbDestFolder.Items.Objects[i] as FolderData;
-    edExtension.Text:= pFD.Ext;
-  end;
-  DiskSpaceTimer.Enabled:=True;
-end;
+  If i < 0 Then
+    Begin
+      edExtension.Text := '';
+    End
+  Else
+    Begin
+      pFD             := cbDestFolder.Items.Objects[i] as FolderData;
+      edExtension.Text := pFD.Ext;
+    End;
+  DiskSpaceTimer.Enabled := True;
+End;
 
-procedure TAddTorrentForm.cbStartTorrentChange(Sender: TObject);
-begin
-    Ini.WriteBool('Interface', 'StartTorrentOnAdd', cbStartTorrent.Checked);
-    if (cbStartTorrent.Checked = false) then begin
-      cbStartTorrent.Font.Style:= [fsbold];
-      Buttons.OKButton.Font.Style:= [fsbold]
-    end
-    else begin
-      cbStartTorrent.Font.Style:= [];
-      Buttons.OKButton.Font.Style:= []
-    end;
-end;
-procedure TAddTorrentForm.cbSequentialDownloadChange(Sender: TObject);
-begin
-    Ini.WriteBool('Interface', 'SequentialDownload', cbSequentialDownload.Checked);
-    if (cbSequentialDownload.Checked = false) then begin
-      cbSequentialDownload.Font.Style:= [fsbold];
-      Buttons.OKButton.Font.Style:= [fsbold]
-    end
-    else begin
-      cbSequentialDownload.Font.Style:= [];
-      Buttons.OKButton.Font.Style:= []
-    end;
-end;
+Procedure TAddTorrentForm.cbStartTorrentChange(Sender: TObject);
+Begin
+  Ini.WriteBool('Interface', 'StartTorrentOnAdd', cbStartTorrent.Checked);
+  If (cbStartTorrent.Checked = false) Then
+    Begin
+      cbStartTorrent.Font.Style := [fsbold];
+      Buttons.OKButton.Font.Style := [fsbold]
+    End
+  Else
+    Begin
+      cbStartTorrent.Font.Style := [];
+      Buttons.OKButton.Font.Style := []
+    End;
+End;
+Procedure TAddTorrentForm.cbSequentialDownloadChange(Sender: TObject);
+Begin
+  Ini.WriteBool('Interface', 'SequentialDownload', cbSequentialDownload.Checked)
+  ;
+  If (cbSequentialDownload.Checked = false) Then
+    Begin
+      cbSequentialDownload.Font.Style := [fsbold];
+      Buttons.OKButton.Font.Style := [fsbold]
+    End
+  Else
+    Begin
+      cbSequentialDownload.Font.Style := [];
+      Buttons.OKButton.Font.Style := []
+    End;
+End;
 
-procedure TAddTorrentForm.DelButtonClick(Sender: TObject);
-var
+Procedure TAddTorrentForm.DelButtonClick(Sender: TObject);
+
+Var 
   i: integer;
   s : string;
-begin
-    if cbDestFolder.Items.Count > 1 then begin
-        s := CorrectPath(cbDestFolder.Text);
-        i := cbDestFolder.Items.IndexOf(s);
-        if i > -1 then begin
-              cbDestFolder.Items.Delete(i);
-              cbDestFolder.ItemIndex:=0;
-        end;
-    end;
-end;
+Begin
+  If cbDestFolder.Items.Count > 1 Then
+    Begin
+      s := CorrectPath(cbDestFolder.Text);
+      i := cbDestFolder.Items.IndexOf(s);
+      If i > -1 Then
+        Begin
+          cbDestFolder.Items.Delete(i);
+          cbDestFolder.ItemIndex := 0;
+        End;
+    End;
+End;
 
-procedure TAddTorrentForm.DiskSpaceTimerTimer(Sender: TObject);
-var
+Procedure TAddTorrentForm.DiskSpaceTimerTimer(Sender: TObject);
+
+Var 
   f: double;
   req, args: TJSONObject;
-begin
-  DiskSpaceTimer.Enabled:=False;
-  if RpcObj.RPCVersion < 15 then
+Begin
+  DiskSpaceTimer.Enabled := False;
+  If RpcObj.RPCVersion < 15 Then
     exit;
   AppBusy;
-  f:=-1;
-  try
-    req:=TJSONObject.Create;
-    args:=TJSONObject.Create;
-    try
+  f := -1;
+  Try
+    req := TJSONObject.Create;
+    args := TJSONObject.Create;
+    Try
       req.Add('method', 'free-space');
       args.Add('path', UTF8Decode(cbDestFolder.Text));
       req.Add('arguments', args);
-      args:=RpcObj.SendRequest(req);
-      if args <> nil then
-        f:=args.Floats['size-bytes'];
-      RpcObj.Status:='';
-    finally
+      args := RpcObj.SendRequest(req);
+      If args <> Nil Then
+        f := args.Floats['size-bytes'];
+      RpcObj.Status := '';
+    Finally
       args.Free;
       req.Free;
-    end;
-  except
-    f:=-1;
-  end;
-  txDiskSpace.Caption:=FDiskSpaceCaption + ' ' + GetHumanSize(f);
-  AppNormal;
-end;
+End;
+Except
+  f := -1;
+End;
+txDiskSpace.Caption := FDiskSpaceCaption + ' ' + GetHumanSize(f);
+AppNormal;
+End;
 
-procedure TAddTorrentForm.edSaveAsChange(Sender: TObject);
-begin
-  Caption:=OrigCaption + ' - ' + edSaveAs.Text;
-end;
-procedure TAddTorrentForm.edLabelChange(Sender: TObject);
-begin
-//     Ini.WriteString('Interface', 'Label', edLabel.Text);
-end;
+Procedure TAddTorrentForm.edSaveAsChange(Sender: TObject);
+Begin
+  Caption := OrigCaption + ' - ' + edSaveAs.Text;
+End;
+Procedure TAddTorrentForm.edLabelChange(Sender: TObject);
+Begin
+  //     Ini.WriteString('Interface', 'Label', edLabel.Text);
+End;
 
-procedure TAddTorrentForm.TreeStateChanged(Sender: TObject);
-begin
+Procedure TAddTorrentForm.TreeStateChanged(Sender: TObject);
+Begin
   UpdateSize;
-end;
+End;
 
-function  TAddTorrentForm.GetTempate (ext:string; var e: array of string):integer;
-var
+Function  TAddTorrentForm.GetTempate (ext:String; Var e: Array Of String):
+
+                                                                         integer
+;
+
+Var 
   tmp,exten : string;
   i,n : integer;
-begin
+Begin
   tmp   := ext;
   exten := ext;
   n     := 0;
-  while tmp <> '' do begin
-    i := Pos (' ', tmp);
-    if (i <> 0) then begin
-      exten:= Trim (Copy (tmp, 1, i-1));
-      tmp  := Trim (Copy (tmp, i, 999));
-      end
-    else begin
-      exten:= Trim (tmp);
-      tmp  := '';
-    end;
-    e[n]:= exten;
-    n   := n+1;
-  end;
+  While tmp <> '' Do
+    Begin
+      i := Pos (' ', tmp);
+      If (i <> 0) Then
+        Begin
+          exten := Trim (Copy (tmp, 1, i-1));
+          tmp  := Trim (Copy (tmp, i, 999));
+        End
+      Else
+        Begin
+          exten := Trim (tmp);
+          tmp  := '';
+        End;
+      e[n] := exten;
+      n   := n+1;
+    End;
   GetTempate := n;
-end;
+End;
 
-function  TAddTorrentForm.IsFileTemplate(filename:string; cntE : integer; e: array of string):boolean;
-var
+Function  TAddTorrentForm.IsFileTemplate(filename:String; cntE : integer; e:
+                                         Array Of String): boolean;
+
+Var 
   tmp, tmpExt, tmp_Name, sstr: string;
   i,n,lstr,j,k, total_sstr, total_templ : integer;
   ok : boolean;
   re : boolean;
-begin
+Begin
   IsFileTemplate := false;
 
   tmp := filename;
-  lstr:= Length(tmp);
-  for i:=1 to lstr-1 do begin
-    if (tmp[lstr-i]= '/') or (tmp[lstr-i]= '\') then begin
-      tmp := Copy (tmp, lstr-i+1, 999);
-      Break;
-    end;
-  end;
+  lstr := Length(tmp);
+  For i:=1 To lstr-1 Do
+    Begin
+      If (tmp[lstr-i]= '/') Or (tmp[lstr-i]= '\') Then
+        Begin
+          tmp := Copy (tmp, lstr-i+1, 999);
+          Break;
+        End;
+    End;
 
-  for i:=0 to cntE-1 do begin
+  For i:=0 To cntE-1 Do
+    Begin
       tmpExt     := e[i];
       tmp_Name   := tmp;
       total_sstr := 0;
-      total_templ:= 0;
-      while tmpExt <> '' do begin
-        j := Pos ('*', tmpExt);
-        if j <> 0 then begin
-          sstr  := Copy (tmpExt, 1, j-1);
-          tmpExt:= Copy (tmpExt, j+1, 999);
-          re    := false;
-          end
-        else begin
-          sstr  := Trim (tmpExt);
-          tmpExt:= '';
-          re    := true;
-        end;
-        if sstr = '' then continue;
+      total_templ := 0;
+      While tmpExt <> '' Do
+        Begin
+          j := Pos ('*', tmpExt);
+          If j <> 0 Then
+            Begin
+              sstr  := Copy (tmpExt, 1, j-1);
+              tmpExt := Copy (tmpExt, j+1, 999);
+              re    := false;
+            End
+          Else
+            Begin
+              sstr  := Trim (tmpExt);
+              tmpExt := '';
+              re    := true;
+            End;
+          If sstr = '' Then continue;
 
-        total_templ := total_templ +1;
-        n           := Length(sstr);
-        ok          := false;
-        while 1 = 1 do begin
-          if tmp_Name = '' then break;
-          k := Pos (sstr, tmp_Name);
-          if k <> 0 then begin
-            tmp_Name    := Copy (tmp_Name, k+n, 999);
-            if ((tmpExt ='') and (re=true)) and (tmp_Name <> '') then begin
-              continue;
-            end else begin
-              total_sstr := total_sstr +1;
-              ok         := true;
-              Break;
-            end;
-          end else begin
-            Break;
-          end;
-        end;
-        if ok = true then break;
-      end;
+          total_templ := total_templ +1;
+          n           := Length(sstr);
+          ok          := false;
+          While 1 = 1 Do
+            Begin
+              If tmp_Name = '' Then break;
+              k := Pos (sstr, tmp_Name);
+              If k <> 0 Then
+                Begin
+                  tmp_Name    := Copy (tmp_Name, k+n, 999);
+                  If ((tmpExt ='') And (re=true)) And (tmp_Name <> '') Then
+                    Begin
+                      continue;
+                    End
+                  Else
+                    Begin
+                      total_sstr := total_sstr +1;
+                      ok         := true;
+                      Break;
+                    End;
+                End
+              Else
+                Begin
+                  Break;
+                End;
+            End;
+          If ok = true Then break;
+        End;
 
-      if total_sstr = total_templ then begin
-        IsFileTemplate := true;
-        Break;
-      end;
-  end;
-end;
+      If total_sstr = total_templ Then
+        Begin
+          IsFileTemplate := true;
+          Break;
+        End;
+    End;
+End;
 
 
-procedure TAddTorrentForm.SearchGoodExtension ();
-var
+Procedure TAddTorrentForm.SearchGoodExtension ();
+
+Var 
   i,j, jMax, torrMax : integer;
   s, filename : string;
   filesize, dTotal,dTotalMax : double;
   pFD : FolderData;
-  e : array [0..50] of string;
+  e : array [0..50] Of string;
   n : integer;
-begin
-    dTotalMax := 0;
-    jMax      :=-1;
+Begin
+  dTotalMax := 0;
+  jMax      := -1;
 
-    try
-      for j:=0 to cbDestFolder.Items.Count-1 do begin
+  Try
+    For j:=0 To cbDestFolder.Items.Count-1 Do
+      Begin
         pFD  := cbDestFolder.Items.Objects[j] as FolderData;
         s    := Trim(pFD.Ext);
-        if s = '' then continue;
+        If s = '' Then continue;
 
         n      := GetTempate (AnsiLowerCase(s), e);
         dTotal := 0;
-        torrMax:= lvFiles.Items.Count;
-        if torrMax > 100 then torrMax := 100;
+        torrMax := lvFiles.Items.Count;
+        If torrMax > 100 Then torrMax := 100;
 
-        for i:=0 to torrMax - 1 do begin
-            if not FTree.IsFolder(i) then begin
-              filename := lvFiles.Items[idxFileName, i];
-              filesize := double(lvFiles.Items[idxFileSize, i]);
-              if IsFileTemplate(filename, n,e) = true then
-                dTotal := dTotal + filesize;
-            end;
-        end;
+        For i:=0 To torrMax - 1 Do
+          Begin
+            If Not FTree.IsFolder(i) Then
+              Begin
+                filename := lvFiles.Items[idxFileName, i];
+                filesize := double(lvFiles.Items[idxFileSize, i]);
+                If IsFileTemplate(filename, n,e) = true Then
+                  dTotal := dTotal + filesize;
+              End;
+          End;
 
-        if (dTotal > 0) and (dTotal > dTotalMax) then begin
-          dTotalMax := dTotal;
-          jMax      := j;
-        end;
-      end;
-    except
-      MessageDlg('Error: LS-003. Please contact the developer', mtError, [mbOK], 0);
-    end;
+        If (dTotal > 0) And (dTotal > dTotalMax) Then
+          Begin
+            dTotalMax := dTotal;
+            jMax      := j;
+          End;
+      End;
+  Except
+    MessageDlg('Error: LS-003. Please contact the developer', mtError, [mbOK], 0
+    );
+End;
 
-    try
-      if jMax <> -1 then begin
-        pFD  := cbDestFolder.Items.Objects[jMax] as FolderData;
-        cbDestFolder.ItemIndex := jMax;
-        cbDestFolder.Text := pFD.Txt;
-        cbDestFolderChange(nil);
-      end else begin
-        cbDestFolderChange(nil);
-      end;
-    except
-      MessageDlg('Error: LS-004. Please contact the developer', mtError, [mbOK], 0);
-    end;
-end;
+Try
+  If jMax <> -1 Then
+    Begin
+      pFD  := cbDestFolder.Items.Objects[jMax] as FolderData;
+      cbDestFolder.ItemIndex := jMax;
+      cbDestFolder.Text := pFD.Txt;
+      cbDestFolderChange(Nil);
+    End
+  Else
+    Begin
+      cbDestFolderChange(Nil);
+    End;
+Except
+  MessageDlg('Error: LS-004. Please contact the developer', mtError, [mbOK], 0);
+End;
+End;
 
-procedure TAddTorrentForm.FormCreate(Sender: TObject);
-begin
-  OrigCaption:=Caption;
-  FDiskSpaceCaption:=txDiskSpace.Caption;
-  lvFiles.Items.ExtraColumns:=FilesExtraColumns;
-  FTree:=TFilesTree.Create(lvFiles);
-  FTree.Checkboxes:=True;
-  FTree.OnStateChange:=@TreeStateChanged;
-  Buttons.OKButton.ModalResult:=mrNone;
+Procedure TAddTorrentForm.FormCreate(Sender: TObject);
+Begin
+  OrigCaption := Caption;
+  FDiskSpaceCaption := txDiskSpace.Caption;
+  lvFiles.Items.ExtraColumns := FilesExtraColumns;
+  FTree := TFilesTree.Create(lvFiles);
+  FTree.Checkboxes := True;
+  FTree.OnStateChange := @TreeStateChanged;
+  Buttons.OKButton.ModalResult := mrNone;
   bidiMode := GetBiDi();
-  cbStartTorrent.Checked := Ini.ReadBool('Interface', 'StartTorrentOnAdd', true);
-  cbSequentialDownload.Checked := Ini.ReadBool('Interface', 'SequentialDownload', true);
-//  edLabel.Text:=Ini.ReadString('Interface', 'Label', '');
-  if RpcObj.RPCVersion < 18 Then
-     cbSequentialDownload.Visible:=false
-  else
-    cbSequentialDownload.Visible:=true;
-  if (cbStartTorrent.Checked = false) then begin
-    cbStartTorrent.Font.Style:= [fsbold];
-    Buttons.OKButton.Font.Style:= [fsbold]
-  end
-  else begin
-    cbStartTorrent.Font.Style:= [];
-    Buttons.OKButton.Font.Style:= []
-  end;
+  cbStartTorrent.Checked := Ini.ReadBool('Interface', 'StartTorrentOnAdd', true)
+  ;
+  cbSequentialDownload.Checked := Ini.ReadBool('Interface', 'SequentialDownload'
+                                  , true);
+  //  edLabel.Text:=Ini.ReadString('Interface', 'Label', '');
+  If RpcObj.RPCVersion < 18 Then
+    cbSequentialDownload.Visible := false
+  Else
+    cbSequentialDownload.Visible := true;
+  If (cbStartTorrent.Checked = false) Then
+    Begin
+      cbStartTorrent.Font.Style := [fsbold];
+      Buttons.OKButton.Font.Style := [fsbold]
+    End
+  Else
+    Begin
+      cbStartTorrent.Font.Style := [];
+      Buttons.OKButton.Font.Style := []
+    End;
 
 {$ifdef windows}
-  gbSaveAs.Caption:='';
+  gbSaveAs.Caption := '';
 {$endif windows}
 {$ifdef darwin}
-  Buttons.BorderSpacing.Right:=Buttons.BorderSpacing.Right + ScaleInt(12);
+  Buttons.BorderSpacing.Right := Buttons.BorderSpacing.Right + ScaleInt(12);
 {$endif darwin}
-end;
+End;
 
 initialization
   {$I addtorrent.lrs}
 
-end.
-
+End.

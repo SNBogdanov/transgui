@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -28,204 +30,222 @@
   statement from your version.  If you delete this exception statement from all
   source files in the program, then also delete it here.
 *************************************************************************************}
-unit IpResolver;
+
+Unit IpResolver;
 
 {$mode objfpc}{$H+}
 
-interface
+Interface
 
-uses
-  Classes, SysUtils, GeoIP, syncobjs;
+Uses 
+Classes, SysUtils, GeoIP, syncobjs;
 
-type
+Type 
   PHostEntry = ^THostEntry;
-  THostEntry = record
+  THostEntry = Record
     IP: string;
     HostName: string;
     CountryName: string;
     CountryCode: string;
     ImageIndex: integer;
-  end;
+  End;
 
   TResolverOption = (roResolveIP, roResolveCountry);
-  TResolverOptions = set of TResolverOption;
+  TResolverOptions = set Of TResolverOption;
 
   { TIpResolverThread }
 
-  TIpResolver = class(TThread)
-  private
-    FLock: TCriticalSection;
-    FResolveEvent: TEvent;
-    FCache: TList;
-    FResolveIp: TStringList;
-    FGeoIp: TGeoIP;
-    FOptions: TResolverOptions;
-    FGeoIpCounryDB: string;
-  protected
-    procedure Execute; override;
-    function NewEntry(const IpAddress: string): PHostEntry;
-    function FindEntry(const IpAddress: string): PHostEntry;
-  public
-    constructor Create(const GeoIpCounryDB: string; AOptions: TResolverOptions); reintroduce;
-    destructor Destroy; override;
-    function Resolve(const IpAddress: string): PHostEntry;
-  end;
+  TIpResolver = Class(TThread)
+    Private 
+      FLock: TCriticalSection;
+      FResolveEvent: TEvent;
+      FCache: TList;
+      FResolveIp: TStringList;
+      FGeoIp: TGeoIP;
+      FOptions: TResolverOptions;
+      FGeoIpCounryDB: string;
+    Protected 
+      Procedure Execute;
+      override;
+      Function NewEntry(Const IpAddress: String): PHostEntry;
+      Function FindEntry(Const IpAddress: String): PHostEntry;
+    Public 
+      constructor Create(Const GeoIpCounryDB: String; AOptions: TResolverOptions
+      );
+      reintroduce;
+      destructor Destroy;
+      override;
+      Function Resolve(Const IpAddress: String): PHostEntry;
+  End;
 
-implementation
+Implementation
 
-uses synsock;
+Uses synsock;
 
 { TIpResolver }
 
-procedure TIpResolver.Execute;
-var
+Procedure TIpResolver.Execute;
+
+Var 
   ip, s: string;
   c: PHostEntry;
-begin
-  try
-    while not Terminated do begin
-      if FResolveEvent.WaitFor(200) = wrSignaled then begin
-        FResolveEvent.ResetEvent;
+Begin
+  Try
+    While Not Terminated Do
+      Begin
+        If FResolveEvent.WaitFor(200) = wrSignaled Then
+          Begin
+            FResolveEvent.ResetEvent;
 
-        while True do begin
-          FLock.Enter;
-          try
-            ip:='';
-            if FResolveIp.Count > 0 then begin
-              ip:=FResolveIp[0];
-              FResolveIp.Delete(0);
-            end;
-            UniqueString(ip);
-          finally
-            FLock.Leave;
-          end;
+            While True Do
+              Begin
+                FLock.Enter;
+                Try
+                  ip := '';
+                  If FResolveIp.Count > 0 Then
+                    Begin
+                      ip := FResolveIp[0];
+                      FResolveIp.Delete(0);
+                    End;
+                  UniqueString(ip);
+                Finally
+                  FLock.Leave;
+              End;
 
-          if ip = '' then
-            break;
+            If ip = '' Then
+              break;
 
-          if roResolveIP in FOptions then begin
-            s:=synsock.ResolveIPToName(ip, AF_INET, IPPROTO_IP, 0);
-            c:=FindEntry(ip);
-            FLock.Enter;
-            try
-              c^.HostName:=s;
-              UniqueString(c^.HostName);
-            finally
-              FLock.Leave;
-            end;
-          end;
-        end;
+            If roResolveIP In FOptions Then
+              Begin
+                s := synsock.ResolveIPToName(ip, AF_INET, IPPROTO_IP, 0);
+                c := FindEntry(ip);
+                FLock.Enter;
+                Try
+                  c^.HostName := s;
+                  UniqueString(c^.HostName);
+                Finally
+                  FLock.Leave;
+              End;
+          End;
+      End;
 
-      end;
-    end;
-  except
-  end;
-  Sleep(20);
-end;
+End;
+End;
+Except
+End;
+Sleep(20);
+End;
 
-function TIpResolver.NewEntry(const IpAddress: string): PHostEntry;
-begin
+Function TIpResolver.NewEntry(Const IpAddress: String): PHostEntry;
+Begin
   FLock.Enter;
-  try
+  Try
     New(Result);
-    Result^.ImageIndex:=0;
-    Result^.IP:=IpAddress;
+    Result^.ImageIndex := 0;
+    Result^.IP := IpAddress;
     UniqueString(Result^.IP);
-    Result^.HostName:=IpAddress;
+    Result^.HostName := IpAddress;
     UniqueString(Result^.HostName);
     FCache.Add(Result);
-  finally
+  Finally
     FLock.Leave;
-  end;
-end;
+End;
+End;
 
-function TIpResolver.FindEntry(const IpAddress: string): PHostEntry;
-var
+Function TIpResolver.FindEntry(Const IpAddress: String): PHostEntry;
+
+Var 
   i: integer;
-begin
+Begin
   FLock.Enter;
-  try
-    for i:=0 to FCache.Count - 1 do begin
-      Result:=FCache[i];
-      if Result^.IP = IpAddress then
-        exit;
-    end;
-    Result:=nil;
-  finally
+  Try
+    For i:=0 To FCache.Count - 1 Do
+      Begin
+        Result := FCache[i];
+        If Result^.IP = IpAddress Then
+          exit;
+      End;
+    Result := Nil;
+  Finally
     FLock.Leave;
-  end;
-end;
+End;
+End;
 
-constructor TIpResolver.Create(const GeoIpCounryDB: string; AOptions: TResolverOptions);
-begin
-  FOptions:=AOptions;
-  FLock:=TCriticalSection.Create;
-  FResolveEvent:=TEvent.Create(nil, True, False, '');
-  FCache:=TList.Create;
-  FResolveIp:=TStringList.Create;
-  FGeoIpCounryDB:=GeoIpCounryDB;
-  if (roResolveCountry in FOptions) and (FGeoIpCounryDB <> '') then
-    FGeoIp:=TGeoIP.Create(GeoIpCounryDB);
-  inherited Create(not (roResolveIP in FOptions));
-end;
+constructor TIpResolver.Create(Const GeoIpCounryDB: String; AOptions:
+                               TResolverOptions);
+Begin
+  FOptions := AOptions;
+  FLock := TCriticalSection.Create;
+  FResolveEvent := TEvent.Create(Nil, True, False, '');
+  FCache := TList.Create;
+  FResolveIp := TStringList.Create;
+  FGeoIpCounryDB := GeoIpCounryDB;
+  If (roResolveCountry In FOptions) And (FGeoIpCounryDB <> '') Then
+    FGeoIp := TGeoIP.Create(GeoIpCounryDB);
+  inherited Create(Not (roResolveIP In FOptions));
+End;
 
 destructor TIpResolver.Destroy;
-var
+
+Var 
   i: integer;
-begin
+Begin
   Terminate;
-  if not Suspended then
+  If Not Suspended Then
     WaitFor;
   FResolveIp.Free;
   FResolveEvent.Free;
   FLock.Free;
   FGeoIp.Free;
-  for i:=0 to FCache.Count - 1 do
+  For i:=0 To FCache.Count - 1 Do
     Dispose(PHostEntry(FCache[i]));
   FCache.Free;
   inherited Destroy;
-end;
+End;
 
-function TIpResolver.Resolve(const IpAddress: string): PHostEntry;
-var
+Function TIpResolver.Resolve(Const IpAddress: String): PHostEntry;
+
+Var 
   GeoCountry: TGeoIPCountry;
-begin
-  Result:=FindEntry(IpAddress);
-  if Result <> nil then
+Begin
+  Result := FindEntry(IpAddress);
+  If Result <> Nil Then
     exit;
 
-  Result:=NewEntry(IpAddress);
-  if roResolveIP in FOptions then begin
-    FLock.Enter;
-    try
-      if FResolveIp.IndexOf(IpAddress) < 0 then begin
-        FResolveIp.Add(IpAddress);
-        FResolveEvent.SetEvent;
-      end;
-    finally
-      FLock.Leave;
-    end;
-  end;
-
-  if FGeoIp <> nil then
-  try
-    if FGeoIp.GetCountry(IpAddress, GeoCountry) = GEOIP_SUCCESS then begin
+  Result := NewEntry(IpAddress);
+  If roResolveIP In FOptions Then
+    Begin
       FLock.Enter;
-      try
-        Result^.CountryName:=GeoCountry.CountryName;
-        UniqueString(Result^.CountryName);
-        Result^.CountryCode:=AnsiLowerCase(GeoCountry.CountryCode);
-        UniqueString(Result^.CountryCode);
-      finally
+      Try
+        If FResolveIp.IndexOf(IpAddress) < 0 Then
+          Begin
+            FResolveIp.Add(IpAddress);
+            FResolveEvent.SetEvent;
+          End;
+      Finally
         FLock.Leave;
-      end;
-    end;
-  except
-    FreeAndNil(FGeoIp);
-    DeleteFile(FGeoIpCounryDB);
-    Result:=nil;
-  end;
-end;
+    End;
+End;
 
-end.
+If FGeoIp <> Nil Then
+  Try
+    If FGeoIp.GetCountry(IpAddress, GeoCountry) = GEOIP_SUCCESS Then
+      Begin
+        FLock.Enter;
+        Try
+          Result^.CountryName := GeoCountry.CountryName;
+          UniqueString(Result^.CountryName);
+          Result^.CountryCode := AnsiLowerCase(GeoCountry.CountryCode);
+          UniqueString(Result^.CountryCode);
+        Finally
+          FLock.Leave;
+      End;
+End;
+Except
+  FreeAndNil(FGeoIp);
+  DeleteFile(FGeoIpCounryDB);
+  Result := Nil;
+End;
+End;
 
+End.

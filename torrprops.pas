@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -28,20 +30,22 @@
   statement from your version.  If you delete this exception statement from all
   source files in the program, then also delete it here.
 *************************************************************************************}
-unit TorrProps;
+
+Unit TorrProps;
 
 {$mode objfpc}{$H+}
 
-interface
+Interface
 
-uses
-  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs, StdCtrls, Spin, ButtonPanel, ComCtrls, BaseForm;
+Uses 
+Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+StdCtrls, Spin, ButtonPanel, ComCtrls, BaseForm;
 
-type
+Type 
 
   { TTorrPropsForm }
 
-  TTorrPropsForm = class(TBaseForm)
+  TTorrPropsForm = Class(TBaseForm)
     Buttons: TButtonPanel;
     cbIdleSeedLimit: TCheckBox;
     cbSequentialDownload: TCheckBox;
@@ -63,51 +67,50 @@ type
     txMinutes: TLabel;
     txName: TLabel;
     txPeerLimit: TLabel;
-    procedure cbIdleSeedLimitClick(Sender: TObject);
-    procedure cbMaxDownClick(Sender: TObject);
-    procedure cbMaxUpClick(Sender: TObject);
-    procedure cbSeedRatioClick(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
-  private
+    Procedure cbIdleSeedLimitClick(Sender: TObject);
+    Procedure cbMaxDownClick(Sender: TObject);
+    Procedure cbMaxUpClick(Sender: TObject);
+    Procedure cbSeedRatioClick(Sender: TObject);
+    Procedure FormCreate(Sender: TObject);
+    Private 
     { private declarations }
-  public
+    Public 
     { public declarations }
-  end;
+  End;
 
-implementation
+Implementation
 
-uses main;
+Uses main;
 
 { TTorrPropsForm }
 
-procedure TTorrPropsForm.cbMaxDownClick(Sender: TObject);
-begin
-  edMaxDown.Enabled:=cbMaxDown.Checked;
-end;
+Procedure TTorrPropsForm.cbMaxDownClick(Sender: TObject);
+Begin
+  edMaxDown.Enabled := cbMaxDown.Checked;
+End;
 
-procedure TTorrPropsForm.cbIdleSeedLimitClick(Sender: TObject);
-begin
-  edIdleSeedLimit.Enabled:=cbIdleSeedLimit.State = cbChecked;
-end;
+Procedure TTorrPropsForm.cbIdleSeedLimitClick(Sender: TObject);
+Begin
+  edIdleSeedLimit.Enabled := cbIdleSeedLimit.State = cbChecked;
+End;
 
-procedure TTorrPropsForm.cbMaxUpClick(Sender: TObject);
-begin
-  edMaxUp.Enabled:=cbMaxUp.Checked;
-end;
+Procedure TTorrPropsForm.cbMaxUpClick(Sender: TObject);
+Begin
+  edMaxUp.Enabled := cbMaxUp.Checked;
+End;
 
-procedure TTorrPropsForm.cbSeedRatioClick(Sender: TObject);
-begin
-  edSeedRatio.Enabled:=cbSeedRatio.State = cbChecked;
-end;
+Procedure TTorrPropsForm.cbSeedRatioClick(Sender: TObject);
+Begin
+  edSeedRatio.Enabled := cbSeedRatio.State = cbChecked;
+End;
 
-procedure TTorrPropsForm.FormCreate(Sender: TObject);
-begin
-  Page.ActivePageIndex:=0;
+Procedure TTorrPropsForm.FormCreate(Sender: TObject);
+Begin
+  Page.ActivePageIndex := 0;
   bidiMode := GetBiDi();
-end;
+End;
 
 initialization
   {$I torrprops.lrs}
 
-end.
-
+End.

@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -29,29 +31,31 @@
   source files in the program, then also delete it here.
 *************************************************************************************}
 
-unit About;
+Unit About;
 
 {$mode objfpc}{$H+}
 
-interface
+Interface
 
-uses
-  BaseForm, Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs, StdCtrls, ComCtrls, ExtCtrls, ButtonPanel, lclversion,
-    ssl_openssl, ssl_openssl_lib;
+Uses 
+BaseForm, Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics,
+Dialogs, StdCtrls, ComCtrls, ExtCtrls, ButtonPanel, lclversion,
+ssl_openssl, ssl_openssl_lib;
 
 resourcestring
-  SErrorCheckingVersion = 'Error checking for new version.';
-  SNewVersionFound = 'A new version of %s is available.' + LineEnding +
-                    'Your current version: %s' + LineEnding +
-                    'The new version: %s' + LineEnding + LineEnding +
-                    'Do you wish to open the Downloads web page?';
-  SLatestVersion = 'No updates have been found.' + LineEnding + 'You are running the latest version of %s.';
+SErrorCheckingVersion = 'Error checking for new version.';
+SNewVersionFound = 'A new version of %s is available.' + LineEnding +
+                   'Your current version: %s' + LineEnding +
+                   'The new version: %s' + LineEnding + LineEnding +
+                   'Do you wish to open the Downloads web page?';
+SLatestVersion = 'No updates have been found.' + LineEnding +
+                 'You are running the latest version of %s.';
 
-type
+Type 
 
   { TAboutForm }
 
-  TAboutForm = class(TBaseForm)
+  TAboutForm = Class(TBaseForm)
     Bevel1: TBevel;
     Buttons: TButtonPanel;
     edLicense: TMemo;
@@ -66,210 +70,230 @@ type
     tabAbout: TTabSheet;
     tabLicense: TTabSheet;
     txVersFPC: TLabel;
-    procedure FormCreate(Sender: TObject);
-    procedure imgDonateClick(Sender: TObject);
-    procedure imgLazarusClick(Sender: TObject);
-    procedure imgSynapseClick(Sender: TObject);
-    procedure txHomePageClick(Sender: TObject);
-  private
+    Procedure FormCreate(Sender: TObject);
+    Procedure imgDonateClick(Sender: TObject);
+    Procedure imgLazarusClick(Sender: TObject);
+    Procedure imgSynapseClick(Sender: TObject);
+    Procedure txHomePageClick(Sender: TObject);
+    Private 
     { private declarations }
-  public
+    Public 
     { public declarations }
-  end;
+  End;
 
-procedure CheckNewVersion(Async: boolean = True);
-procedure GoHomePage;
-procedure GoGitHub;
+Procedure CheckNewVersion(Async: boolean = True);
+Procedure GoHomePage;
+Procedure GoGitHub;
 
-implementation
+Implementation
 
-uses Main, utils, httpsend;
+Uses Main, utils, httpsend;
 
-type
+Type 
 
   { TCheckVersionThread }
 
-  TCheckVersionThread = class(TThread)
-  private
-    FHttp: THTTPSend;
-    FError: string;
-    FVersion: string;
-    FExit: boolean;
+  TCheckVersionThread = Class(TThread)
+    Private 
+      FHttp: THTTPSend;
+      FError: string;
+      FVersion: string;
+      FExit: boolean;
 
-    procedure CheckResult;
-    function GetIntVersion(const Ver: string): integer;
-  protected
-    procedure Execute; override;
-  end;
+      Procedure CheckResult;
+      Function GetIntVersion(Const Ver: String): integer;
+    Protected 
+      Procedure Execute;
+      override;
+  End;
 
-var
+Var 
   CheckVersionThread: TCheckVersionThread;
 
-procedure CheckNewVersion(Async: boolean);
-begin
-  if CheckVersionThread <> nil then
+Procedure CheckNewVersion(Async: boolean);
+Begin
+  If CheckVersionThread <> Nil Then
     exit;
   Ini.WriteInteger('Interface', 'LastNewVersionCheck', Trunc(Now));
-  CheckVersionThread:=TCheckVersionThread.Create(True);
-  CheckVersionThread.FreeOnTerminate:=True;
-  if Async then
-    CheckVersionThread.Suspended:=False
-  else begin
-    CheckVersionThread.Execute;
-    CheckVersionThread.FExit:=True;
-    CheckVersionThread.Suspended:=False;
-  end;
-end;
+  CheckVersionThread := TCheckVersionThread.Create(True);
+  CheckVersionThread.FreeOnTerminate := True;
+  If Async Then
+    CheckVersionThread.Suspended := False
+  Else
+    Begin
+      CheckVersionThread.Execute;
+      CheckVersionThread.FExit := True;
+      CheckVersionThread.Suspended := False;
+    End;
+End;
 
-procedure GoHomePage;
-begin
+Procedure GoHomePage;
+Begin
   AppBusy;
   OpenURL('https://github.com/transmission-remote-gui/transgui/releases');
   AppNormal;
-end;
+End;
 
-procedure GoGitHub;
-begin
+Procedure GoGitHub;
+Begin
   AppBusy;
   OpenURL('https://github.com/transmission-remote-gui/transgui');
   AppNormal;
-end;
+End;
 
 { TCheckVersionThread }
 
-procedure TCheckVersionThread.CheckResult;
-begin
+Procedure TCheckVersionThread.CheckResult;
+Begin
   ForceAppNormal;
-  if FError <> '' then begin
-    MessageDlg(SErrorCheckingVersion + LineEnding + FError, mtError, [mbOK], 0);
-    exit;
-  end;
+  If FError <> '' Then
+    Begin
+      MessageDlg(SErrorCheckingVersion + LineEnding + FError, mtError, [mbOK], 0
+      );
+      exit;
+    End;
 
-  if GetIntVersion(AppVersion) >= GetIntVersion(FVersion)  then begin
-    MessageDlg(Format(SLatestVersion, [AppName]), mtInformation, [mbOK], 0);
-    exit;
-  end;
+  If GetIntVersion(AppVersion) >= GetIntVersion(FVersion)  Then
+    Begin
+      MessageDlg(Format(SLatestVersion, [AppName]), mtInformation, [mbOK], 0);
+      exit;
+    End;
 
-  if MessageDlg(Format(SNewVersionFound, [AppName, AppVersion, FVersion]), mtConfirmation, mbYesNo, 0) <> mrYes then
+  If MessageDlg(Format(SNewVersionFound, [AppName, AppVersion, FVersion]),
+     mtConfirmation, mbYesNo, 0) <> mrYes Then
     exit;
 
   Application.ProcessMessages;
   AppBusy;
   OpenURL('https://github.com/transmission-remote-gui/transgui/releases');
   AppNormal;
-end;
+End;
 
-function TCheckVersionThread.GetIntVersion(const Ver: string): integer;
-var
+Function TCheckVersionThread.GetIntVersion(Const Ver: String): integer;
+
+Var 
   v: string;
   vi, i, j: integer;
-begin
-  Result:=0;
-  v:=Ver;
-  for i:=1 to 3 do begin
-    if v = '' then
-      vi:=0
-    else begin
-      j:=Pos('.', v);
-      if j = 0 then
-        j:=MaxInt;
-      vi:=StrToIntDef(Copy(v, 1, j - 1), 0);
-      Delete(v, 1, j);
-    end;
-    Result:=Result shl 8 or vi;
-  end;
-end;
+Begin
+  Result := 0;
+  v := Ver;
+  For i:=1 To 3 Do
+    Begin
+      If v = '' Then
+        vi := 0
+      Else
+        Begin
+          j := Pos('.', v);
+          If j = 0 Then
+            j := MaxInt;
+          vi := StrToIntDef(Copy(v, 1, j - 1), 0);
+          Delete(v, 1, j);
+        End;
+      Result := Result shl 8 Or vi;
+    End;
+End;
 
-procedure TCheckVersionThread.Execute;
-begin
-  if not FExit then begin
-    try
-      FHttp:=THTTPSend.Create;
-      try
-        if RpcObj.Http.ProxyHost <> '' then begin
-          FHttp.ProxyHost:=RpcObj.Http.ProxyHost;
-          FHttp.ProxyPort:=RpcObj.Http.ProxyPort;
-          FHttp.ProxyUser:=RpcObj.Http.ProxyUser;
-          FHttp.ProxyPass:=RpcObj.Http.ProxyPass;
-        end;
-        if FHttp.HTTPMethod('GET', 'https://raw.githubusercontent.com/transmission-remote-gui/transgui/master/VERSION.txt') then begin
-          if FHttp.ResultCode = 200 then begin
-            SetString(FVersion, FHttp.Document.Memory, FHttp.Document.Size);
-            FVersion:=Trim(FVersion);
-          end
-          else
-            FError:=Format('HTTP error: %d', [FHttp.ResultCode]);
-        end
-        else
-          FError:=FHttp.Sock.LastErrorDesc;
-      finally
-        FHttp.Free;
-      end;
-    except
-      FError:=Exception(ExceptObject).Message;
-    end;
-    if (FError <> '') or (GetIntVersion(FVersion) > GetIntVersion(AppVersion)) or Suspended then
-      if Suspended then
-        CheckResult
-      else
-        Synchronize(@CheckResult);
-  end;
-  if not Suspended then
-    CheckVersionThread:=nil;
-end;
+Procedure TCheckVersionThread.Execute;
+Begin
+  If Not FExit Then
+    Begin
+      Try
+        FHttp := THTTPSend.Create;
+        Try
+          If RpcObj.Http.ProxyHost <> '' Then
+            Begin
+              FHttp.ProxyHost := RpcObj.Http.ProxyHost;
+              FHttp.ProxyPort := RpcObj.Http.ProxyPort;
+              FHttp.ProxyUser := RpcObj.Http.ProxyUser;
+              FHttp.ProxyPass := RpcObj.Http.ProxyPass;
+            End;
+          If FHttp.HTTPMethod('GET',
+
+'https://raw.githubusercontent.com/transmission-remote-gui/transgui/master/VERSION.txt'
+             ) Then
+            Begin
+              If FHttp.ResultCode = 200 Then
+                Begin
+                  SetString(FVersion, FHttp.Document.Memory, FHttp.Document.Size
+                  );
+                  FVersion := Trim(FVersion);
+                End
+              Else
+                FError := Format('HTTP error: %d', [FHttp.ResultCode]);
+            End
+          Else
+            FError := FHttp.Sock.LastErrorDesc;
+        Finally
+          FHttp.Free;
+    End;
+Except
+  FError := Exception(ExceptObject).Message;
+End;
+If (FError <> '') Or (GetIntVersion(FVersion) > GetIntVersion(AppVersion)) Or
+   Suspended Then
+  If Suspended Then
+    CheckResult
+Else
+  Synchronize(@CheckResult);
+End;
+If Not Suspended Then
+  CheckVersionThread := Nil;
+End;
 
 { TAboutForm }
 
-procedure TAboutForm.imgSynapseClick(Sender: TObject);
-begin
+Procedure TAboutForm.imgSynapseClick(Sender: TObject);
+Begin
   AppBusy;
   OpenURL('http://synapse.ararat.cz');
   AppNormal;
-end;
+End;
 
-procedure TAboutForm.txHomePageClick(Sender: TObject);
-begin
+Procedure TAboutForm.txHomePageClick(Sender: TObject);
+Begin
   GoHomePage;
-end;
+End;
 
-procedure TAboutForm.FormCreate(Sender: TObject);
+Procedure TAboutForm.FormCreate(Sender: TObject);
 {$ifdef lclcarbon}
-var
+
+Var 
   s: string;
 {$endif lclcarbon}
-begin
+Begin
   bidiMode := GetBiDi();
-  txAppName.Font.Size:=Font.Size + 2;
-  txHomePage.Font.Size:=Font.Size;
-  BorderStyle:=bsSizeable;
-  txAppName.Caption:=AppName;
-  txVersion.Caption:=Format(txVersion.Caption, [AppVersion]);
-  Page.ActivePageIndex:=0;
+  txAppName.Font.Size := Font.Size + 2;
+  txHomePage.Font.Size := Font.Size;
+  BorderStyle := bsSizeable;
+  txAppName.Caption := AppName;
+  txVersion.Caption := Format(txVersion.Caption, [AppVersion]);
+  Page.ActivePageIndex := 0;
 
-  txVersFPC.caption := 'Fpc : ' + {$I %FPCVERSION%} + '   Lazarus : ' +lcl_version;
+  txVersFPC.caption := 'Fpc : ' + {$I %FPCVERSION%} + '   Lazarus : ' +
+                       lcl_version;
 
 {$ifdef lclcarbon}
-  s:=edLicense.Text;
-  edLicense.Text:='';
+  s := edLicense.Text;
+  edLicense.Text := '';
   edLicense.HandleNeeded;
-  edLicense.Text:=s;
-  Buttons.BorderSpacing.Right:=Buttons.BorderSpacing.Right + ScaleInt(12);
+  edLicense.Text := s;
+  Buttons.BorderSpacing.Right := Buttons.BorderSpacing.Right + ScaleInt(12);
 {$endif lclcarbon}
-end;
+End;
 
-procedure TAboutForm.imgDonateClick(Sender: TObject);
-begin
+Procedure TAboutForm.imgDonateClick(Sender: TObject);
+Begin
   GoGitHub;
-end;
+End;
 
-procedure TAboutForm.imgLazarusClick(Sender: TObject);
-begin
+Procedure TAboutForm.imgLazarusClick(Sender: TObject);
+Begin
   AppBusy;
   OpenURL('https://www.lazarus-ide.org');
   AppNormal;
-end;
+End;
 
 initialization
   {$I about.lrs}
 
-end.
+End.

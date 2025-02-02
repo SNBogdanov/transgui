@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -28,250 +30,277 @@
   statement from your version.  If you delete this exception statement from all
   source files in the program, then also delete it here.
 *************************************************************************************}
-unit BaseForm;
+
+Unit BaseForm;
 
 {$mode objfpc}
 
-interface
+Interface
 
-uses
-  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics;
+Uses 
+Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics;
 
-type
+Type 
 
   { TBaseForm }
 
-  TBaseForm = class(TForm)
-  private
-    FNeedAutoSize: boolean;
-    procedure DoScale(C: TControl);
-    procedure InitScale;
-  protected
-    procedure DoCreate; override;
-  public
-    constructor Create(TheOwner: TComponent); override;
-  end;
+  TBaseForm = Class(TForm)
+    Private 
+      FNeedAutoSize: boolean;
+      Procedure DoScale(C: TControl);
+      Procedure InitScale;
+    Protected 
+      Procedure DoCreate;
+      override;
+    Public 
+      constructor Create(TheOwner: TComponent);
+      override;
+  End;
 
-procedure AutoSizeForm(Form: TCustomForm);
-function ScaleInt(i: integer): integer;
+Procedure AutoSizeForm(Form: TCustomForm);
+Function ScaleInt(i: integer): integer;
 
-var
+Var 
   IntfScale: integer = 100;
 
-implementation
+Implementation
 
-uses LCLType, ButtonPanel, VarGrid, ComCtrls, StdCtrls, ExtCtrls, lclversion;
+Uses LCLType, ButtonPanel, VarGrid, ComCtrls, StdCtrls, ExtCtrls, lclversion;
 
-var
+Var 
   ScaleMultiplier, ScaleDivider: integer;
 
-function ScaleInt(i: integer): integer;
-begin
-  Result:=i*ScaleMultiplier div ScaleDivider;
-end;
+Function ScaleInt(i: integer): integer;
+Begin
+  Result := i*ScaleMultiplier Div ScaleDivider;
+End;
 
-type THackControl = class(TWinControl) end;
+Type THackControl = Class(TWinControl)
+End;
 
-procedure AutoSizeForm(Form: TCustomForm);
-var
+Procedure AutoSizeForm(Form: TCustomForm);
+
+Var 
   i, ht, w, h: integer;
   C: TControl;
-begin
-  ht:=0;
-  for i:=0 to Form.ControlCount - 1 do begin
-    C:=Form.Controls[i];
-    if not C.Visible then
-      continue;
-    with C do begin
-      if C is TButtonPanel then begin
-        TButtonPanel(C).HandleNeeded;
-        w:=0;
-        h:=0;
-        THackControl(C).CalculatePreferredSize(w, h, True);
-      end
-      else
-        h:=Height;
+Begin
+  ht := 0;
+  For i:=0 To Form.ControlCount - 1 Do
+    Begin
+      C := Form.Controls[i];
+      If Not C.Visible Then
+        continue;
+      With C Do
+        Begin
+          If C is TButtonPanel Then
+            Begin
+              TButtonPanel(C).HandleNeeded;
+              w := 0;
+              h := 0;
+              THackControl(C).CalculatePreferredSize(w, h, True);
+            End
+          Else
+            h := Height;
 {$ifdef LCLcarbon}
-      if C is TPageControl then
-        Inc(h, ScaleInt(10));
+          If C is TPageControl Then
+            Inc(h, ScaleInt(10));
 {$endif LCLcarbon}
-      Inc(ht, h + BorderSpacing.Top + BorderSpacing.Bottom + BorderSpacing.Around*2);
-    end;
-  end;
-  ht:=ht + 2*Form.BorderWidth;
+          Inc(ht, h + BorderSpacing.Top + BorderSpacing.Bottom + BorderSpacing.
+              Around*2);
+        End;
+    End;
+  ht := ht + 2*Form.BorderWidth;
 
-  Form.ClientHeight:=ht;
-  if Form.ClientHeight <> ht then begin
-    Form.Constraints.MinHeight:=0;
-    Form.ClientHeight:=ht;
-    Form.Constraints.MinHeight:=Form.Height;
-  end;
-  if Form.BorderStyle = bsDialog then begin
-    Form.Constraints.MinHeight:=Form.Height;
-    Form.Constraints.MinWidth:=Form.Width;
-  end;
-end;
+  Form.ClientHeight := ht;
+  If Form.ClientHeight <> ht Then
+    Begin
+      Form.Constraints.MinHeight := 0;
+      Form.ClientHeight := ht;
+      Form.Constraints.MinHeight := Form.Height;
+    End;
+  If Form.BorderStyle = bsDialog Then
+    Begin
+      Form.Constraints.MinHeight := Form.Height;
+      Form.Constraints.MinWidth := Form.Width;
+    End;
+End;
 
 { TBaseForm }
 
-procedure TBaseForm.DoScale(C: TControl);
-var
+Procedure TBaseForm.DoScale(C: TControl);
+
+Var 
   i: integer;
   R: TRect;
   w, h: integer;
-begin
-  with C do begin
+Begin
+  With C Do
+    Begin
 {$ifdef darwin}
-    if C is TButtonPanel then
-      exit;
+      If C is TButtonPanel Then
+        exit;
 {$endif darwin}
-    if C is TWinControl then
-      TWinControl(C).DisableAlign;
-    try
-      if ScaleMultiplier <> ScaleDivider then begin
-        ScaleConstraints(ScaleMultiplier, ScaleDivider);
-        R := BaseBounds;
-        R.Left := ScaleInt(R.Left);
-        R.Top := ScaleInt(R.Top);
-        R.Right := ScaleInt(R.Right);
-        R.Bottom := ScaleInt(R.Bottom);
-        if (Parent <> nil) and (Align = alNone) then begin
-          if akRight in Anchors then
-            Inc(R.Right, C.Parent.ClientWidth - ScaleInt(C.BaseParentClientSize.cx));
-          if akBottom in Anchors then
-            Inc(R.Bottom, C.Parent.ClientHeight - ScaleInt(C.BaseParentClientSize.cy));
-        end;
-        BoundsRect := R;
-        with BorderSpacing do begin
-          Top:=ScaleInt(Top);
-          Left:=ScaleInt(Left);
-          Bottom:=ScaleInt(Bottom);
-          Right:=ScaleInt(Right);
-          Around:=ScaleInt(Around);
-          InnerBorder:=ScaleInt(InnerBorder);
-        end;
+      If C is TWinControl Then
+        TWinControl(C).DisableAlign;
+      Try
+        If ScaleMultiplier <> ScaleDivider Then
+          Begin
+            ScaleConstraints(ScaleMultiplier, ScaleDivider);
+            R := BaseBounds;
+            R.Left := ScaleInt(R.Left);
+            R.Top := ScaleInt(R.Top);
+            R.Right := ScaleInt(R.Right);
+            R.Bottom := ScaleInt(R.Bottom);
+            If (Parent <> Nil) And (Align = alNone) Then
+              Begin
+                If akRight In Anchors Then
+                  Inc(R.Right, C.Parent.ClientWidth - ScaleInt(C.
+                      BaseParentClientSize.cx));
+                If akBottom In Anchors Then
+                  Inc(R.Bottom, C.Parent.ClientHeight - ScaleInt(C.
+                      BaseParentClientSize.cy));
+              End;
+            BoundsRect := R;
+            With BorderSpacing Do
+              Begin
+                Top := ScaleInt(Top);
+                Left := ScaleInt(Left);
+                Bottom := ScaleInt(Bottom);
+                Right := ScaleInt(Right);
+                Around := ScaleInt(Around);
+                InnerBorder := ScaleInt(InnerBorder);
+              End;
 
-        if C is TWinControl then
-          with TWinControl(C).ChildSizing do begin
-            HorizontalSpacing:=ScaleInt(HorizontalSpacing);
-            VerticalSpacing:=ScaleInt(VerticalSpacing);
-            LeftRightSpacing:=ScaleInt(LeftRightSpacing);
-            TopBottomSpacing:=ScaleInt(TopBottomSpacing);
-          end;
+            If C is TWinControl Then
+              With TWinControl(C).ChildSizing Do
+                Begin
+                  HorizontalSpacing := ScaleInt(HorizontalSpacing);
+                  VerticalSpacing := ScaleInt(VerticalSpacing);
+                  LeftRightSpacing := ScaleInt(LeftRightSpacing);
+                  TopBottomSpacing := ScaleInt(TopBottomSpacing);
+                End;
 
-        if C is TButtonPanel then
-          TButtonPanel(C).Spacing:=ScaleInt(TButtonPanel(C).Spacing);
+            If C is TButtonPanel Then
+              TButtonPanel(C).Spacing := ScaleInt(TButtonPanel(C).Spacing);
 
-        if C is TVarGrid then
-          with TVarGrid(C).Columns do
-            for i:=0 to Count - 1 do
-              Items[i].Width:=ScaleInt(Items[i].Width);
-        if C is TStatusBar then
-          with TStatusBar(C) do
-            for i:=0 to Panels.Count - 1 do
-              Panels[i].Width:=ScaleInt(Panels[i].Width);
-      end;
+            If C is TVarGrid Then
+              With TVarGrid(C).Columns Do
+                For i:=0 To Count - 1 Do
+                  Items[i].Width := ScaleInt(Items[i].Width);
+            If C is TStatusBar Then
+              With TStatusBar(C) Do
+                For i:=0 To Panels.Count - 1 Do
+                  Panels[i].Width := ScaleInt(Panels[i].Width);
+          End;
 
-      // Runtime fixes
+        // Runtime fixes
 
-      // Fix right aligned label autosize
-      if C.Visible and (C is TCustomLabel) and C.AutoSize and (TLabel(C).Alignment = taLeftJustify) and (C.Anchors*[akLeft, akRight] = [akRight]) then begin
-        w:=0;
-        h:=0;
-        THackControl(C).CalculatePreferredSize(w, h, True);
-        C.Width:=w;
-      end;
+        // Fix right aligned label autosize
+        If C.Visible And (C is TCustomLabel) And C.AutoSize And (TLabel(C).
+           Alignment = taLeftJustify) And (C.Anchors*[akLeft, akRight] = [
+           akRight]) Then
+          Begin
+            w := 0;
+            h := 0;
+            THackControl(C).CalculatePreferredSize(w, h, True);
+            C.Width := w;
+          End;
 {$ifdef darwin}
-      // Always use standard button height on OS X for proper theming
-      if C.Visible and (C is TCustomButton) then begin
-        w:=0;
-        h:=0;
-        THackControl(C).CalculatePreferredSize(w, h, True);
-        C.Height:=h;
-      end;
-      // Add extra top spacing for group box
-      i:=ScaleInt(6);
-      if C.Parent is TCustomGroupBox then
-        Top:=Top + i;
-      if C is TCustomGroupBox then
-        with TCustomGroupBox(C).ChildSizing do
-          TopBottomSpacing:=TopBottomSpacing + i;
+        // Always use standard button height on OS X for proper theming
+        If C.Visible And (C is TCustomButton) Then
+          Begin
+            w := 0;
+            h := 0;
+            THackControl(C).CalculatePreferredSize(w, h, True);
+            C.Height := h;
+          End;
+        // Add extra top spacing for group box
+        i := ScaleInt(6);
+        If C.Parent is TCustomGroupBox Then
+          Top := Top + i;
+        If C is TCustomGroupBox Then
+          With TCustomGroupBox(C).ChildSizing Do
+            TopBottomSpacing := TopBottomSpacing + i;
 {$endif darwin}
 {$ifdef LCLgtk2}
-      // Fix panel color bug on GTK2
-      if (C is TCustomPanel) and ParentColor and (Color = clDefault) then
-        Color:=clForm;
+        // Fix panel color bug on GTK2
+        If (C is TCustomPanel) And ParentColor And (Color = clDefault) Then
+          Color := clForm;
 {$endif LCLgtk2}
 
-      if C is TWinControl then
-        with TWinControl(C) do
-          for i:=0 to ControlCount - 1 do
-            DoScale(Controls[i]);
-    finally
-      if C is TWinControl then
-        TWinControl(C).EnableAlign;
-    end;
-  end;
-end;
+        If C is TWinControl Then
+          With TWinControl(C) Do
+            For i:=0 To ControlCount - 1 Do
+              DoScale(Controls[i]);
+      Finally
+        If C is TWinControl Then
+          TWinControl(C).EnableAlign;
+    End;
+End;
+End;
 
 constructor TBaseForm.Create(TheOwner: TComponent);
-begin
+Begin
   inherited Create(TheOwner);
-  FNeedAutoSize:=AutoSize;
-  AutoSize:=False;
-end;
+  FNeedAutoSize := AutoSize;
+  AutoSize := False;
+End;
 
-procedure TBaseForm.DoCreate;
+Procedure TBaseForm.DoCreate;
 {$ifdef LCLcarbon}
-var
+
+Var 
   i: integer;
   {$endif LCLcarbon}
-begin
+Begin
   InitScale;
   HandleNeeded;
-  Font.Height:=ScaleInt(-11);
+  Font.Height := ScaleInt(-11);
   DoScale(Self);
-  if FNeedAutoSize then
+  If FNeedAutoSize Then
     AutoSizeForm(Self);
 {$ifdef LCLcarbon}
   // Destroy handles of child controls to fix the LCL Carbon bug.
   // Without this hack, it will not be possible to hide form's controls.
-  for i:=0 to ControlCount - 1 do
-    if Controls[i] is TWinControl then
+  For i:=0 To ControlCount - 1 Do
+    If Controls[i] is TWinControl Then
       THackControl(Controls[i]).DestroyHandle;
 {$endif LCLcarbon}
   inherited DoCreate;
-end;
+End;
 
-procedure TBaseForm.InitScale;
-var
+Procedure TBaseForm.InitScale;
+
+Var 
   i: integer;
   tm: TLCLTextMetric;
-begin
-  if ScaleDivider <> 0 then exit;
-  ScaleDivider:=11;
-  i:=Screen.SystemFont.Height;
-  if i = 0 then begin
-    if Canvas.GetTextMetrics(tm) then begin
-      ScaleMultiplier:=tm.Ascender;
-      if ScaleMultiplier < 11 then
-        ScaleMultiplier:=11;
-    end
-    else begin
-      ScaleMultiplier:=Canvas.TextHeight('Wy');
-      ScaleDivider:=13;
-    end;
-    if ScaleMultiplier = 0 then
-      ScaleMultiplier:=ScaleDivider;
-  end
-  else
-    ScaleMultiplier:=Abs(i);
-  ScaleMultiplier:=ScaleMultiplier*IntfScale;
-  ScaleDivider:=ScaleDivider*100;
-end;
+Begin
+  If ScaleDivider <> 0 Then exit;
+  ScaleDivider := 11;
+  i := Screen.SystemFont.Height;
+  If i = 0 Then
+    Begin
+      If Canvas.GetTextMetrics(tm) Then
+        Begin
+          ScaleMultiplier := tm.Ascender;
+          If ScaleMultiplier < 11 Then
+            ScaleMultiplier := 11;
+        End
+      Else
+        Begin
+          ScaleMultiplier := Canvas.TextHeight('Wy');
+          ScaleDivider := 13;
+        End;
+      If ScaleMultiplier = 0 Then
+        ScaleMultiplier := ScaleDivider;
+    End
+  Else
+    ScaleMultiplier := Abs(i);
+  ScaleMultiplier := ScaleMultiplier*IntfScale;
+  ScaleDivider := ScaleDivider*100;
+End;
 
 initialization
   {$I baseform.lrs}
 
-end.
-
+End.

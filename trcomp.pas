@@ -1,21 +1,23 @@
+
+
 { This file was automatically created by Lazarus. do not edit!
   This source is only used to compile and install the package.
  }
 
-unit trcomp;
+Unit trcomp;
 
-interface
+Interface
 
-uses
-  VarGrid, LazarusPackageIntf;
+Uses 
+VarGrid, LazarusPackageIntf;
 
-implementation
+Implementation
 
-procedure Register;
-begin
+Procedure Register;
+Begin
   RegisterUnit('VarGrid', @VarGrid.Register);
-end;
+End;
 
 initialization
-  RegisterPackage('trcomp', @Register);
-end.
+RegisterPackage('trcomp', @Register);
+End.

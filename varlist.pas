@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -28,403 +30,442 @@
   statement from your version.  If you delete this exception statement from all
   source files in the program, then also delete it here.
 *************************************************************************************}
-unit varlist;
+
+Unit varlist;
 
 {$mode objfpc}{$H+}
 
-interface
+Interface
 
-uses
-  Classes, SysUtils, variants;
+Uses 
+Classes, SysUtils, variants;
 
-type
-  TVarList = class;
+Type 
+  TVarList = Class;
 
-  TCompareVarRowsEvent = function(Sender: TVarList; Row1, Row2: PVariant; DescendingSort: boolean): integer of object;
+    TCompareVarRowsEvent = Function (Sender: TVarList; Row1, Row2: PVariant;
+                                     DescendingSort: boolean): integer Of object
+    ;
 
   { TVarList }
 
-  TVarList = class(TList)
-  private
-    FColCnt: integer;
-    FExtraColumns: integer;
-    FOnCompareVarRows: TCompareVarRowsEvent;
-    FOnDataChanged: TNotifyEvent;
-    FUpdateLockCnt: integer;
-    function GetItemPtr(ACol, ARow: integer): PVariant;
-    function GetItems(ACol, ARow: integer): variant;
-    function GetRowCnt: integer;
-    function GetRowOptions(ARow: integer): integer;
-    function GetRows(ARow: integer): PVariant;
-    function GetRow(ARow: integer): PVariant;
-    procedure SetColCnt(const AValue: integer);
-    procedure SetExtraColumns(const AValue: integer);
-    procedure SetItems(ACol, ARow: integer; const AValue: variant);
-    procedure SetRowCnt(const AValue: integer);
-    procedure SetRowOptions(ARow: integer; const AValue: integer);
-    function IntCols: integer;
-    procedure CheckColIndex(ColIndex: integer);
+    TVarList = Class(TList)
+      Private 
+        FColCnt: integer;
+        FExtraColumns: integer;
+        FOnCompareVarRows: TCompareVarRowsEvent;
+        FOnDataChanged: TNotifyEvent;
+        FUpdateLockCnt: integer;
+        Function GetItemPtr(ACol, ARow: integer): PVariant;
+        Function GetItems(ACol, ARow: integer): variant;
+        Function GetRowCnt: integer;
+        Function GetRowOptions(ARow: integer): integer;
+        Function GetRows(ARow: integer): PVariant;
+        Function GetRow(ARow: integer): PVariant;
+        Procedure SetColCnt(Const AValue: integer);
+        Procedure SetExtraColumns(Const AValue: integer);
+        Procedure SetItems(ACol, ARow: integer; Const AValue: variant);
+        Procedure SetRowCnt(Const AValue: integer);
+        Procedure SetRowOptions(ARow: integer; Const AValue: integer);
+        Function IntCols: integer;
+        Procedure CheckColIndex(ColIndex: integer);
 
-  protected
-    procedure DoDataChanged; virtual;
+      Protected 
+        Procedure DoDataChanged;
+        virtual;
 
-  public
-    constructor Create(AColCnt, ARowCnt: integer);
-    destructor Destroy; override;
-    procedure Clear; override;
-    procedure Delete(Index: Integer);
-    procedure Sort(ACol: integer; Descending: boolean = False); reintroduce;
-    function IndexOf(ACol: integer; const Value: variant): integer;
-    function SortedIndexOf(ACol: integer; const Value: variant): integer;
-    function Find(ACol: integer; const Value: variant; var Index: Integer): Boolean;
-    procedure BeginUpdate;
-    procedure EndUpdate;
-    procedure InsertRow(ARow: integer);
-    function IsUpdating: boolean;
-    function GetRowItem(ARow: PVariant; ACol: integer): variant;
-    property Items[ACol, ARow: integer]: variant read GetItems write SetItems; default;
-    property ItemPtrs[ACol, ARow: integer]: PVariant read GetItemPtr;
-    property Rows[ARow: integer]: PVariant read GetRows;
-    property RowOptions[ARow: integer]: integer read GetRowOptions write SetRowOptions;
-    property ColCnt: integer read FColCnt write SetColCnt;
-    property RowCnt: integer read GetRowCnt write SetRowCnt;
-    property Count: integer read GetRowCnt;
-    property OnDataChanged: TNotifyEvent read FOnDataChanged write FOnDataChanged;
-    property OnCompareVarRows: TCompareVarRowsEvent read FOnCompareVarRows write FOnCompareVarRows;
-    property ExtraColumns: integer read FExtraColumns write SetExtraColumns;
-  end;
+      Public 
+        constructor Create(AColCnt, ARowCnt: integer);
+        destructor Destroy;
+        override;
+        Procedure Clear;
+        override;
+        Procedure Delete(Index: Integer);
+        Procedure Sort(ACol: integer; Descending: boolean = False);
+        reintroduce;
+        Function IndexOf(ACol: integer; Const Value: variant): integer;
+        Function SortedIndexOf(ACol: integer; Const Value: variant): integer;
+        Function Find(ACol: integer; Const Value: variant; Var Index: Integer):
 
-function CompareVariants(const v1, v2: variant): integer;
+                                                                         Boolean
+        ;
+        Procedure BeginUpdate;
+        Procedure EndUpdate;
+        Procedure InsertRow(ARow: integer);
+        Function IsUpdating: boolean;
+        Function GetRowItem(ARow: PVariant; ACol: integer): variant;
+        property Items[ACol, ARow: integer]: variant read GetItems write
+                                             SetItems;
+        default;
+        property ItemPtrs[ACol, ARow: integer]: PVariant read GetItemPtr;
+        property Rows[ARow: integer]: PVariant read GetRows;
+        property RowOptions[ARow: integer]: integer read GetRowOptions write
+                                            SetRowOptions;
+        property ColCnt: integer read FColCnt write SetColCnt;
+        property RowCnt: integer read GetRowCnt write SetRowCnt;
+        property Count: integer read GetRowCnt;
+        property OnDataChanged: TNotifyEvent read FOnDataChanged write
+                                FOnDataChanged;
+        property OnCompareVarRows: TCompareVarRowsEvent read FOnCompareVarRows
+                                   write FOnCompareVarRows;
+        property ExtraColumns: integer read FExtraColumns write SetExtraColumns;
+    End;
 
-implementation
+    Function CompareVariants(Const v1, v2: variant): integer;
 
-uses Math;
+    Implementation
+
+    Uses Math;
 
 { TVarList }
 
-function TVarList.GetItems(ACol, ARow: integer): variant;
-begin
-  CheckColIndex(ACol);
-  Result:=GetRow(ARow)[ACol + IntCols];
-end;
+    Function TVarList.GetItems(ACol, ARow: integer): variant;
+    Begin
+      CheckColIndex(ACol);
+      Result := GetRow(ARow)[ACol + IntCols];
+    End;
 
-function TVarList.GetItemPtr(ACol, ARow: integer): PVariant;
-begin
-  CheckColIndex(ACol);
-  Result:=GetRow(ARow) + (ACol + IntCols);
-end;
+    Function TVarList.GetItemPtr(ACol, ARow: integer): PVariant;
+    Begin
+      CheckColIndex(ACol);
+      Result := GetRow(ARow) + (ACol + IntCols);
+    End;
 
-function TVarList.GetRowCnt: integer;
-begin
-  Result:=inherited GetCount;
-end;
+    Function TVarList.GetRowCnt: integer;
+    Begin
+      Result := Inherited GetCount;
+    End;
 
-function TVarList.GetRowOptions(ARow: integer): integer;
-begin
-  Result:=GetRow(ARow)[0];
-end;
+    Function TVarList.GetRowOptions(ARow: integer): integer;
+    Begin
+      Result := GetRow(ARow)[0];
+    End;
 
-function TVarList.GetRows(ARow: integer): PVariant;
-begin
-  Result:=GetRow(ARow);
-end;
+    Function TVarList.GetRows(ARow: integer): PVariant;
+    Begin
+      Result := GetRow(ARow);
+    End;
 
-function TVarList.GetRow(ARow: integer): PVariant;
-var
-  v: PVariant;
-  sz: integer;
-begin
+    Function TVarList.GetRow(ARow: integer): PVariant;
 
-  if ARow < 0 then ARow := 0;
+    Var 
+      v: PVariant;
+      sz: integer;
+    Begin
 
-  if ARow >= Count then
-    SetRowCnt(ARow + 1);
-  v:=Get(ARow);
-  if v = nil then begin
-    sz:=SizeOf(variant)*(FColCnt + IntCols);
-    v:=GetMem(sz);
-    FillChar(v^, sz, 0);
-    v[0]:=0;
-    Put(ARow, v);
-  end;
-  Result:=v;
-end;
+      If ARow < 0 Then ARow := 0;
 
-procedure TVarList.SetColCnt(const AValue: integer);
-var
-  i, j, ocnt, ncnt: integer;
-  p: PVariant;
-begin
-  if FColCnt = AValue then exit;
-  ocnt:=FColCnt + IntCols;
-  FColCnt:=AValue;
-  ncnt:=FColCnt + IntCols;
-  for i:=0 to Count - 1 do begin
-    p:=GetRow(i);
-    for j:=ncnt to ocnt - 1 do
-      VarClear(p[j]);
-    ReAllocMem(p, ncnt*SizeOf(variant));
-    if ncnt > ocnt then
-      FillChar(p[ocnt], (ncnt - ocnt)*SizeOf(variant), 0);
-  end;
-end;
+      If ARow >= Count Then
+        SetRowCnt(ARow + 1);
+      v := Get(ARow);
+      If v = Nil Then
+        Begin
+          sz := SizeOf(variant)*(FColCnt + IntCols);
+          v := GetMem(sz);
+          FillChar(v^, sz, 0);
+          v[0] := 0;
+          Put(ARow, v);
+        End;
+      Result := v;
+    End;
 
-procedure TVarList.SetExtraColumns(const AValue: integer);
-begin
-  if FExtraColumns=AValue then exit;
-  if RowCnt <> 0 then
-    raise Exception.Create('Unable to set extra columns.');
-  FExtraColumns:=AValue;
-end;
+    Procedure TVarList.SetColCnt(Const AValue: integer);
 
-procedure TVarList.SetItems(ACol, ARow: integer; const AValue: variant);
-begin
-  GetRow(ARow)[ACol + IntCols]:=AValue;
-  DoDataChanged;
-end;
+    Var 
+      i, j, ocnt, ncnt: integer;
+      p: PVariant;
+    Begin
+      If FColCnt = AValue Then exit;
+      ocnt := FColCnt + IntCols;
+      FColCnt := AValue;
+      ncnt := FColCnt + IntCols;
+      For i:=0 To Count - 1 Do
+        Begin
+          p := GetRow(i);
+          For j:=ncnt To ocnt - 1 Do
+            VarClear(p[j]);
+          ReAllocMem(p, ncnt*SizeOf(variant));
+          If ncnt > ocnt Then
+            FillChar(p[ocnt], (ncnt - ocnt)*SizeOf(variant), 0);
+        End;
+    End;
 
-procedure TVarList.SetRowCnt(const AValue: integer);
-begin
-  BeginUpdate;
-  try
-    while Count > AValue do
-      Delete(Count - 1);
-    SetCount(AValue);
-  finally
-    EndUpdate;
-  end;
-end;
+    Procedure TVarList.SetExtraColumns(Const AValue: integer);
+    Begin
+      If FExtraColumns=AValue Then exit;
+      If RowCnt <> 0 Then
+        raise Exception.Create('Unable to set extra columns.');
+      FExtraColumns := AValue;
+    End;
 
-procedure TVarList.SetRowOptions(ARow: integer; const AValue: integer);
-begin
-  GetRow(ARow)[0]:=AValue;
-end;
+    Procedure TVarList.SetItems(ACol, ARow: integer; Const AValue: variant);
+    Begin
+      GetRow(ARow)[ACol + IntCols] := AValue;
+      DoDataChanged;
+    End;
 
-function TVarList.IntCols: integer;
-begin
-  Result:=FExtraColumns + 1;
-end;
+    Procedure TVarList.SetRowCnt(Const AValue: integer);
+    Begin
+      BeginUpdate;
+      Try
+        While Count > AValue Do
+          Delete(Count - 1);
+        SetCount(AValue);
+      Finally
+        EndUpdate;
+    End;
+  End;
 
-procedure TVarList.CheckColIndex(ColIndex: integer);
-begin
-  if (ColIndex + IntCols < 0) or (ColIndex >= ColCnt) then
+Procedure TVarList.SetRowOptions(ARow: integer; Const AValue: integer);
+Begin
+  GetRow(ARow)[0] := AValue;
+End;
+
+Function TVarList.IntCols: integer;
+Begin
+  Result := FExtraColumns + 1;
+End;
+
+Procedure TVarList.CheckColIndex(ColIndex: integer);
+Begin
+  If (ColIndex + IntCols < 0) Or (ColIndex >= ColCnt) Then
     raise Exception.CreateFmt('Invalid column index (%d).', [ColIndex]);
-end;
+End;
 
-procedure TVarList.DoDataChanged;
-begin
-  if Assigned(FOnDataChanged) and (FUpdateLockCnt = 0) then
+Procedure TVarList.DoDataChanged;
+Begin
+  If Assigned(FOnDataChanged) And (FUpdateLockCnt = 0) Then
     FOnDataChanged(Self);
-end;
+End;
 
 constructor TVarList.Create(AColCnt, ARowCnt: integer);
-begin
+Begin
   inherited Create;
-  FColCnt:=AColCnt;
-  RowCnt:=ARowCnt;
-end;
+  FColCnt := AColCnt;
+  RowCnt := ARowCnt;
+End;
 
 destructor TVarList.Destroy;
-begin
-  FOnDataChanged:=nil;
+Begin
+  FOnDataChanged := Nil;
   inherited Destroy;
-end;
+End;
 
-procedure TVarList.Clear;
-var
+Procedure TVarList.Clear;
+
+Var 
   i: integer;
   v: PVariant;
-begin
-  for i:=0 to Count - 1 do begin
-    v:=inherited Get(i);
-    if v <> nil then begin
-      VarClear(v^);
-      FreeMem(v);
-    end;
-  end;
+Begin
+  For i:=0 To Count - 1 Do
+    Begin
+      v := Inherited Get(i);
+      If v <> Nil Then
+        Begin
+          VarClear(v^);
+          FreeMem(v);
+        End;
+    End;
   inherited Clear;
   DoDataChanged;
-end;
+End;
 
-procedure TVarList.Delete(Index: Integer);
-var
+Procedure TVarList.Delete(Index: Integer);
+
+Var 
   v: PVariant;
   i: integer;
-begin
-  v:=inherited Get(Index);
-  if v <> nil then begin
-    for i:=0 to ColCnt + IntCols - 1 do
-      VarClear(v[i]);
-    FreeMem(v);
-  end;
+Begin
+  v := Inherited Get(Index);
+  If v <> Nil Then
+    Begin
+      For i:=0 To ColCnt + IntCols - 1 Do
+        VarClear(v[i]);
+      FreeMem(v);
+    End;
   inherited Delete(Index);
   DoDataChanged;
-end;
+End;
 
-function CompareVariants(const v1, v2: variant): integer;
-var
+Function CompareVariants(Const v1, v2: variant): integer;
+
+Var 
   v1e, v2e: boolean;
-  d1,d2:double;
-begin
-  v1e:=VarIsNull(v1) or VarIsEmpty(v1);
-  v2e:=VarIsNull(v2) or VarIsEmpty(v2);
-  if v1e and v2e then
-    Result:=0
-  else
-  if v1e and not v2e then
-    Result:=-1
-  else
-  if not v1e and v2e then
-    Result:=1
-  else
-  begin
-      case VarType(v1) of
-      varInteger,varsmallint,varshortint,varbyte,varword,varlongword,varint64,varqword:
-        begin
-          d1:=Int64(v1);
-        end;
-      varDouble,varSingle,varDate:
-        begin
-        d1:=double(v1);
-        Result:=Sign(double(v1) - double(v2));
-        end
-      else
-        Result:=AnsiCompareText(v1, v2);
+  d1,d2: double;
+Begin
+  v1e := VarIsNull(v1) Or VarIsEmpty(v1);
+  v2e := VarIsNull(v2) Or VarIsEmpty(v2);
+  If v1e And v2e Then
+    Result := 0
+  Else
+    If v1e And Not v2e Then
+      Result := -1
+  Else
+    If Not v1e And v2e Then
+      Result := 1
+  Else
+    Begin
+      Case VarType(v1) Of 
+        varInteger,varsmallint,varshortint,varbyte,varword,varlongword,varint64,
+        varqword:
+                  Begin
+                    d1 := Int64(v1);
+                  End;
+        varDouble,varSingle,varDate:
+                                     Begin
+                                       d1 := double(v1);
+                                       Result := Sign(double(v1) - double(v2));
+                                     End
+                                     Else
+                                       Result := AnsiCompareText(v1, v2);
         exit;
-      end;
-    case VarType(v2) of
-    varInteger,varsmallint,varshortint,varbyte,varword,varlongword,varint64,varqword:
-      begin
-        d2:=Int64(v2);
-        Result:=Sign(d1-d2);
-      end;
-    varDouble,varSingle,varDate:
-      begin
-      d2:=double(v2);
-      Result:=Sign(d1-d2);
-      end
-    else
-      Result:=AnsiCompareText(v1, v2);
-    end;
-  end;
+      End;
+      Case VarType(v2) Of 
+        varInteger,varsmallint,varshortint,varbyte,varword,varlongword,varint64,
+        varqword:
+                  Begin
+                    d2 := Int64(v2);
+                    Result := Sign(d1-d2);
+                  End;
+        varDouble,varSingle,varDate:
+                                     Begin
+                                       d2 := double(v2);
+                                       Result := Sign(d1-d2);
+                                     End
+                                     Else
+                                       Result := AnsiCompareText(v1, v2);
+      End;
+    End;
 
-end;
+End;
 
-var
+Var 
   _SortColumn: integer;
   _SortDesc: boolean;
   _IntCols: integer;
   _List: TVarList;
 
-function CompareItems(Item1, Item2: Pointer): Integer;
-var
+Function CompareItems(Item1, Item2: Pointer): Integer;
+
+Var 
   v1, v2: PVariant;
   i: integer;
-begin
-  if Item1 = Item2 then begin
-    Result:=0;
-    exit;
-  end;
-  v1:=Item1;
-  v2:=Item2;
-  if Assigned(_List.OnCompareVarRows) then
-    Result:=_List.OnCompareVarRows(_List, v1, v2, _SortDesc)
-  else
-    Result:=0;
-  if Result = 0 then begin
-    Result:=CompareVariants(v1[_SortColumn], v2[_SortColumn]);
-    i:=_IntCols;
-    while (Result = 0) and (i < _List.ColCnt + _IntCols) do begin
-      if i <> _SortColumn then
-        Result:=CompareVariants(v1[i], v2[i]);
-      Inc(i);
-    end;
-    if _SortDesc then
-      Result:=-Result;
-  end;
-end;
+Begin
+  If Item1 = Item2 Then
+    Begin
+      Result := 0;
+      exit;
+    End;
+  v1 := Item1;
+  v2 := Item2;
+  If Assigned(_List.OnCompareVarRows) Then
+    Result := _List.OnCompareVarRows(_List, v1, v2, _SortDesc)
+  Else
+    Result := 0;
+  If Result = 0 Then
+    Begin
+      Result := CompareVariants(v1[_SortColumn], v2[_SortColumn]);
+      i := _IntCols;
+      While (Result = 0) And (i < _List.ColCnt + _IntCols) Do
+        Begin
+          If i <> _SortColumn Then
+            Result := CompareVariants(v1[i], v2[i]);
+          Inc(i);
+        End;
+      If _SortDesc Then
+        Result := -Result;
+    End;
+End;
 
-procedure TVarList.Sort(ACol: integer; Descending: boolean);
-begin
-  _SortColumn:=ACol + IntCols;
-  _SortDesc:=Descending;
-  _IntCols:=IntCols;
-  _List:=Self;
+Procedure TVarList.Sort(ACol: integer; Descending: boolean);
+Begin
+  _SortColumn := ACol + IntCols;
+  _SortDesc := Descending;
+  _IntCols := IntCols;
+  _List := Self;
   inherited Sort(@CompareItems);
   DoDataChanged;
-end;
+End;
 
-function TVarList.IndexOf(ACol: integer; const Value: variant): integer;
-var
+Function TVarList.IndexOf(ACol: integer; Const Value: variant): integer;
+
+Var 
   i: integer;
-begin
-  for i:=0 to RowCnt - 1 do
-    if CompareVariants(Items[ACol, i], Value) = 0 then begin
-      Result:=i;
-      exit;
-    end;
-  Result:=-1;
-end;
+Begin
+  For i:=0 To RowCnt - 1 Do
+    If CompareVariants(Items[ACol, i], Value) = 0 Then
+      Begin
+        Result := i;
+        exit;
+      End;
+  Result := -1;
+End;
 
-function TVarList.SortedIndexOf(ACol: integer; const Value: variant): integer;
-begin
-  Result:=-1;
-  if not Find(ACol, Value, Result) then
-    Result:=-1;
-end;
+Function TVarList.SortedIndexOf(ACol: integer; Const Value: variant): integer;
+Begin
+  Result := -1;
+  If Not Find(ACol, Value, Result) Then
+    Result := -1;
+End;
 
-function TVarList.Find(ACol: integer; const Value: variant; var Index: Integer): Boolean;
-var
+Function TVarList.Find(ACol: integer; Const Value: variant; Var Index: Integer):
+
+                                                                         Boolean
+;
+
+Var 
   L, R, I: Integer;
   CompareRes: PtrInt;
-begin
+Begin
   Result := false;
   L := 0;
   R := Count - 1;
-  while (L<=R) do
-  begin
-    I := L + (R - L) div 2;
-    CompareRes := CompareVariants(Value, Items[ACol, I]);
-    if (CompareRes>0) then
-      L := I+1
-    else begin
-      R := I-1;
-      if (CompareRes=0) then begin
-        Result := true;
-        L := I; // forces end of while loop
-      end;
-    end;
-  end;
+  While (L<=R) Do
+    Begin
+      I := L + (R - L) Div 2;
+      CompareRes := CompareVariants(Value, Items[ACol, I]);
+      If (CompareRes>0) Then
+        L := I+1
+      Else
+        Begin
+          R := I-1;
+          If (CompareRes=0) Then
+            Begin
+              Result := true;
+              L := I;
+              // forces end of while loop
+            End;
+        End;
+    End;
   Index := L;
-end;
+End;
 
-procedure TVarList.BeginUpdate;
-begin
+Procedure TVarList.BeginUpdate;
+Begin
   Inc(FUpdateLockCnt);
-end;
+End;
 
-procedure TVarList.EndUpdate;
-begin
+Procedure TVarList.EndUpdate;
+Begin
   Dec(FUpdateLockCnt);
-  if FUpdateLockCnt = 0 then
+  If FUpdateLockCnt = 0 Then
     DoDataChanged;
-end;
+End;
 
-procedure TVarList.InsertRow(ARow: integer);
-begin
-  inherited Insert(ARow, nil);
-end;
+Procedure TVarList.InsertRow(ARow: integer);
+Begin
+  inherited Insert(ARow, Nil);
+End;
 
-function TVarList.IsUpdating: boolean;
-begin
-  Result:=FUpdateLockCnt > 0;
-end;
+Function TVarList.IsUpdating: boolean;
+Begin
+  Result := FUpdateLockCnt > 0;
+End;
 
-function TVarList.GetRowItem(ARow: PVariant; ACol: integer): variant;
-begin
+Function TVarList.GetRowItem(ARow: PVariant; ACol: integer): variant;
+Begin
   CheckColIndex(ACol);
-  Result:=ARow[ACol + IntCols];
-end;
+  Result := ARow[ACol + IntCols];
+End;
 
-end.
-
+End.

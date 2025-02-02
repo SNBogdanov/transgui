@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -28,634 +30,691 @@
   statement from your version.  If you delete this exception statement from all
   source files in the program, then also delete it here.
 *************************************************************************************}
-unit utils;
+
+Unit utils;
 
 {$mode objfpc}{$H+}
 
-interface
+Interface
 
-uses
-  SysUtils, Classes, Controls, Forms, IniFiles,
+Uses 
+SysUtils, Classes, Controls, Forms, IniFiles,
 {$ifdef windows}
-  Windows, win32int, InterfaceBase
+Windows, win32int, InterfaceBase
 {$endif}
 {$ifdef unix}
-  baseunix, unix, unixutil, process
+baseunix, unix, unixutil, process
 {$endif}
-  ;
+;
 
-type
+Type 
 
   { TFileStreamUTF8 }
 
-  TFileStreamUTF8 = class(THandleStream)
-  private
-    FFileName: utf8string;
-  public
-    constructor Create(const AFileName: utf8string; Mode: Word);
-    constructor Create(const AFileName: utf8string; Mode: Word; Rights: Cardinal);
-    destructor Destroy; override;
-    property FileName: utf8string Read FFilename;
-  end;
+  TFileStreamUTF8 = Class(THandleStream)
+    Private 
+      FFileName: utf8string;
+    Public 
+      constructor Create(Const AFileName: utf8string; Mode: Word);
+      constructor Create(Const AFileName: utf8string; Mode: Word; Rights:
+                         Cardinal);
+      destructor Destroy;
+      override;
+      property FileName: utf8string Read FFilename;
+  End;
 
 
   { TIniFileUtf8 }
 
-  TIniFileUtf8 = class(TIniFile)
-  private
-    FStream: TFileStreamUTF8;
-    FFileName: string;
-  public
-    constructor Create(const AFileName: string; AEscapeLineFeeds : Boolean = False); override;
-    destructor Destroy; override;
-    procedure UpdateFile; override;
-    function getFileName() : string;
-  end;
+  TIniFileUtf8 = Class(TIniFile)
+    Private 
+      FStream: TFileStreamUTF8;
+      FFileName: string;
+    Public 
+      constructor Create(Const AFileName: String; AEscapeLineFeeds : Boolean =
+                         False);
+      override;
+      destructor Destroy;
+      override;
+      Procedure UpdateFile;
+      override;
+      Function getFileName() : string;
+  End;
 
 
 
-function FileOpenUTF8(Const FileName : string; Mode : Integer) : THandle;
-function FileCreateUTF8(Const FileName : string) : THandle;
-function FileCreateUTF8(Const FileName : string; Rights: Cardinal) : THandle;
+Function FileOpenUTF8(Const FileName : String; Mode : Integer) : THandle;
+Function FileCreateUTF8(Const FileName : String) : THandle;
+Function FileCreateUTF8(Const FileName : String; Rights: Cardinal) : THandle;
 
-function GetTimeZoneDelta: TDateTime;
+Function GetTimeZoneDelta: TDateTime;
 
-procedure ShowTaskbarButton;
-procedure HideTaskbarButton;
-function IsTaskbarButtonVisible: boolean;
+Procedure ShowTaskbarButton;
+Procedure HideTaskbarButton;
+Function IsTaskbarButtonVisible: boolean;
 
-procedure CenterOnParent(C: TControl);
-procedure EnableControls(AEnable: boolean; const AControls: array of TControl);
+Procedure CenterOnParent(C: TControl);
+Procedure EnableControls(AEnable: boolean; Const AControls: Array Of TControl);
 
-function OpenURL(const URL: string; const Params: string = ''): boolean;
+Function OpenURL(Const URL: String; Const Params: String = ''): boolean;
 
-function CompareFilePath(const p1, p2: string): integer;
+Function CompareFilePath(Const p1, p2: String): integer;
 
-procedure AppBusy;
-procedure AppNormal;
-procedure ForceAppNormal;
+Procedure AppBusy;
+Procedure AppNormal;
+Procedure ForceAppNormal;
 
-function ParamStrUTF8(Param: Integer): utf8string;
-function ParamCount: integer;
-function GetCmdSwitchValue(const Switch: string): string;
+Function ParamStrUTF8(Param: Integer): utf8string;
+Function ParamCount: integer;
+Function GetCmdSwitchValue(Const Switch: String): string;
 
-function Base32Decode(const s: ansistring): ansistring;
+Function Base32Decode(Const s: ansistring): ansistring;
 
 {$ifdef CALLSTACK}
-function GetLastExceptionCallStack: string;
+Function GetLastExceptionCallStack: string;
 {$endif CALLSTACK}
 
 {$ifdef mswindows}
-procedure AllowSetForegroundWindow(dwProcessId: DWORD);
+Procedure AllowSetForegroundWindow(dwProcessId: DWORD);
 {$endif mswindows}
 
-implementation
+Implementation
 
-uses
+Uses 
 {$ifdef CALLSTACK}
-  lineinfo2,
+lineinfo2,
 {$endif CALLSTACK}
-  FileUtil, LazUTF8, LazFileUtils, StdCtrls, Graphics;
+FileUtil, LazUTF8, LazFileUtils, StdCtrls, Graphics;
 
 {$ifdef windows}
-function FileOpenUTF8(Const FileName : string; Mode : Integer) : THandle;
-const
-  AccessMode: array[0..2] of Cardinal  = (
-    GENERIC_READ,
-    GENERIC_WRITE,
-    GENERIC_READ or GENERIC_WRITE);
-  ShareMode: array[0..4] of Integer = (
-              0,
-              0,
-              FILE_SHARE_READ,
-              FILE_SHARE_WRITE,
-              FILE_SHARE_READ or FILE_SHARE_WRITE);
-begin
-  Result := CreateFileW(PWideChar(UTF8Decode(FileName)), dword(AccessMode[Mode and 3]),
-                      dword(ShareMode[(Mode and $F0) shr 4]), nil, OPEN_EXISTING,
-                      FILE_ATTRIBUTE_NORMAL, 0);
+Function FileOpenUTF8(Const FileName : String; Mode : Integer) : THandle;
+
+Const 
+  AccessMode: array[0..2] Of Cardinal  = (
+                                          GENERIC_READ,
+                                          GENERIC_WRITE,
+                                          GENERIC_READ Or GENERIC_WRITE);
+  ShareMode: array[0..4] Of Integer = (
+                                       0,
+                                       0,
+                                       FILE_SHARE_READ,
+                                       FILE_SHARE_WRITE,
+                                       FILE_SHARE_READ Or FILE_SHARE_WRITE);
+Begin
+  Result := CreateFileW(PWideChar(UTF8Decode(FileName)), dword(AccessMode[Mode
+            And 3]),
+            dword(ShareMode[(Mode And $F0) shr 4]), Nil, OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL, 0);
   //if fail api return feInvalidHandle (INVALIDE_HANDLE=feInvalidHandle=-1)
-end;
+End;
 
-function FileCreateUTF8(Const FileName : string) : THandle;
-begin
-  Result := CreateFileW(PWideChar(UTF8Decode(FileName)), GENERIC_READ or GENERIC_WRITE,
-                      0, nil, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-end;
+Function FileCreateUTF8(Const FileName : String) : THandle;
+Begin
+  Result := CreateFileW(PWideChar(UTF8Decode(FileName)), GENERIC_READ Or
+            GENERIC_WRITE,
+            0, Nil, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+End;
 
-function FileCreateUTF8(Const FileName : string; Rights: Cardinal) : THandle;
-begin
-  Result := CreateFileW(PWideChar(UTF8Decode(FileName)), GENERIC_READ or GENERIC_WRITE,
-                      0, nil, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-end;
+Function FileCreateUTF8(Const FileName : String; Rights: Cardinal) : THandle;
+Begin
+  Result := CreateFileW(PWideChar(UTF8Decode(FileName)), GENERIC_READ Or
+            GENERIC_WRITE,
+            0, Nil, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+End;
 
-var
+Var 
   FParams: TStringList;
 
-function ParamStrUTF8(Param: Integer): utf8string;
+Function ParamStrUTF8(Param: Integer): utf8string;
 
-  function SkipSpaces( P: PWideChar ): PWideChar;
-  begin
-    while True do
-    begin
-      while (P[0] <> #0) and (P[0] <= ' ') do Inc(P);
-      if (P[0] = '"') and (P[1] = '"') then Inc(P, 2) else Break;
-    end;
-    Result := P;
-  end;
-
-  function SkipParam(P: PWideChar): PWideChar;
-  begin
-    P := SkipSpaces( P );
-    while P[0] > ' ' do
-      if P[0] = '"' then
-      begin
+Function SkipSpaces( P: PWideChar ): PWideChar;
+Begin
+  While True Do
+    Begin
+      While (P[0] <> #0) And (P[0] <= ' ') Do
         Inc(P);
-        while (P[0] <> #0) and (P[0] <> '"') do
+      If (P[0] = '"') And (P[1] = '"') Then Inc(P, 2)
+      Else Break;
+    End;
+  Result := P;
+End;
+
+Function SkipParam(P: PWideChar): PWideChar;
+Begin
+  P := SkipSpaces( P );
+  While P[0] > ' ' Do
+    If P[0] = '"' Then
+      Begin
+        Inc(P);
+        While (P[0] <> #0) And (P[0] <> '"') Do
           Inc(P);
-        if P[0] <> #0 then Inc(P);
-      end
-        else
-        Inc(P);
-    Result := P;
-  end;
+        If P[0] <> #0 Then Inc(P);
+      End
+    Else
+      Inc(P);
+  Result := P;
+End;
 
-var
+Var 
   P, P1: PWideChar;
   s: widestring;
-begin
-  if Win32Platform <> VER_PLATFORM_WIN32_NT then begin
-    Result:=LazUTF8.ParamStrUTF8(Param);
-    exit;
-  end;
+Begin
+  If Win32Platform <> VER_PLATFORM_WIN32_NT Then
+    Begin
+      Result := LazUTF8.ParamStrUTF8(Param);
+      exit;
+    End;
 
-  if FParams = nil then begin
-    FParams:=TStringList.Create;
-    P := GetCommandLineW;
-    while True do begin
-      P := SkipSpaces( P );
-      P1 := P;
-      P := SkipParam(P);
-      if P = P1 then
-        break;
-      s := Copy( P1, 1, P - P1 );
-      if Length(s) >= 2 then
-        if (s[1] = '"') and (s[Length(s)] = '"') then
-          s:=Copy(s, 2, Length(s) - 2);
-      FParams.Add(UTF8Encode(s));
-    end;
-    // Getting real executable name
-    SetLength(s, 1000);
-    SetLength(s, GetModuleFileNameW(HINSTANCE, PWideChar(s), Length(s) + 1));
-    if s <> '' then
-      if FParams.Count > 0 then
-        FParams[0]:=UTF8Encode(s)
-      else
+  If FParams = Nil Then
+    Begin
+      FParams := TStringList.Create;
+      P := GetCommandLineW;
+      While True Do
+        Begin
+          P := SkipSpaces( P );
+          P1 := P;
+          P := SkipParam(P);
+          If P = P1 Then
+            break;
+          s := Copy( P1, 1, P - P1 );
+          If Length(s) >= 2 Then
+            If (s[1] = '"') And (s[Length(s)] = '"') Then
+              s := Copy(s, 2, Length(s) - 2);
+          FParams.Add(UTF8Encode(s));
+        End;
+      // Getting real executable name
+      SetLength(s, 1000);
+      SetLength(s, GetModuleFileNameW(HINSTANCE, PWideChar(s), Length(s) + 1));
+      If s <> '' Then
+        If FParams.Count > 0 Then
+          FParams[0] := UTF8Encode(s)
+      Else
         FParams.Add(UTF8Encode(s));
-  end;
+    End;
 
-  if Param >= FParams.Count then
-    Result:=''
-  else
-    Result:=FParams[Param];
-end;
+  If Param >= FParams.Count Then
+    Result := ''
+  Else
+    Result := FParams[Param];
+End;
 
-function ParamCount: integer;
-begin
-  if Win32Platform <> VER_PLATFORM_WIN32_NT then
-    Result:=System.ParamCount
-  else begin
-    if FParams = nil then
-      ParamStrUTF8(0);
-    Result:=FParams.Count - 1;
-  end;
-end;
+Function ParamCount: integer;
+Begin
+  If Win32Platform <> VER_PLATFORM_WIN32_NT Then
+    Result := System.ParamCount
+  Else
+    Begin
+      If FParams = Nil Then
+        ParamStrUTF8(0);
+      Result := FParams.Count - 1;
+    End;
+End;
 
-{$else} // Non-Windows targets
+{$else}
+// Non-Windows targets
 
-function FileOpenUTF8(Const FileName : string; Mode : Integer) : THandle;
-begin
-  Result:=FileOpen(FileName, Mode);
-end;
+Function FileOpenUTF8(Const FileName : String; Mode : Integer) : THandle;
+Begin
+  Result := FileOpen(FileName, Mode);
+End;
 
-function FileCreateUTF8(Const FileName : string) : THandle;
-begin
-  Result:=FileCreate(FileName);
-end;
+Function FileCreateUTF8(Const FileName : String) : THandle;
+Begin
+  Result := FileCreate(FileName);
+End;
 
-function FileCreateUTF8(Const FileName : string; Rights: Cardinal) : THandle;
-begin
-  Result:=FileCreate(FileName, Rights);
-end;
+Function FileCreateUTF8(Const FileName : String; Rights: Cardinal) : THandle;
+Begin
+  Result := FileCreate(FileName, Rights);
+End;
 
-function ParamStrUTF8(Param: Integer): utf8string;
-begin
-  Result:=LazUTF8.ParamStrUTF8(Param);
-end;
+Function ParamStrUTF8(Param: Integer): utf8string;
+Begin
+  Result := LazUTF8.ParamStrUTF8(Param);
+End;
 
-function ParamCount: integer;
-begin
-  Result:=System.ParamCount;
-end;
+Function ParamCount: integer;
+Begin
+  Result := System.ParamCount;
+End;
 
 {$endif windows}
 
 { TFileStreamUTF8 }
 
-constructor TFileStreamUTF8.Create(const AFileName: utf8string; Mode: Word);
-var
+constructor TFileStreamUTF8.Create(Const AFileName: utf8string; Mode: Word);
+
+Var 
   lHandle: THandle;
-begin
-  FFileName:= AFileName;
-  if Mode = fmcreate then
-    lHandle:= FileCreateUTF8(AFileName)
-  else
-    lHandle:= FileOpenUTF8(AFileName, Mode);
+Begin
+  FFileName := AFileName;
+  If Mode = fmcreate Then
+    lHandle := FileCreateUTF8(AFileName)
+  Else
+    lHandle := FileOpenUTF8(AFileName, Mode);
 
-  If (THandle(lHandle)=feInvalidHandle) then
-  begin
-    if Mode = fmCreate then
-      raise EFCreateError.createfmt({SFCreateError}'Unable to create file "%s"', [AFileName])
-    else
-      raise EFOpenError.Createfmt({SFOpenError}'Unable to open file "%s"', [AFilename]);
-  end
-  else
+  If (THandle(lHandle)=feInvalidHandle) Then
+    Begin
+      If Mode = fmCreate Then
+        raise EFCreateError.createfmt({SFCreateError}
+                                      'Unable to create file "%s"', [AFileName])
+      Else
+        raise EFOpenError.Createfmt({SFOpenError}'Unable to open file "%s"', [
+                                    AFilename]);
+    End
+  Else
     inherited Create(lHandle);
-end;
+End;
 
-constructor TFileStreamUTF8.Create(const AFileName: utf8string; Mode: Word; Rights: Cardinal);
-var
+constructor TFileStreamUTF8.Create(Const AFileName: utf8string; Mode: Word;
+                                   Rights: Cardinal);
+
+Var 
   lHandle: THandle;
-begin
-  FFileName:=AFileName;
-  if Mode=fmcreate then
-    lHandle:=FileCreateUTF8(AFileName,Rights)
-  else
-    lHandle:=FileOpenUTF8(AFileName,Mode);
+Begin
+  FFileName := AFileName;
+  If Mode=fmcreate Then
+    lHandle := FileCreateUTF8(AFileName,Rights)
+  Else
+    lHandle := FileOpenUTF8(AFileName,Mode);
 
-  if (THandle(lHandle)=feInvalidHandle) then
-  begin
-    if Mode=fmcreate then
-      raise EFCreateError.createfmt({SFCreateError}'Unable to create file "%s"',[AFileName])
-    else
-      raise EFOpenError.Createfmt({SFOpenError}'Unable to open file "%s"',[AFilename]);
-  end
-  else
+  If (THandle(lHandle)=feInvalidHandle) Then
+    Begin
+      If Mode=fmcreate Then
+        raise EFCreateError.createfmt({SFCreateError}
+                                      'Unable to create file "%s"',[AFileName])
+      Else
+        raise EFOpenError.Createfmt({SFOpenError}'Unable to open file "%s"',[
+                                    AFilename]);
+    End
+  Else
     inherited Create(lHandle);
-end;
+End;
 
 destructor TFileStreamUTF8.Destroy;
-begin
+Begin
   FileClose(Handle);
-end;
+End;
 
 { TIniFileUtf8 }
 
-constructor TIniFileUtf8.Create(const AFileName: string; AEscapeLineFeeds: Boolean);
-var
+constructor TIniFileUtf8.Create(Const AFileName: String; AEscapeLineFeeds:
+                                Boolean);
+
+Var 
   m: integer;
-begin
-  FFileName:=AFileName;
-  if FileExistsUTF8(FFileName) then
-    m:=fmOpenRead or fmShareDenyNone
-  else
-    m:=fmCreate;
-  FStream:=TFileStreamUTF8.Create(AFileName, m);
+Begin
+  FFileName := AFileName;
+  If FileExistsUTF8(FFileName) Then
+    m := fmOpenRead Or fmShareDenyNone
+  Else
+    m := fmCreate;
+  FStream := TFileStreamUTF8.Create(AFileName, m);
   inherited Create(FStream, AEscapeLineFeeds);
   FileClose(FStream.Handle);
-  THandle(pointer(@FStream.Handle)^):=0;
-end;
+  THandle(pointer(@FStream.Handle)^) := 0;
+End;
 
 destructor TIniFileUtf8.Destroy;
-begin
+Begin
   inherited Destroy;
   FStream.Free;
-end;
+End;
 
-procedure TIniFileUtf8.UpdateFile;
-var
+Procedure TIniFileUtf8.UpdateFile;
+
+Var 
   h: THANDLE;
-begin
-  if FileExistsUTF8(FFileName) then
-    h:=FileOpenUTF8(FFileName, fmOpenWrite or fmShareDenyWrite)
-  else
-    h:=FileCreateUTF8(FFileName);
-  if h = THandle(-1) then
-    raise Exception.Create('Unable to write to INI file.' + LineEnding + SysErrorMessageUTF8(GetLastOSError));
-  THandle(pointer(@FStream.Handle)^):=h;
-  try
+Begin
+  If FileExistsUTF8(FFileName) Then
+    h := FileOpenUTF8(FFileName, fmOpenWrite Or fmShareDenyWrite)
+  Else
+    h := FileCreateUTF8(FFileName);
+  If h = THandle(-1) Then
+    raise Exception.Create('Unable to write to INI file.' + LineEnding +
+                           SysErrorMessageUTF8(GetLastOSError));
+  THandle(pointer(@FStream.Handle)^) := h;
+  Try
     inherited UpdateFile;
-    FStream.Size:=FStream.Position;
-  finally
+    FStream.Size := FStream.Position;
+  Finally
     FileClose(FStream.Handle);
-    THandle(pointer(@FStream.Handle)^):=0;
-  end;
-end;
+    THandle(pointer(@FStream.Handle)^) := 0;
+End;
+End;
 
 // ---------------------------------------------
 
-function GetTimeZoneDelta: TDateTime;
+Function GetTimeZoneDelta: TDateTime;
 {$ifdef windows}
-var
+
+Var 
   t: TIME_ZONE_INFORMATION;
   res: dword;
 {$endif}
-begin
-  Result:=0;
+Begin
+  Result := 0;
 {$ifdef windows}
-  res:=GetTimeZoneInformation(t);
-  if res<> TIME_ZONE_ID_INVALID then begin
-    case res of
-      TIME_ZONE_ID_STANDARD:
-        Result:=-t.StandardBias;
-      TIME_ZONE_ID_DAYLIGHT:
-        Result:=-t.DaylightBias;
-    end;
-    Result:=(-t.Bias + Result)/MinsPerDay;
-  end;
+  res := GetTimeZoneInformation(t);
+  If res<> TIME_ZONE_ID_INVALID Then
+    Begin
+      Case res Of 
+        TIME_ZONE_ID_STANDARD:
+                               Result := -t.StandardBias;
+        TIME_ZONE_ID_DAYLIGHT:
+                               Result := -t.DaylightBias;
+      End;
+      Result := (-t.Bias + Result)/MinsPerDay;
+    End;
 {$endif}
 {$ifdef unix}
-  Result:=Tzseconds/SecsPerDay;
+  Result := Tzseconds/SecsPerDay;
 {$endif}
-end;
+End;
 
-procedure ShowTaskbarButton;
-begin
+Procedure ShowTaskbarButton;
+Begin
 {$ifdef mswindows}
   ShowWindow(TWin32WidgetSet(WidgetSet).AppHandle, SW_SHOW);
 {$else}
-  Application.MainForm.Visible:=True;
+  Application.MainForm.Visible := True;
 {$endif mswindows}
-end;
+End;
 
-procedure HideTaskbarButton;
-begin
+Procedure HideTaskbarButton;
+Begin
 {$ifdef mswindows}
   ShowWindow(TWin32WidgetSet(WidgetSet).AppHandle, SW_HIDE);
 {$else}
-  Application.MainForm.Visible:=False;
+  Application.MainForm.Visible := False;
 {$endif mswindows}
-end;
+End;
 
-function IsTaskbarButtonVisible: boolean;
-begin
+Function IsTaskbarButtonVisible: boolean;
+Begin
 {$ifdef mswindows}
-  Result:=IsWindowVisible(TWin32WidgetSet(WidgetSet).AppHandle);
+  Result := IsWindowVisible(TWin32WidgetSet(WidgetSet).AppHandle);
 {$else}
-  Result:=Application.MainForm.Visible;
+  Result := Application.MainForm.Visible;
 {$endif mswindows}
-end;
+End;
 
 {$ifdef unix}
-function UnixOpenURL(const FileName: String):Integer;
-var
+Function UnixOpenURL(Const FileName: String): Integer;
+
+Var 
   WrkProcess: TProcess;
   cmd, fn: String;
-begin
-  Result:=-1;
-  WrkProcess:=TProcess.Create(nil);
-  WrkProcess.Options:=[poNoConsole,poWaitOnExit];
+Begin
+  Result := -1;
+  WrkProcess := TProcess.Create(Nil);
+  WrkProcess.Options := [poNoConsole,poWaitOnExit];
 
-  cmd:=FindDefaultExecutablePath('xdg-open');
-  if cmd = '' then begin
-    cmd:=FindDefaultExecutablePath('gnome-open');
-    if cmd = '' then begin
-      cmd:=FindDefaultExecutablePath('kioclient');
-      if cmd <> '' then
-        Wrkprocess.Parameters.Add('exec')
-      else begin
-        cmd:=FindDefaultExecutablePath('kfmclient');
-        if cmd = '' then
-          exit;
-        Wrkprocess.Parameters.Add('exec')
-      end;
-    end;
-  end;
+  cmd := FindDefaultExecutablePath('xdg-open');
+  If cmd = '' Then
+    Begin
+      cmd := FindDefaultExecutablePath('gnome-open');
+      If cmd = '' Then
+        Begin
+          cmd := FindDefaultExecutablePath('kioclient');
+          If cmd <> '' Then
+            Wrkprocess.Parameters.Add('exec')
+          Else
+            Begin
+              cmd := FindDefaultExecutablePath('kfmclient');
+              If cmd = '' Then
+                exit;
+              Wrkprocess.Parameters.Add('exec')
+            End;
+        End;
+    End;
 
-  fn:=FileName;
-  if Pos('://', fn) > 0 then
-    fn:=StringReplace(fn, '#', '%23', [rfReplaceAll]);
+  fn := FileName;
+  If Pos('://', fn) > 0 Then
+    fn := StringReplace(fn, '#', '%23', [rfReplaceAll]);
   Wrkprocess.Parameters.Add(fn);
-  WrkProcess.Executable:=cmd;
+  WrkProcess.Executable := cmd;
 
-  try
+  Try
     WrkProcess.Execute;
-    Result:=WrkProcess.ExitStatus;
-  finally
+    Result := WrkProcess.ExitStatus;
+  Finally
     WrkProcess.Free;
-  end;
-end;
+End;
+End;
 {$endif unix}
 
-function OpenURL(const URL, Params: string): boolean;
+Function OpenURL(Const URL, Params: String): boolean;
 {$ifdef mswindows}
-var
+
+Var 
   s, p: widestring;
 {$endif mswindows}
-begin
+Begin
 {$ifdef mswindows}
-  s:=UTF8Decode(URL);
-  p:=UTF8Decode(Params);
-  if Win32Platform = VER_PLATFORM_WIN32_NT then
-    Result:=ShellExecuteW(0, 'open', PWideChar(s), PWideChar(p), nil, SW_SHOWNORMAL) > 32
-  else
-    Result:=ShellExecuteA(0, 'open', PChar(ansistring(s)), PChar(ansistring(p)), nil, SW_SHOWNORMAL) > 32;
+  s := UTF8Decode(URL);
+  p := UTF8Decode(Params);
+  If Win32Platform = VER_PLATFORM_WIN32_NT Then
+    Result := ShellExecuteW(0, 'open', PWideChar(s), PWideChar(p), Nil,
+              SW_SHOWNORMAL) > 32
+  Else
+    Result := ShellExecuteA(0, 'open', PChar(ansistring(s)), PChar(ansistring(p)
+              ), Nil, SW_SHOWNORMAL) > 32;
 {$endif mswindows}
 
 {$ifdef darwin}
-  Result:=fpSystem('open "' + URL + '"') = 0;
+  Result := fpSystem('open "' + URL + '"') = 0;
 {$else darwin}
 
   {$ifdef unix}
-    Result:=UnixOpenURL(URL) = 0;
+  Result := UnixOpenURL(URL) = 0;
   {$endif unix}
 
 {$endif darwin}
-end;
+End;
 
-var
+Var 
   BusyCount: integer = 0;
 
-procedure AppBusy;
-begin
+Procedure AppBusy;
+Begin
   Inc(BusyCount);
-  Screen.Cursor:=crHourGlass;
-end;
+  Screen.Cursor := crHourGlass;
+End;
 
-procedure AppNormal;
-begin
+Procedure AppNormal;
+Begin
   Dec(BusyCount);
-  if BusyCount <= 0 then begin
-    BusyCount:=0;
-    Screen.Cursor:=crDefault;
-  end;
-end;
+  If BusyCount <= 0 Then
+    Begin
+      BusyCount := 0;
+      Screen.Cursor := crDefault;
+    End;
+End;
 
-procedure ForceAppNormal;
-begin
-  BusyCount:=0;
+Procedure ForceAppNormal;
+Begin
+  BusyCount := 0;
   AppNormal;
-end;
+End;
 
 {$ifdef mswindows}
-procedure AllowSetForegroundWindow(dwProcessId: DWORD);
-type
-  TAllowSetForegroundWindow = function(dwProcessId: DWORD): BOOL; stdcall;
-var
+Procedure AllowSetForegroundWindow(dwProcessId: DWORD);
+
+Type 
+  TAllowSetForegroundWindow = Function (dwProcessId: DWORD): BOOL;
+  stdcall;
+
+Var 
   _AllowSetForegroundWindow: TAllowSetForegroundWindow;
-begin
-  _AllowSetForegroundWindow:=TAllowSetForegroundWindow(GetProcAddress(GetModuleHandle('user32.dll'), 'AllowSetForegroundWindow'));
-  if Assigned(_AllowSetForegroundWindow) then
+Begin
+  _AllowSetForegroundWindow := TAllowSetForegroundWindow(GetProcAddress(
+                               GetModuleHandle('user32.dll'),
+                               'AllowSetForegroundWindow'));
+  If Assigned(_AllowSetForegroundWindow) Then
     _AllowSetForegroundWindow(dwProcessId);
-end;
+End;
 {$endif mswindows}
 
-function CompareFilePath(const p1, p2: string): integer;
-begin
+Function CompareFilePath(Const p1, p2: String): integer;
+Begin
 {$ifdef windows}
-  Result:=AnsiCompareText(UTF8Decode(p1), UTF8Decode(p2));
+  Result := AnsiCompareText(UTF8Decode(p1), UTF8Decode(p2));
 {$else}
-  Result:=AnsiCompareStr(UTF8Decode(p1), UTF8Decode(p2));
+  Result := AnsiCompareStr(UTF8Decode(p1), UTF8Decode(p2));
 {$endif windows}
-end;
+End;
 
-function GetCmdSwitchValue(const Switch: string): string;
-var
+Function GetCmdSwitchValue(Const Switch: String): string;
+
+Var 
   i, len: integer;
   s, ss: string;
-begin
-  Result:='';
-  ss:='--' + Switch + '=';
-  len:=Length(ss);
-  for i:=1 to ParamCount do begin
-    s:=ParamStrUTF8(i);
-    if Copy(s, 1, len) = ss then begin
-      Result:=Copy(s, len + 1, MaxInt);
-      break;
-    end;
-  end;
-end;
+Begin
+  Result := '';
+  ss := '--' + Switch + '=';
+  len := Length(ss);
+  For i:=1 To ParamCount Do
+    Begin
+      s := ParamStrUTF8(i);
+      If Copy(s, 1, len) = ss Then
+        Begin
+          Result := Copy(s, len + 1, MaxInt);
+          break;
+        End;
+    End;
+End;
 
 {$ifdef CALLSTACK}
-function GetLastExceptionCallStack: string;
+Function GetLastExceptionCallStack: string;
 
-  function GetAddrInfo(addr: pointer): string;
-  var
-    func,
-    source : shortstring;
-    line   : longint;
-  begin
-    GetLineInfo(ptruint(addr), func, source, line);
-    Result:='$' + HexStr(ptruint(addr), sizeof(ptruint) * 2);
-    if func<>'' then
-      Result:=Result + '  ' + func;
-    if source<>'' then begin
-      if func<>'' then
-        Result:=Result + ', ';
-      if line<>0 then
-        Result:=Result + ' line ' + IntToStr(line);
-      Result:=Result + ' of ' + source;
-    end;
-  end;
+Function GetAddrInfo(addr: pointer): string;
 
-var
+Var 
+  func,
+  source : shortstring;
+  line   : longint;
+Begin
+  GetLineInfo(ptruint(addr), func, source, line);
+  Result := '$' + HexStr(ptruint(addr), sizeof(ptruint) * 2);
+  If func<>'' Then
+    Result := Result + '  ' + func;
+  If source<>'' Then
+    Begin
+      If func<>'' Then
+        Result := Result + ', ';
+      If line<>0 Then
+        Result := Result + ' line ' + IntToStr(line);
+      Result := Result + ' of ' + source;
+    End;
+End;
+
+Var 
   I: Integer;
   Frames: PPointer;
-begin
+Begin
   Result := GetAddrInfo(ExceptAddr);
   Frames := ExceptFrames;
-  for I := 0 to ExceptFrameCount - 1 do
+  For I := 0 To ExceptFrameCount - 1 Do
     Result := Result + LineEnding + GetAddrInfo(Frames[I]);
-end;
+End;
 {$endif CALLSTACK}
 
-procedure CenterOnParent(C: TControl);
-var
+Procedure CenterOnParent(C: TControl);
+
+Var 
   R: TRect;
-begin
-  R:=C.BoundsRect;
-  R.Left:=(C.Parent.ClientWidth - C.Width) div 2;
-  R.Top:=(C.Parent.ClientHeight - C.Height) div 2;
-  C.BoundsRect:=R;
-end;
+Begin
+  R := C.BoundsRect;
+  R.Left := (C.Parent.ClientWidth - C.Width) Div 2;
+  R.Top := (C.Parent.ClientHeight - C.Height) Div 2;
+  C.BoundsRect := R;
+End;
 
 {$PUSH}
 {$RANGECHECKS OFF}
-function Base32Decode(const s: ansistring): ansistring;
-var
+Function Base32Decode(Const s: ansistring): ansistring;
+
+Var 
   optr, len, bcnt: integer;
   Output: PByteArray;
   Input: PAnsiChar;
   w: word;
   c: ansichar;
   b: byte;
-begin
-  len:=Length(s);
-  Input:=PAnsiChar(s);
+Begin
+  len := Length(s);
+  Input := PAnsiChar(s);
   SetLength(Result, len);
-  Output:=PByteArray(PAnsiChar(Result));
-  optr:=0;
-  w:=0;
-  bcnt:=0;
-  while len > 0 do begin
-    repeat
-      c:=Input^;
-      if c = '=' then begin
-        len:=0;
-        break;
-      end;
-      if c in ['A'..'Z'] then
-        b:=Ord(c) - Ord('A')
-      else
-        if c in ['2'..'7'] then
-          b:=Ord(c) - 24
-        else
+  Output := PByteArray(PAnsiChar(Result));
+  optr := 0;
+  w := 0;
+  bcnt := 0;
+  While len > 0 Do
+    Begin
+      Repeat
+        c := Input^;
+        If c = '=' Then
+          Begin
+            len := 0;
+            break;
+          End;
+        If c In ['A'..'Z'] Then
+          b := Ord(c) - Ord('A')
+        Else
+          If c In ['2'..'7'] Then
+            b := Ord(c) - 24
+        Else
           raise Exception.Create('Invalid base32 string.');
-      w:=(w shl 5) or b;
-      Inc(bcnt, 5);
-      Inc(Input);
-      Dec(len);
-    until (bcnt >= 8) or (len <= 0);
-    if bcnt < 8 then
-      Output^[optr]:=w shl (8 - bcnt)
-    else begin
-      Dec(bcnt, 8);
-      Output^[optr]:=w shr bcnt;
-    end;
-    Inc(optr);
-  end;
+        w := (w shl 5) Or b;
+        Inc(bcnt, 5);
+        Inc(Input);
+        Dec(len);
+      Until (bcnt >= 8) Or (len <= 0);
+      If bcnt < 8 Then
+        Output^[optr] := w shl (8 - bcnt)
+      Else
+        Begin
+          Dec(bcnt, 8);
+          Output^[optr] := w shr bcnt;
+        End;
+      Inc(optr);
+    End;
   SetLength(Result, optr);
-end;
+End;
 {$POP}
 
-procedure EnableControls(AEnable: boolean; const AControls: array of TControl);
-var
+Procedure EnableControls(AEnable: boolean; Const AControls: Array Of TControl);
+
+Var 
   i: integer;
   C: TControl;
-begin
-  for i:=Low(AControls) to High(AControls) do begin
-    C:=AControls[i];
-    C.Enabled:=AEnable;
-    if (C is TCustomEdit) or (C is TCustomListBox) or (C is TCustomComboBox) then begin
-      if AEnable then
-        C.Color:=clDefault
-      else
-        C.Color:=clBtnFace;
-    end;
-  end;
-end;
+Begin
+  For i:=Low(AControls) To High(AControls) Do
+    Begin
+      C := AControls[i];
+      C.Enabled := AEnable;
+      If (C is TCustomEdit) Or (C is TCustomListBox) Or (C is TCustomComboBox)
+        Then
+        Begin
+          If AEnable Then
+            C.Color := clDefault
+          Else
+            C.Color := clBtnFace;
+        End;
+    End;
+End;
 
 
-function TIniFileUtf8.getFileName() : string;
-begin
-  result:=FFileName;
-end;
+Function TIniFileUtf8.getFileName() : string;
+Begin
+  result := FFileName;
+End;
 
 
 finalization
 {$ifdef windows}
-  FreeAndNil(FParams);
+FreeAndNil(FParams);
 {$endif windows}
 
-end.
-
+End.

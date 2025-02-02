@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -28,74 +30,75 @@
   statement from your version.  If you delete this exception statement from all
   source files in the program, then also delete it here.
 *************************************************************************************}
-unit passwcon;
+
+Unit passwcon;
 
 {$mode objfpc}{$H+}
 
-interface
+Interface
 
-uses
-  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs, StdCtrls, ButtonPanel;
+Uses 
+Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+StdCtrls, ButtonPanel;
 
-type
+Type 
 
   { TPasswordConnect }
 
-  TPasswordConnect = class(TForm)
+  TPasswordConnect = Class(TForm)
     Buttons: TButtonPanel;
     passw: TEdit;
     lMsg: TLabel;
-    procedure CancelButtonClick(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
-    procedure OKButtonClick(Sender: TObject);
-    procedure SetText(form : string; msg : string);
+    Procedure CancelButtonClick(Sender: TObject);
+    Procedure FormCreate(Sender: TObject);
+    Procedure OKButtonClick(Sender: TObject);
+    Procedure SetText(form : String; msg : String);
 
-  private
+    Private 
     { private declarations }
-  public
+    Public 
     { public declarations }
-    gPassw : string;
-  end;
+      gPassw : string;
+  End;
 
-var
+Var 
   PasswordConnect: TPasswordConnect;
 
-implementation
+Implementation
 
-uses main;
+Uses main;
 
 { TPasswordConnect }
 
-procedure TPasswordConnect.CancelButtonClick(Sender: TObject);
-begin
+Procedure TPasswordConnect.CancelButtonClick(Sender: TObject);
+Begin
 
-end;
+End;
 
-procedure TPasswordConnect.FormCreate(Sender: TObject);
-begin
+Procedure TPasswordConnect.FormCreate(Sender: TObject);
+Begin
 
-  Buttons.OKButton.ModalResult:= mrNone;
+  Buttons.OKButton.ModalResult := mrNone;
   bidiMode := GetBiDi;
   gPassw := '';
   passw.Text := '';
-end;
+End;
 
-procedure TPasswordConnect.OKButtonClick(Sender: TObject);
-begin
-  gPassw:= passw.Text;
-  ModalResult:=mrOk;
-end;
+Procedure TPasswordConnect.OKButtonClick(Sender: TObject);
+Begin
+  gPassw := passw.Text;
+  ModalResult := mrOk;
+End;
 
 
-procedure TPasswordConnect.SetText(form : string; msg : string);
-begin
+Procedure TPasswordConnect.SetText(form : String; msg : String);
+Begin
   lMsg.Caption := msg;
   Caption := form;
-end;
+End;
 
 
 initialization
   {$I passwcon.lrs}
 
-end.
-
+End.

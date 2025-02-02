@@ -1,3 +1,5 @@
+
+
 {*************************************************************************************
   This file is part of Transmission Remote GUI.
   Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
@@ -30,60 +32,61 @@
 
 *************************************************************************************}
 
-unit AddLink;
+Unit AddLink;
 
 {$mode objfpc}{$H+}
 
-interface
+Interface
 
-uses
-  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs, StdCtrls, ButtonPanel, ExtCtrls, BaseForm;
+Uses 
+Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+StdCtrls, ButtonPanel, ExtCtrls, BaseForm;
 
 resourcestring
-  SNoLink = 'No link was specified.';
+SNoLink = 'No link was specified.';
 
-type
+Type 
 
   { TAddLinkForm }
 
-  TAddLinkForm = class(TBaseForm)
+  TAddLinkForm = Class(TBaseForm)
     Buttons: TButtonPanel;
     edLink: TEdit;
     Panel1: TPanel;
     txLink: TLabel;
-    procedure btOKClick(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
-  private
+    Procedure btOKClick(Sender: TObject);
+    Procedure FormCreate(Sender: TObject);
+    Private 
     { private declarations }
-  public
+    Public 
     { public declarations }
-  end;
+  End;
 
-implementation
+Implementation
 
-uses main;
+Uses main;
 
 { TAddLinkForm }
 
-procedure TAddLinkForm.btOKClick(Sender: TObject);
-begin
-  edLink.Text:=Trim(edLink.Text);
-  if edLink.Text = '' then begin
-    edLink.SetFocus;
-    MessageDlg(SNoLink, mtError, [mbOK], 0);
-    exit;
-  end;
-  ModalResult:=mrOK;
-end;
+Procedure TAddLinkForm.btOKClick(Sender: TObject);
+Begin
+  edLink.Text := Trim(edLink.Text);
+  If edLink.Text = '' Then
+    Begin
+      edLink.SetFocus;
+      MessageDlg(SNoLink, mtError, [mbOK], 0);
+      exit;
+    End;
+  ModalResult := mrOK;
+End;
 
-procedure TAddLinkForm.FormCreate(Sender: TObject);
-begin
-  Buttons.OKButton.ModalResult:=mrNone;
-  Buttons.OKButton.OnClick:=@btOKClick;
-end;
+Procedure TAddLinkForm.FormCreate(Sender: TObject);
+Begin
+  Buttons.OKButton.ModalResult := mrNone;
+  Buttons.OKButton.OnClick := @btOKClick;
+End;
 
 initialization
   {$I addlink.lrs}
 
-end.
-
+End.
