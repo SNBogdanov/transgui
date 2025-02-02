@@ -37,11 +37,11 @@ Unit ColSetup;
 
 Interface
 
-Uses 
-Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-ComCtrls, CheckLst, StdCtrls, ButtonPanel, ExtCtrls, VarGrid, BaseForm;
+Uses
+  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+  ComCtrls, CheckLst, StdCtrls, ButtonPanel, ExtCtrls, VarGrid, BaseForm;
 
-Type 
+Type
 
   { TColSetupForm }
 
@@ -57,94 +57,92 @@ Type
     Procedure FormCreate(Sender: TObject);
     Procedure lstColumnsClick(Sender: TObject);
     Procedure lstColumnsClickCheck(Sender: TObject);
-    Private 
-      FPersistentColumnId: integer;
+  Private
+    FPersistentColumnId: Integer;
 
-      Procedure UpdateUI;
-      Procedure MoveItem(Delta: integer);
-    Public 
+    Procedure UpdateUI;
+    Procedure MoveItem(Delta: Integer);
+  Public
     { public declarations }
   End;
 
-Function SetupColumns(LV: TVarGrid; PersistentColumnId: integer; Const GridName:
-                      String): boolean;
+Function SetupColumns(LV: TVarGrid; PersistentColumnId: Integer;
+  Const GridName: String): Boolean;
 
 Implementation
 
 Uses main;
 
-Function SetupColumns(LV: TVarGrid; PersistentColumnId: integer; Const GridName:
-                      String): boolean;
-
-Var 
-  i, j: integer;
+Function SetupColumns(LV: TVarGrid; PersistentColumnId: Integer;
+  Const GridName: String): Boolean;
+Var
+  i, j: Integer;
 Begin
   With TColSetupForm.Create(Application) Do
-    Try
-      If GridName <> '' Then
-        Caption := Caption + ' - ' + GridName;
-      FPersistentColumnId := PersistentColumnId;
-      For i:=0 To LV.Columns.Count - 1 Do
-        With LV.Columns[i] Do
-          Begin
-            j := lstColumns.Items.Add(Title.Caption);
-            lstColumns.Items.Objects[j] := TObject(ptrint(ID));
-            If Width = 0 Then
-              Visible := False;
-            lstColumns.Checked[j] := Visible;
-            If ID = PersistentColumnId Then
-              lstColumns.Checked[j] := True;
-          End;
-      UpdateUI;
-      Result := ShowModal = mrOk;
-      If Result Then
-        Begin
-          LV.BeginUpdate;
-          Try
-            For i:=0 To lstColumns.Items.Count - 1 Do
-              For j:=0 To LV.Columns.Count - 1 Do
-                With LV.Columns[j] Do
-                  If ID = ptrint(lstColumns.Items.Objects[i]) Then
-                    Begin
-                      Index := i;
-                      If ID - 1 = PersistentColumnId Then
-                        lstColumns.Checked[i] := True;
-                      If Not Visible And (Visible <> lstColumns.Checked[i]) Then
-                        Begin
-                          Visible := True;
-                          If Width < 32 Then
-                            Width := 70;
-                        End
-                      Else
-                        Visible := lstColumns.Checked[i];
-                      If Not Visible And (LV.SortColumn = ID - 1) And (
-                         PersistentColumnId >= 0) Then
-                        LV.SortColumn := PersistentColumnId;
-                      break;
-                    End;
-          Finally
-            LV.EndUpdate;
-        End;
-End;
-Finally
-  Free;
-End;
-Application.ProcessMessages;
+  Try
+    If GridName <> '' Then
+      Caption := Caption + ' - ' + GridName;
+    FPersistentColumnId := PersistentColumnId;
+    For i := 0 To LV.Columns.Count - 1 Do
+      With LV.Columns[i] Do
+      Begin
+        j := lstColumns.Items.Add(Title.Caption);
+        lstColumns.Items.Objects[j] := TObject(ptrint(ID));
+        If Width = 0 Then
+          Visible := False;
+        lstColumns.Checked[j] := Visible;
+        If ID = PersistentColumnId Then
+          lstColumns.Checked[j] := True;
+      End;
+    UpdateUI;
+    Result := ShowModal = mrOk;
+    If Result Then
+    Begin
+      LV.BeginUpdate;
+      Try
+        For i := 0 To lstColumns.Items.Count - 1 Do
+          For j := 0 To LV.Columns.Count - 1 Do
+            With LV.Columns[j] Do
+              If ID = ptrint(lstColumns.Items.Objects[i]) Then
+              Begin
+                Index := i;
+                If ID - 1 = PersistentColumnId Then
+                  lstColumns.Checked[i] := True;
+                If Not Visible And (Visible <> lstColumns.Checked[i]) Then
+                Begin
+                  Visible := True;
+                  If Width < 32 Then
+                    Width := 70;
+                End
+                Else
+                  Visible := lstColumns.Checked[i];
+                If Not Visible And (LV.SortColumn = ID - 1) And
+                  (PersistentColumnId >= 0) Then
+                  LV.SortColumn := PersistentColumnId;
+                break;
+              End;
+      Finally
+        LV.EndUpdate;
+      End;
+    End;
+  Finally
+    Free;
+  End;
+  Application.ProcessMessages;
 End;
 
 { TColSetupForm }
 
 Procedure TColSetupForm.btOkClick(Sender: TObject);
-
-Var 
-  i: integer;
+Var
+  i: Integer;
 Begin
-  For i:=0 To lstColumns.Items.Count - 1 Do
+  For i := 0 To lstColumns.Items.Count - 1 Do
     If lstColumns.Checked[i] Then
-      Begin
-        ModalResult := mrOk;
-        exit;
-      End;
+    Begin
+      ModalResult := mrOk;
+      exit;
+    End;
   MessageDlg('At least single column must be visible.', mtError, [mbOK], 0);
 End;
 
@@ -170,41 +168,39 @@ Begin
 End;
 
 Procedure TColSetupForm.lstColumnsClickCheck(Sender: TObject);
-
-Var 
-  i: integer;
+Var
+  i: Integer;
 Begin
   If FPersistentColumnId >= 0 Then
-    For i:=0 To lstColumns.Items.Count - 1 Do
+    For i := 0 To lstColumns.Items.Count - 1 Do
       If ptrint(lstColumns.Items.Objects[i]) = FPersistentColumnId Then
-        Begin
-          lstColumns.Checked[i] := True;
-          break;
-        End;
+      Begin
+        lstColumns.Checked[i] := True;
+        break;
+      End;
 End;
 
 Procedure TColSetupForm.UpdateUI;
 Begin
   btUp.Enabled := lstColumns.ItemIndex > 0;
-  btDown.Enabled := (lstColumns.ItemIndex >= 0) And (lstColumns.ItemIndex <
-                    lstColumns.Items.Count - 1);
+  btDown.Enabled := (lstColumns.ItemIndex >= 0) And
+    (lstColumns.ItemIndex < lstColumns.Items.Count - 1);
 End;
 
-Procedure TColSetupForm.MoveItem(Delta: integer);
-
-Var 
-  c: boolean;
-  OldIdx: integer;
+Procedure TColSetupForm.MoveItem(Delta: Integer);
+Var
+  c: Boolean;
+  OldIdx: Integer;
 Begin
   OldIdx := lstColumns.ItemIndex;
   c := lstColumns.Checked[OldIdx];
-  lstColumns.Items.Move(OldIdx, OldIdx+Delta);
-  lstColumns.Checked[OldIdx+Delta] := c;
-  lstColumns.ItemIndex := OldIdx+Delta;
+  lstColumns.Items.Move(OldIdx, OldIdx + Delta);
+  lstColumns.Checked[OldIdx + Delta] := c;
+  lstColumns.ItemIndex := OldIdx + Delta;
   UpdateUI;
 End;
 
-initialization
+Initialization
   {$I colsetup.lrs}
 
 End.

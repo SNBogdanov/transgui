@@ -37,11 +37,11 @@ Unit TorrProps;
 
 Interface
 
-Uses 
-Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-StdCtrls, Spin, ButtonPanel, ComCtrls, BaseForm;
+Uses
+  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+  StdCtrls, Spin, ButtonPanel, ComCtrls, BaseForm;
 
-Type 
+Type
 
   { TTorrPropsForm }
 
@@ -72,9 +72,9 @@ Type
     Procedure cbMaxUpClick(Sender: TObject);
     Procedure cbSeedRatioClick(Sender: TObject);
     Procedure FormCreate(Sender: TObject);
-    Private 
+  Private
     { private declarations }
-    Public 
+  Public
     { public declarations }
   End;
 
@@ -82,7 +82,7 @@ Implementation
 
 Uses main;
 
-{ TTorrPropsForm }
+  { TTorrPropsForm }
 
 Procedure TTorrPropsForm.cbMaxDownClick(Sender: TObject);
 Begin
@@ -110,7 +110,7 @@ Begin
   bidiMode := GetBiDi();
 End;
 
-initialization
+Initialization
   {$I torrprops.lrs}
 
 End.

@@ -26,38 +26,53 @@
 {$apptype gui}
 {$endif windows}
 
-program transgui;
+Program transgui;
 
 {$mode objfpc}{$H+}
 
-uses
-{$ifdef UNIX}
+Uses
+  {$ifdef UNIX}
   cthreads,
   {$ifdef darwin}
   maclocale,
   {$else}
   clocale,
   {$endif}
-{$endif}
+  {$endif}
   Interfaces, // this includes the LCL widgetset
-  Forms
-  { you can add units after this }, BaseForm, Main, rpc, AddTorrent,
-  ConnOptions, varlist, TorrProps, DaemonOptions, About, IpResolver, download,
-  ColSetup, utils, ResTranslator, AddLink, MoveTorrent, AddTracker, Options,
+  Forms { you can add units after this },
+  BaseForm,
+  Main,
+  rpc,
+  AddTorrent,
+  ConnOptions,
+  varlist,
+  TorrProps,
+  DaemonOptions,
+  About,
+  IpResolver,
+  download,
+  ColSetup,
+  utils,
+  ResTranslator,
+  AddLink,
+  MoveTorrent,
+  AddTracker,
+  Options,
   passwcon;
 
-//{$ifdef windows}
-{$R *.res}
-//{$endif}
+  //{$ifdef windows}
+  {$R *.res}
+  //{$endif}
 
-begin
-//Application.Scaled:=True; //travis doesnt compile
+Begin
+  //Application.Scaled:=True; //travis doesnt compile
 
-  if not CheckAppParams then exit;
+  If Not CheckAppParams Then exit;
 
-//  Application.Scaled:=True;
-  Application.Title:='';
+  //  Application.Scaled:=True;
+  Application.Title := '';
   Application.Initialize;
   Application.CreateForm(TMainForm, MainForm);
   Application.Run;
-end.
+End.

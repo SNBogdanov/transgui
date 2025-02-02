@@ -37,11 +37,11 @@ Unit passwcon;
 
 Interface
 
-Uses 
-Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-StdCtrls, ButtonPanel;
+Uses
+  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+  StdCtrls, ButtonPanel;
 
-Type 
+Type
 
   { TPasswordConnect }
 
@@ -52,23 +52,23 @@ Type
     Procedure CancelButtonClick(Sender: TObject);
     Procedure FormCreate(Sender: TObject);
     Procedure OKButtonClick(Sender: TObject);
-    Procedure SetText(form : String; msg : String);
+    Procedure SetText(form: String; msg: String);
 
-    Private 
+  Private
     { private declarations }
-    Public 
+  Public
     { public declarations }
-      gPassw : string;
+    gPassw: String;
   End;
 
-Var 
+Var
   PasswordConnect: TPasswordConnect;
 
 Implementation
 
 Uses main;
 
-{ TPasswordConnect }
+  { TPasswordConnect }
 
 Procedure TPasswordConnect.CancelButtonClick(Sender: TObject);
 Begin
@@ -91,14 +91,14 @@ Begin
 End;
 
 
-Procedure TPasswordConnect.SetText(form : String; msg : String);
+Procedure TPasswordConnect.SetText(form: String; msg: String);
 Begin
   lMsg.Caption := msg;
   Caption := form;
 End;
 
 
-initialization
+Initialization
   {$I passwcon.lrs}
 
 End.

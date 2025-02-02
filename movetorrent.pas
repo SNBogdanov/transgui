@@ -37,15 +37,15 @@ Unit MoveTorrent;
 
 Interface
 
-Uses 
-Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-StdCtrls, ButtonPanel, ExtCtrls, BaseForm;
+Uses
+  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+  StdCtrls, ButtonPanel, ExtCtrls, BaseForm;
 
-resourcestring
-SNoTorrentDir = 'No torrent location was specified.';
-SSelectFolder = 'Select torrent location';
+Resourcestring
+  SNoTorrentDir = 'No torrent location was specified.';
+  SSelectFolder = 'Select torrent location';
 
-Type 
+Type
 
   { TMoveTorrentForm }
 
@@ -59,9 +59,9 @@ Type
     Procedure btBrowseClick(Sender: TObject);
     Procedure btOKClick(Sender: TObject);
     Procedure FormCreate(Sender: TObject);
-    Private 
+  Private
     { private declarations }
-    Public 
+  Public
     { public declarations }
   End;
 
@@ -69,24 +69,23 @@ Implementation
 
 Uses main;
 
-{ TMoveTorrentForm }
+  { TMoveTorrentForm }
 
 Procedure TMoveTorrentForm.btOKClick(Sender: TObject);
 Begin
   edTorrentDir.Text := Trim(edTorrentDir.Text);
   If edTorrentDir.Text = '' Then
-    Begin
-      edTorrentDir.SetFocus;
-      MessageDlg(SNoTorrentDir, mtError, [mbOK], 0);
-      exit;
-    End;
-  ModalResult := mrOK;
+  Begin
+    edTorrentDir.SetFocus;
+    MessageDlg(SNoTorrentDir, mtError, [mbOK], 0);
+    exit;
+  End;
+  ModalResult := mrOk;
 End;
 
 Procedure TMoveTorrentForm.btBrowseClick(Sender: TObject);
-
-Var 
-  s: string;
+Var
+  s: String;
 Begin
   s := MainForm.SelectRemoteFolder(edTorrentDir.Text, SSelectFolder);
   If s <> '' Then
@@ -102,7 +101,7 @@ Begin
   // fix button
 End;
 
-initialization
+Initialization
   {$I movetorrent.lrs}
 
 End.

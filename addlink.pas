@@ -38,14 +38,14 @@ Unit AddLink;
 
 Interface
 
-Uses 
-Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-StdCtrls, ButtonPanel, ExtCtrls, BaseForm;
+Uses
+  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+  StdCtrls, ButtonPanel, ExtCtrls, BaseForm;
 
-resourcestring
-SNoLink = 'No link was specified.';
+Resourcestring
+  SNoLink = 'No link was specified.';
 
-Type 
+Type
 
   { TAddLinkForm }
 
@@ -56,9 +56,9 @@ Type
     txLink: TLabel;
     Procedure btOKClick(Sender: TObject);
     Procedure FormCreate(Sender: TObject);
-    Private 
+  Private
     { private declarations }
-    Public 
+  Public
     { public declarations }
   End;
 
@@ -66,18 +66,18 @@ Implementation
 
 Uses main;
 
-{ TAddLinkForm }
+  { TAddLinkForm }
 
 Procedure TAddLinkForm.btOKClick(Sender: TObject);
 Begin
   edLink.Text := Trim(edLink.Text);
   If edLink.Text = '' Then
-    Begin
-      edLink.SetFocus;
-      MessageDlg(SNoLink, mtError, [mbOK], 0);
-      exit;
-    End;
-  ModalResult := mrOK;
+  Begin
+    edLink.SetFocus;
+    MessageDlg(SNoLink, mtError, [mbOK], 0);
+    exit;
+  End;
+  ModalResult := mrOk;
 End;
 
 Procedure TAddLinkForm.FormCreate(Sender: TObject);
@@ -86,7 +86,7 @@ Begin
   Buttons.OKButton.OnClick := @btOKClick;
 End;
 
-initialization
+Initialization
   {$I addlink.lrs}
 
 End.

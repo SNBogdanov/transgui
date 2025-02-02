@@ -37,12 +37,12 @@ Unit Options;
 
 Interface
 
-Uses 
-Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-ComCtrls, StdCtrls, Spin, Buttons, ButtonPanel, BaseForm,
-ConnOptions;
+Uses
+  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+  ComCtrls, StdCtrls, Spin, Buttons, ButtonPanel, BaseForm,
+  ConnOptions;
 
-Type 
+Type
 
   { TOptionsForm }
 
@@ -82,46 +82,45 @@ Type
     txSeconds2: TLabel;
     Procedure cbCheckNewVersionClick(Sender: TObject);
     Procedure cbLanguageEnter(Sender: TObject);
-    Procedure cbLanguageMouseDown(Sender: TObject; Button: TMouseButton; Shift:
-                                  TShiftState; X, Y: Integer);
-    Procedure cbLanguageMouseMove(Sender: TObject; Shift: TShiftState; X, Y:
-                                  Integer);
+    Procedure cbLanguageMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    Procedure cbLanguageMouseMove(Sender: TObject; Shift: TShiftState;
+      X, Y: Integer);
     Procedure FormActivate(Sender: TObject);
     Procedure FormCreate(Sender: TObject);
     Procedure FormDestroy(Sender: TObject);
     Procedure FormShow(Sender: TObject);
     Procedure OKButtonClick(Sender: TObject);
-    Private 
-      FLangList: TStringList;
-{$ifdef mswindows}
-      FRegExt: boolean;
-      FRegMagnet: boolean;
-{$endif mswindows}
+  Private
+    FLangList: TStringList;
+    {$ifdef mswindows}
+    FRegExt: Boolean;
+    FRegMagnet: Boolean;
+    {$endif mswindows}
 
-      Procedure FillLanguageItems;
-    Public 
-      ConnForm: TConnOptionsForm;
+    Procedure FillLanguageItems;
+  Public
+    ConnForm: TConnOptionsForm;
   End;
 
 Implementation
 
-Uses 
+Uses
   {$ifdef mswindows}
-registry,
+  registry,
   {$endif mswindows}
-main, utils, ResTranslator, Math;
+  main, utils, ResTranslator, Math;
 
-{ TOptionsForm }
+  { TOptionsForm }
 
 Procedure TOptionsForm.FormCreate(Sender: TObject);
-
-Var 
-  i: integer;
+Var
+  i: Integer;
   pg: TTabSheet;
-{$ifdef mswindows}
+  {$ifdef mswindows}
   reg: TRegistry;
-  s: string;
-{$endif mswindows}
+  s: String;
+  {$endif mswindows}
 Begin
   bidiMode := GetBiDi();
   cbRegExt.Caption := Format(cbRegExt.Caption, [AppName]);
@@ -129,11 +128,11 @@ Begin
 
   ConnForm := TConnOptionsForm.Create(Self);
   While ConnForm.Page.ControlCount > 0 Do
-    Begin
-      pg := ConnForm.Page.Pages[0];
-      pg.Parent := Page;
-      pg.TabVisible := True;
-    End;
+  Begin
+    pg := ConnForm.Page.Pages[0];
+    pg.Parent := Page;
+    pg.TabVisible := True;
+  End;
   ConnForm.Page.Free;
   ConnForm.Page := Page;
 
@@ -146,52 +145,51 @@ Begin
   cbLangLeftRight.Items.Add(sBiDiRightLeft);
   cbLangLeftRight.Items.Add(sBiDiRightLeftNoAlign);
   cbLangLeftRight.Items.Add(sBiDiRightLeftReadOnly);
-  cbLangLeftRight.ItemIndex := Ini.ReadInteger ('Interface', 'IgnoreRightLeft',
-                               0);
+  cbLangLeftRight.ItemIndex :=
+    Ini.ReadInteger('Interface', 'IgnoreRightLeft', 0);
 
   cbLanguage.Items.Add(FTranslationLanguage);
   cbLanguage.ItemIndex := 0;
-  i := 80*100 Div (ScaleInt(100)*100 Div IntfScale);
+  i := 80 * 100 Div (ScaleInt(100) * 100 Div IntfScale);
   i := i - i Mod 5;
   If i < 10 Then
     i := 10;
   edIntfScale.MinValue := i;
-{$ifdef LCLgtk2}
+  {$ifdef LCLgtk2}
   cbLanguage.OnDropDown := @cbLanguageEnter;
   cbLanguage.OnMouseMove := @cbLanguageMouseMove;
 {$endif LCLgtk2}
 
-{$ifdef mswindows}
+  {$ifdef mswindows}
   gbSysInt.Visible := True;
   reg := TRegistry.Create;
   Try
     If reg.OpenKeyReadOnly('Software\Classes\.torrent') Then
+    Begin
+      If reg.ReadString('') = AppName Then
       Begin
-        If reg.ReadString('') = AppName Then
-          Begin
-            reg.CloseKey;
-            If reg.OpenKeyReadOnly(Format(
-               'Software\Classes\%s\shell\open\command', [AppName])) Then
-              Begin
-                s := reg.ReadString('');
-                FRegExt := CompareFilePath(s, Format('"%s" "%%1"', [ParamStr(0)]
-                           )) = 0;
-              End;
-          End;
+        reg.CloseKey;
+        If reg.OpenKeyReadOnly(Format(
+          'Software\Classes\%s\shell\open\command', [AppName])) Then
+        Begin
+          s := reg.ReadString('');
+          FRegExt := CompareFilePath(s, Format('"%s" "%%1"',
+            [ParamStr(0)])) = 0;
+        End;
       End;
+    End;
     reg.CloseKey;
     If reg.OpenKeyReadOnly('Software\Classes\Magnet\shell\open\command') Then
-      Begin
-        s := reg.ReadString('');
-        FRegMagnet := CompareFilePath(s, Format('"%s" "%%1"', [ParamStr(0)])) =
-                      0;
-      End;
+    Begin
+      s := reg.ReadString('');
+      FRegMagnet := CompareFilePath(s, Format('"%s" "%%1"', [ParamStr(0)])) = 0;
+    End;
   Finally
     reg.Free;
-End;
-cbRegExt.Checked := FRegExt;
-cbRegMagnet.Checked := FRegMagnet;
-{$endif mswindows}
+  End;
+  cbRegExt.Checked := FRegExt;
+  cbRegMagnet.Checked := FRegMagnet;
+  {$endif mswindows}
 End;
 
 Procedure TOptionsForm.cbLanguageEnter(Sender: TObject);
@@ -205,21 +203,20 @@ Begin
   edCheckVersionDays.Enabled := cbCheckNewVersion.Checked;
 End;
 
-Procedure TOptionsForm.cbLanguageMouseDown(Sender: TObject; Button: TMouseButton
-                                           ; Shift: TShiftState; X, Y: Integer);
+Procedure TOptionsForm.cbLanguageMouseDown(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 Begin
   cbLanguageEnter(cbLanguage);
 End;
 
 Procedure TOptionsForm.cbLanguageMouseMove(Sender: TObject; Shift: TShiftState;
-                                           X, Y: Integer);
+  X, Y: Integer);
 Begin
   cbLanguageEnter(cbLanguage);
 End;
 
 Procedure TOptionsForm.FormActivate(Sender: TObject);
-
-Var 
+Var
   cnv: TControlCanvas;
   w: Integer;
   s: String;
@@ -234,13 +231,12 @@ Begin
     cbLangLeftRight.ItemWidth := w + 16;
   Finally
     cnv.Free;
-End;
+  End;
 End;
 
 Procedure TOptionsForm.FillLanguageItems;
-
-Var 
-  i: integer;
+Var
+  i: Integer;
 Begin
   AppBusy;
   cbLanguage.Items.BeginUpdate;
@@ -256,8 +252,8 @@ Begin
       ItemIndex := Items.IndexOf(FTranslationLanguage);
   Finally
     cbLanguage.Items.EndUpdate;
-End;
-AppNormal;
+  End;
+  AppNormal;
 End;
 
 Procedure TOptionsForm.FormDestroy(Sender: TObject);
@@ -267,76 +263,75 @@ End;
 
 Procedure TOptionsForm.FormShow(Sender: TObject);
 Begin
-  ConnForm.FormShow(Nil);
+  ConnForm.FormShow(nil);
   If ConnForm.edHost.Text = '' Then
-    Begin
-      tabGeneral.Hide;
-      ActiveControl := ConnForm.edHost;
-    End;
+  Begin
+    tabGeneral.Hide;
+    ActiveControl := ConnForm.edHost;
+  End;
 End;
 
 Procedure TOptionsForm.OKButtonClick(Sender: TObject);
-
-Var 
-  s: string;
-  bd,idx : Integer;
-  restart: boolean;
-{$ifdef mswindows}
+Var
+  s: String;
+  bd, idx: Integer;
+  restart: Boolean;
+  {$ifdef mswindows}
   reg: TRegistry;
-{$endif mswindows}
+  {$endif mswindows}
 Begin
   ConnForm.ModalResult := mrNone;
-  ConnForm.btOKClick(Nil);
+  ConnForm.btOKClick(nil);
   If ConnForm.ModalResult = mrNone Then
     exit;
   restart := False;
   If cbLanguage.Text <> FTranslationLanguage Then
-    Begin
-      If cbLanguage.Text = 'English' Then
-        s := '-'
-      Else
-        s := FLangList.Values[cbLanguage.Text];
-      Ini.WriteString('Interface', 'TranslationFile', s);
-      restart := True;
-    End;
+  Begin
+    If cbLanguage.Text = 'English' Then
+      s := '-'
+    Else
+      s := FLangList.Values[cbLanguage.Text];
+    Ini.WriteString('Interface', 'TranslationFile', s);
+    restart := True;
+  End;
 
   // bidi
   idx := cbLangLeftRight.ItemIndex;
-  bd := Ini.ReadInteger ('Interface', 'IgnoreRightLeft', 0);
-  Ini.WriteInteger     ('Interface', 'IgnoreRightLeft', idx);
+  bd := Ini.ReadInteger('Interface', 'IgnoreRightLeft', 0);
+  Ini.WriteInteger('Interface', 'IgnoreRightLeft', idx);
   If idx <> bd Then restart := True;
 
-{$ifdef mswindows}
+  {$ifdef mswindows}
   reg := TRegistry.Create;
   Try
     If cbRegExt.Checked <> FRegExt Then
       If cbRegExt.Checked Then
+      Begin
+        If reg.OpenKey('Software\Classes\.torrent', True) Then
         Begin
-          If reg.OpenKey('Software\Classes\.torrent', True) Then
+          reg.WriteString('', AppName);
+          reg.CloseKey;
+          If reg.OpenKey(Format('Software\Classes\%s\DefaultIcon',
+            [AppName]), True) Then
+          Begin
+            reg.WriteString('', Format('"%s",0', [ParamStr(0)]));
+            reg.CloseKey;
+            If reg.OpenKey(Format('Software\Classes\%s\shell\open\command',
+              [AppName]), True) Then
             Begin
-              reg.WriteString('', AppName);
+              reg.WriteString('', Format('"%s" "%%1"', [ParamStr(0)]));
               reg.CloseKey;
-              If reg.OpenKey(Format('Software\Classes\%s\DefaultIcon', [AppName]
-                 ), True) Then
-                Begin
-                  reg.WriteString('', Format('"%s",0', [ParamStr(0)]));
-                  reg.CloseKey;
-                  If reg.OpenKey(Format('Software\Classes\%s\shell\open\command'
-                     , [AppName]), True) Then
-                    Begin
-                      reg.WriteString('', Format('"%s" "%%1"', [ParamStr(0)]));
-                      reg.CloseKey;
-                    End;
-                End;
             End;
-        End
-    Else
+          End;
+        End;
+      End
+      Else
       Begin
         If reg.OpenKey('Software\Classes\.torrent', False) Then
-          Begin
-            reg.DeleteValue('');
-            reg.CloseKey;
-          End;
+        Begin
+          reg.DeleteValue('');
+          reg.CloseKey;
+        End;
         s := Format('Software\Classes\%s', [AppName]);
         reg.DeleteKey(s + '\DefaultIcon');
         reg.DeleteKey(s + '\shell\open\command');
@@ -347,53 +342,53 @@ Begin
 
     If cbRegMagnet.Checked <> FRegMagnet Then
       If cbRegMagnet.Checked Then
+      Begin
+        If reg.OpenKey('Software\Classes\Magnet', True) Then
         Begin
-          If reg.OpenKey('Software\Classes\Magnet', True) Then
+          If Not reg.ValueExists('') Then
+            reg.WriteString('', 'Magnet URI');
+          reg.WriteString('Content Type', 'application/x-magnet');
+          reg.WriteString('URL Protocol', '');
+          reg.CloseKey;
+          If reg.OpenKey('Software\Classes\Magnet\DefaultIcon', True) Then
+          Begin
+            reg.WriteString('', Format('"%s",0', [ParamStr(0)]));
+            reg.CloseKey;
+            If reg.OpenKey('Software\Classes\Magnet\shell', True) Then
             Begin
-              If Not reg.ValueExists('') Then
-                reg.WriteString('', 'Magnet URI');
-              reg.WriteString('Content Type', 'application/x-magnet');
-              reg.WriteString('URL Protocol', '');
+              reg.WriteString('', 'open');
               reg.CloseKey;
-              If reg.OpenKey('Software\Classes\Magnet\DefaultIcon', True) Then
-                Begin
-                  reg.WriteString('', Format('"%s",0', [ParamStr(0)]));
-                  reg.CloseKey;
-                  If reg.OpenKey('Software\Classes\Magnet\shell', True) Then
-                    Begin
-                      reg.WriteString('', 'open');
-                      reg.CloseKey;
-                      If reg.OpenKey(
-                         'Software\Classes\Magnet\shell\open\command', True)
-                        Then
-                        Begin
-                          reg.WriteString('', Format('"%s" "%%1"', [ParamStr(0)]
-                          ));
-                          reg.CloseKey;
-                        End;
-                    End;
-                End;
+              If reg.OpenKey(
+                'Software\Classes\Magnet\shell\open\command',
+                True) Then
+              Begin
+                reg.WriteString('', Format('"%s" "%%1"',
+                  [ParamStr(0)]));
+                reg.CloseKey;
+              End;
             End;
-        End
-    Else
+          End;
+        End;
+      End
+      Else
       Begin
         reg.DeleteKey('Software\Classes\Magnet\DefaultIcon');
         reg.DeleteKey('Software\Classes\Magnet\shell\open\command');
       End;
   Finally
     reg.Free;
+  End;
+  {$endif mswindows}
+
+  If edIntfScale.Value <> IntfScale Then
+    restart := True;
+
+  If restart Then
+    MessageDlg(sRestartRequired, mtInformation, [mbOK], 0);
+  ModalResult := mrOk;
 End;
-{$endif mswindows}
 
-If edIntfScale.Value <> IntfScale Then
-  restart := True;
-
-If restart Then
-  MessageDlg(sRestartRequired, mtInformation, [mbOk], 0);
-ModalResult := mrOk;
-End;
-
-initialization
+Initialization
   {$I options.lrs}
 
 End.

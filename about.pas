@@ -37,21 +37,20 @@ Unit About;
 
 Interface
 
-Uses 
-BaseForm, Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics,
-Dialogs, StdCtrls, ComCtrls, ExtCtrls, ButtonPanel, lclversion,
-ssl_openssl, ssl_openssl_lib;
+Uses
+  BaseForm, Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics,
+  Dialogs, StdCtrls, ComCtrls, ExtCtrls, ButtonPanel, lclversion,
+  ssl_openssl, ssl_openssl_lib;
 
-resourcestring
-SErrorCheckingVersion = 'Error checking for new version.';
-SNewVersionFound = 'A new version of %s is available.' + LineEnding +
-                   'Your current version: %s' + LineEnding +
-                   'The new version: %s' + LineEnding + LineEnding +
-                   'Do you wish to open the Downloads web page?';
-SLatestVersion = 'No updates have been found.' + LineEnding +
-                 'You are running the latest version of %s.';
+Resourcestring
+  SErrorCheckingVersion = 'Error checking for new version.';
+  SNewVersionFound = 'A new version of %s is available.' + LineEnding +
+    'Your current version: %s' + LineEnding + 'The new version: %s' +
+    LineEnding + LineEnding + 'Do you wish to open the Downloads web page?';
+  SLatestVersion = 'No updates have been found.' + LineEnding +
+    'You are running the latest version of %s.';
 
-Type 
+Type
 
   { TAboutForm }
 
@@ -75,13 +74,13 @@ Type
     Procedure imgLazarusClick(Sender: TObject);
     Procedure imgSynapseClick(Sender: TObject);
     Procedure txHomePageClick(Sender: TObject);
-    Private 
+  Private
     { private declarations }
-    Public 
+  Public
     { public declarations }
   End;
 
-Procedure CheckNewVersion(Async: boolean = True);
+Procedure CheckNewVersion(Async: Boolean = True);
 Procedure GoHomePage;
 Procedure GoGitHub;
 
@@ -89,30 +88,29 @@ Implementation
 
 Uses Main, utils, httpsend;
 
-Type 
+Type
 
   { TCheckVersionThread }
 
   TCheckVersionThread = Class(TThread)
-    Private 
-      FHttp: THTTPSend;
-      FError: string;
-      FVersion: string;
-      FExit: boolean;
+  Private
+    FHttp: THTTPSend;
+    FError: String;
+    FVersion: String;
+    FExit: Boolean;
 
-      Procedure CheckResult;
-      Function GetIntVersion(Const Ver: String): integer;
-    Protected 
-      Procedure Execute;
-      override;
+    Procedure CheckResult;
+    Function GetIntVersion(Const Ver: String): Integer;
+  Protected
+    Procedure Execute; Override;
   End;
 
-Var 
+Var
   CheckVersionThread: TCheckVersionThread;
 
-Procedure CheckNewVersion(Async: boolean);
+Procedure CheckNewVersion(Async: Boolean);
 Begin
-  If CheckVersionThread <> Nil Then
+  If CheckVersionThread <> nil Then
     exit;
   Ini.WriteInteger('Interface', 'LastNewVersionCheck', Trunc(Now));
   CheckVersionThread := TCheckVersionThread.Create(True);
@@ -120,11 +118,11 @@ Begin
   If Async Then
     CheckVersionThread.Suspended := False
   Else
-    Begin
-      CheckVersionThread.Execute;
-      CheckVersionThread.FExit := True;
-      CheckVersionThread.Suspended := False;
-    End;
+  Begin
+    CheckVersionThread.Execute;
+    CheckVersionThread.FExit := True;
+    CheckVersionThread.Suspended := False;
+  End;
 End;
 
 Procedure GoHomePage;
@@ -147,20 +145,20 @@ Procedure TCheckVersionThread.CheckResult;
 Begin
   ForceAppNormal;
   If FError <> '' Then
-    Begin
-      MessageDlg(SErrorCheckingVersion + LineEnding + FError, mtError, [mbOK], 0
+  Begin
+    MessageDlg(SErrorCheckingVersion + LineEnding + FError, mtError, [mbOK], 0
       );
-      exit;
-    End;
+    exit;
+  End;
 
-  If GetIntVersion(AppVersion) >= GetIntVersion(FVersion)  Then
-    Begin
-      MessageDlg(Format(SLatestVersion, [AppName]), mtInformation, [mbOK], 0);
-      exit;
-    End;
+  If GetIntVersion(AppVersion) >= GetIntVersion(FVersion) Then
+  Begin
+    MessageDlg(Format(SLatestVersion, [AppName]), mtInformation, [mbOK], 0);
+    exit;
+  End;
 
   If MessageDlg(Format(SNewVersionFound, [AppName, AppVersion, FVersion]),
-     mtConfirmation, mbYesNo, 0) <> mrYes Then
+    mtConfirmation, mbYesNo, 0) <> mrYes Then
     exit;
 
   Application.ProcessMessages;
@@ -169,75 +167,73 @@ Begin
   AppNormal;
 End;
 
-Function TCheckVersionThread.GetIntVersion(Const Ver: String): integer;
-
-Var 
-  v: string;
-  vi, i, j: integer;
+Function TCheckVersionThread.GetIntVersion(Const Ver: String): Integer;
+Var
+  v: String;
+  vi, i, j: Integer;
 Begin
   Result := 0;
   v := Ver;
-  For i:=1 To 3 Do
+  For i := 1 To 3 Do
+  Begin
+    If v = '' Then
+      vi := 0
+    Else
     Begin
-      If v = '' Then
-        vi := 0
-      Else
-        Begin
-          j := Pos('.', v);
-          If j = 0 Then
-            j := MaxInt;
-          vi := StrToIntDef(Copy(v, 1, j - 1), 0);
-          Delete(v, 1, j);
-        End;
-      Result := Result shl 8 Or vi;
+      j := Pos('.', v);
+      If j = 0 Then
+        j := MaxInt;
+      vi := StrToIntDef(Copy(v, 1, j - 1), 0);
+      Delete(v, 1, j);
     End;
+    Result := Result Shl 8 Or vi;
+  End;
 End;
 
 Procedure TCheckVersionThread.Execute;
 Begin
   If Not FExit Then
-    Begin
+  Begin
+    Try
+      FHttp := THTTPSend.Create;
       Try
-        FHttp := THTTPSend.Create;
-        Try
-          If RpcObj.Http.ProxyHost <> '' Then
-            Begin
-              FHttp.ProxyHost := RpcObj.Http.ProxyHost;
-              FHttp.ProxyPort := RpcObj.Http.ProxyPort;
-              FHttp.ProxyUser := RpcObj.Http.ProxyUser;
-              FHttp.ProxyPass := RpcObj.Http.ProxyPass;
-            End;
-          If FHttp.HTTPMethod('GET',
-
-'https://raw.githubusercontent.com/transmission-remote-gui/transgui/master/VERSION.txt'
-             ) Then
-            Begin
-              If FHttp.ResultCode = 200 Then
-                Begin
-                  SetString(FVersion, FHttp.Document.Memory, FHttp.Document.Size
-                  );
-                  FVersion := Trim(FVersion);
-                End
-              Else
-                FError := Format('HTTP error: %d', [FHttp.ResultCode]);
-            End
+        If RpcObj.Http.ProxyHost <> '' Then
+        Begin
+          FHttp.ProxyHost := RpcObj.Http.ProxyHost;
+          FHttp.ProxyPort := RpcObj.Http.ProxyPort;
+          FHttp.ProxyUser := RpcObj.Http.ProxyUser;
+          FHttp.ProxyPass := RpcObj.Http.ProxyPass;
+        End;
+        If FHttp.HTTPMethod('GET',
+          'https://raw.githubusercontent.com/transmission-remote-gui/transgui/master/VERSION.txt'
+          ) Then
+        Begin
+          If FHttp.ResultCode = 200 Then
+          Begin
+            SetString(FVersion, FHttp.Document.Memory, FHttp.Document.Size
+              );
+            FVersion := Trim(FVersion);
+          End
           Else
-            FError := FHttp.Sock.LastErrorDesc;
-        Finally
-          FHttp.Free;
+            FError := Format('HTTP error: %d', [FHttp.ResultCode]);
+        End
+        Else
+          FError := FHttp.Sock.LastErrorDesc;
+      Finally
+        FHttp.Free;
+      End;
+    Except
+      FError := Exception(ExceptObject).Message;
     End;
-Except
-  FError := Exception(ExceptObject).Message;
-End;
-If (FError <> '') Or (GetIntVersion(FVersion) > GetIntVersion(AppVersion)) Or
-   Suspended Then
-  If Suspended Then
-    CheckResult
-Else
-  Synchronize(@CheckResult);
-End;
-If Not Suspended Then
-  CheckVersionThread := Nil;
+    If (FError <> '') Or (GetIntVersion(FVersion) > GetIntVersion(AppVersion)) Or
+      Suspended Then
+      If Suspended Then
+        CheckResult
+      Else
+        Synchronize(@CheckResult);
+  End;
+  If Not Suspended Then
+    CheckVersionThread := nil;
 End;
 
 { TAboutForm }
@@ -269,10 +265,9 @@ Begin
   txVersion.Caption := Format(txVersion.Caption, [AppVersion]);
   Page.ActivePageIndex := 0;
 
-  txVersFPC.caption := 'Fpc : ' + {$I %FPCVERSION%} + '   Lazarus : ' +
-                       lcl_version;
+  txVersFPC.Caption := 'Fpc : ' + {$I %FPCVERSION%} + '   Lazarus : ' + lcl_version;
 
-{$ifdef lclcarbon}
+  {$ifdef lclcarbon}
   s := edLicense.Text;
   edLicense.Text := '';
   edLicense.HandleNeeded;
@@ -293,7 +288,7 @@ Begin
   AppNormal;
 End;
 
-initialization
+Initialization
   {$I about.lrs}
 
 End.
