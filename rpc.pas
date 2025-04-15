@@ -564,8 +564,8 @@ Begin
 
   args := FRpc.RequestInfo(0, ['id', 'name', 'status', 'errorString',
     'announceResponse', 'recheckProgress', 'sizeWhenDone', 'leftUntilDone',
-    'rateDownload', 'rateUpload', 'trackerStats', 'metadataPercentComplete'],
-    ExtraFields);
+    'percentDone', 'rateDownload', 'rateUpload', 'trackerStats',
+    'metadataPercentComplete'], ExtraFields);
   Try
     If (args <> nil) And Not Terminated Then
     Begin
@@ -679,16 +679,15 @@ Var
   t: TJSONArray;
 Begin
   args := FRpc.RequestInfo(TorrentId, ['totalSize', 'sizeWhenDone',
-    'leftUntilDone', 'pieceCount', 'pieceSize', 'haveValid',
-    'hashString', 'comment', 'downloadedEver', 'uploadedEver',
-    'corruptEver', 'errorString', 'announceResponse', 'downloadLimit',
-    'downloadLimitMode', 'uploadLimit', 'uploadLimitMode',
-    'maxConnectedPeers', 'nextAnnounceTime', 'dateCreated', 'creator',
-    'eta', 'peersSendingToUs', 'seeders', 'peersGettingFromUs',
-    'leechers', 'uploadRatio', 'addedDate', 'doneDate', 'activityDate',
-    'downloadLimited', 'uploadLimited', 'downloadDir', 'id', 'pieces',
-    'trackerStats', 'secondsDownloading', 'secondsSeeding', 'magnetLink',
-    'isPrivate', 'labels', 'sequentialDownload']);
+    'leftUntilDone', 'pieceCount', 'pieceSize', 'haveValid', 'hashString',
+    'comment', 'downloadedEver', 'uploadedEver', 'corruptEver',
+    'errorString', 'announceResponse', 'downloadLimit', 'downloadLimitMode',
+    'uploadLimit', 'uploadLimitMode', 'maxConnectedPeers', 'nextAnnounceTime',
+    'dateCreated', 'creator', 'eta', 'peersSendingToUs', 'seeders',
+    'peersGettingFromUs', 'leechers', 'uploadRatio', 'addedDate',
+    'doneDate', 'activityDate', 'downloadLimited', 'uploadLimited',
+    'downloadDir', 'id', 'pieces', 'trackerStats', 'secondsDownloading',
+    'secondsSeeding', 'magnetLink', 'isPrivate', 'labels', 'sequentialDownload']);
   Try
     If args <> nil Then
     Begin
@@ -755,9 +754,12 @@ End;
 
 Destructor TRpc.Destroy;
 Begin
+  //If RpcThread <> nil Then
+  //  RpcThread.Terminate;
+  Disconnect;
   Http.Free;
   HttpLock.Free;
-  FLock.Free;
+  FreeAndNil(FLock);//.Free;
   Inherited Destroy;
 End;
 
@@ -893,7 +895,7 @@ Begin
       Http.Document.Clear;
       s := req.AsJSON;
       Http.Document.Write(PChar(s)^, Length(s));
-      s := '';
+      //s := '';
       Http.Headers.Clear;
       Http.Headers.Add('Accept-Encoding: gzip');
       Http.MimeType := 'application/json';
@@ -905,8 +907,9 @@ Begin
         Try
           r := Http.HTTPMethod('POST', Url + FRpcPath);
         Except
-          OutputDebugString(LPCSTR(Exception(ExceptObject).Message +
-            '(SendRequest 3)'));
+          //OutputDebugString(LPCSTR(Exception(ExceptObject).Message +
+          //  '(SendRequest 3)'));
+          r := False;
         End;
 
       Finally

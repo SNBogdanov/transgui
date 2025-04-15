@@ -339,7 +339,7 @@
     </Other>
   </CompilerOptions>
   <Debugging>
-    <Exceptions Count="14">
+    <Exceptions Count="15">
       <Item1>
         <Name Value="EInvalidCast"/>
       </Item1>
@@ -382,6 +382,9 @@
       <Item14>
         <Name Value="EJSON"/>
       </Item14>
+      <Item15>
+        <Name Value="Edecompressionerror"/>
+      </Item15>
     </Exceptions>
   </Debugging>
 </CONFIG>

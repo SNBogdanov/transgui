@@ -191,11 +191,13 @@ Const
   idxFilePriority = 4;
   idxFileId = -4;
   idxFileId1 = 5;
+  idxFileRemain = 6;
   idxFileFullPath = -1;
   idxFileLevel = -2;
   idxFileIndex = -3;
+  idxFileWanted = -5;
 
-  FilesExtraColumns = 4;
+  FilesExtraColumns = 5;
 
 Implementation
 
@@ -314,7 +316,7 @@ Procedure TFilesTree.FillTree(ATorrentId: Integer;
 
 Var
   i, row: Integer;
-  FullRefresh: Boolean;
+  FullRefresh, iWanted: Boolean;
   f: TJSONObject;
   s, ss, path: String;
   ff: Double;
@@ -390,10 +392,18 @@ Begin
       FFiles[idxFileName, row] := UTF8Decode(ss);
       ff := f.Floats['length'];
       FFiles[idxFileSize, row] := ff;
-
+      If wanted = nil Then
+        iWanted := True
+      Else
+        iWanted := wanted.Integers[i] <> 0;
+      FFiles[idxFileWanted, row] := iWanted;
       If FHasDone Then
       Begin
         FFiles[idxFileDone, row] := f.Floats['bytesCompleted'];
+        If wanted.Integers[i] = 0 Then
+          FFiles[idxFileRemain, row] := 0
+        Else
+          FFiles[idxFileRemain, row] := ff - f.Floats['bytesCompleted'];
         If ff = 0 Then
           ff := 100.0
         Else
@@ -402,15 +412,15 @@ Begin
 
         If FHasPriority Then
         Begin
-          If wanted.Integers[i] = 0 Then
-          Begin
-            FFiles[idxFilePriority, row] := TR_PRI_SKIP;
-            IntSetChecked(row, cbUnchecked);
-          End
-          Else
+          If iWanted Then
           Begin
             FFiles[idxFilePriority, row] := priorities.Integers[i];
             IntSetChecked(row, cbChecked);
+          End
+          Else
+          Begin
+            FFiles[idxFilePriority, row] := TR_PRI_SKIP;
+            IntSetChecked(row, cbUnchecked);
           End;
         End;
       End;
@@ -557,11 +567,18 @@ Function TFilesTree.UpdateSummary: TFolderInfo;
           If FHasDone Then
           Begin
             FFiles[idxFileDone, i] := DoneSize;
+            FFiles[idxFileRemain, i] := Size - DoneSize;
             If Size = 0 Then
               DoneSize := 100.0
             Else
               DoneSize := DoneSize * 100.0 / Size;
             FFiles[idxFileProgress, i] := Int(DoneSize * 10.0) / 10.0;
+          End;
+          With Result Do
+          Begin
+            Size := Size + FFiles[idxFileSize, i];
+            If FHasDone Then
+              DoneSize := DoneSize + FFiles[idxFileDone, i];
           End;
           If FHasPriority Then
           Begin
@@ -573,9 +590,12 @@ Function TFilesTree.UpdateSummary: TFolderInfo;
 
       With Result Do
       Begin
-        Size := Size + FFiles[idxFileSize, i];
-        If FHasDone Then
-          DoneSize := DoneSize + FFiles[idxFileDone, i];
+        If FFiles[idxFileWanted, i] Then
+        Begin
+          Size := Size + FFiles[idxFileSize, i];
+          If FHasDone Then
+            DoneSize := DoneSize + FFiles[idxFileDone, i];
+        End;
         If FHasPriority Then
         Begin
           j := FFiles[idxFilePriority, i];
@@ -932,7 +952,7 @@ Begin
               Inc(Indent, Sender.RowHeights[ARow + Sender.FixedRows]);
         End;
       End;
-      idxFileSize, idxFileDone:
+      idxFileSize, idxFileDone, idxFileRemain:
         Text :=
           (GetHumanSize(Double(Sender.Items[ADataCol, ARow])));
       idxFileProgress:
@@ -1490,10 +1510,10 @@ Begin
 
   {$ifdef windows}
   gbSaveAs.Caption := '';
-{$endif windows}
+  {$endif windows}
   {$ifdef darwin}
   Buttons.BorderSpacing.Right := Buttons.BorderSpacing.Right + ScaleInt(12);
-{$endif darwin}
+  {$endif darwin}
 End;
 
 Initialization

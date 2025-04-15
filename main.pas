@@ -950,6 +950,7 @@ Const
   idxPrivate = 24;
   idxLabels = 25;
 
+
   idxTag = -1;
   idxSeedsTotal = -2;
   idxLeechersTotal = -3;
@@ -3371,6 +3372,7 @@ Begin
             If (RpcObj.RPCVersion >= 18) And cbStartTorrent.Checked Then
             Begin
               args.Add('sequentialDownload', 1);
+              args.Add('sequential_download', 1);
             End;
             If edLabel.Text <> '' Then
             Begin
@@ -4682,35 +4684,37 @@ Begin
     //    Self.Update;
     req := TJSONObject.Create;
     Try
-      req.Add('method', 'torrent-set');
-      args := TJSONObject.Create;
-      args.Add('ids', TJSONArray.Create([torid]));
-      If (rpcObj.RPCVersion >= 17) Then
-      Begin
-        listT := '';
-        i1 := lvTrackers.Row;
-        For i := 0 To lvTrackers.Items.Count - 1 Do
+      Try
+
+        req.Add('method', 'torrent-set');
+        args := TJSONObject.Create;
+        args.Add('ids', TJSONArray.Create([torid]));
+        If (rpcObj.RPCVersion >= 17) Then
         Begin
-          If (i = i1) Then
-            s := tText
-          Else
-            s := lvTrackers.Items[idxTrackersListName, i];
-          listT := listT + s + #10;
-        End;
-        args.Add('trackerList', listT);
-      End
-      Else
-        args.Add('trackerReplace', TJSONArray.Create([id, UTF8Encode(tText)]));
-      //fix bag
-      req.Add('arguments', args);
-      //FreeAndNil(args);
-      args1 := RpcObj.SendRequest(req, False);
-      //if args1 = nil then begin
-      //  CheckStatus(False);
-      //  exit;
-      //end
-      //else
-      FreeAndNil(args1);
+          listT := '';
+          i1 := lvTrackers.Row;
+          For i := 0 To lvTrackers.Items.Count - 1 Do
+          Begin
+            If (i = i1) Then
+              s := tText
+            Else
+              s := lvTrackers.Items[idxTrackersListName, i];
+            listT := listT + s + #10;
+          End;
+          args.Add('trackerList', listT);
+        End
+        Else
+          args.Add('trackerReplace', TJSONArray.Create([id, UTF8Encode(tText)]));
+        //fix bag
+        req.Add('arguments', args);
+        //FreeAndNil(args);
+        args1 := RpcObj.SendRequest(req, False);
+        If args1 <> nil Then
+          FreeAndNil(args1);
+      Except
+        OutputDebugString(LPCSTR(Exception(ExceptObject).Message +
+          '(MenuItem107Click)'));
+      End;
 
     Finally
       req.Free;
@@ -4792,9 +4796,9 @@ Begin
     Else
       TorrentIds := GetSelectedTorrents;
     args := RpcObj.RequestInfos(TorrentIds, ['downloadLimit',
-      'sequentialDownload', 'downloadLimitMode', 'downloadLimited',
-      'uploadLimit', 'uploadLimitMode', 'uploadLimited', 'name',
-      'maxConnectedPeers', 'seedRatioMode', 'seedRatioLimit',
+      'sequential_download', 'sequentialDownload', 'downloadLimitMode',
+      'downloadLimited', 'uploadLimit', 'uploadLimitMode', 'uploadLimited',
+      'name', 'maxConnectedPeers', 'seedRatioMode', 'seedRatioLimit',
       'seedIdleLimit', 'seedIdleMode', 'trackers']);
     If args = nil Then
     Begin
@@ -4907,17 +4911,34 @@ Begin
             c2 := 0;
             For i := 0 To args.Arrays['torrents'].Count - 1 Do
             Begin
-              If (args.Arrays['torrents'].Objects[i].Find(
-                'sequentialDownload') <> nil) Then
+              If (args.Arrays['torrents'].Objects[i].Find('sequential_download') =
+                nil) And (args.Arrays['torrents'].Objects[i].Find('sequentialDownload') =
+                nil) Then
+              Begin
+                c2 := c2 + 1;
+                continue;
+              End;
+              If args.Arrays['torrents'].Objects[i].Find('sequential_download') <>
+                nil Then
+              Begin
+                If args.Arrays['torrents'].Objects[i].Integers[
+                  'sequential_download'] = 1 Then
+                Begin
+                  c1 := c1 + 1;
+                  continue;
+                End;
+              End;
+              If args.Arrays['torrents'].Objects[i].Find('sequentialDownload') <>
+                nil Then
               Begin
                 If args.Arrays['torrents'].Objects[i].Integers[
                   'sequentialDownload'] = 1 Then
-                  c1 := c1 + 1
-                Else
-                  c2 := c2 + 1;
-              End
-              Else
-                c2 := c2 + 1;
+                Begin
+                  c1 := c1 + 1;
+                  continue;
+                End;
+              End;
+              c2 := c2 + 1;
             End;
             cbSequentialDownload.AllowGrayed := False;
             If (c1 <> 0) And (c2 = 0) Then
@@ -4963,8 +4984,12 @@ Begin
           Try
             Begin
               If cbSequentialDownload.State <> cbGrayed Then
+              Begin
+                args.Add('sequential_download',
+                  Integer(cbSequentialDownload.Checked) And 1);
                 args.Add('sequentialDownload',
                   Integer(cbSequentialDownload.Checked) And 1);
+              End;
             End;
           Finally
           End;
@@ -5601,9 +5626,8 @@ Begin
         For i := ARow + 1 To FFiles.Count - 1 Do
           If FFilesTree.RowLevel[i] > lvl Then
             FFiles[idxFileFullPath, i] :=
-              UTF8Decode(p +
-              Copy(UTF8Encode(WideString(FFiles[idxFileFullPath, i])),
-              len + 1, MaxInt))
+              UTF8Decode(p + Copy(
+              UTF8Encode(WideString(FFiles[idxFileFullPath, i])), len + 1, MaxInt))
           Else
             break;
       Finally
@@ -6517,8 +6541,9 @@ Begin
 
       //    (pos('https://',lvTrackers.Items[idxTrackersListName, lvTrackers.Row]) >0));
       (pos('http://plab.site/', lvTrackers.Items[idxTrackersListName,
-      lvTrackers.Row]) > 0) Or (pos('http://plab.site1/',
-      lvTrackers.Items[idxTrackersListName, lvTrackers.Row]) > 0));
+      lvTrackers.Row]) > 0) Or
+      (pos('http://plab.site1/', lvTrackers.Items[idxTrackersListName,
+      lvTrackers.Row]) > 0));
   End
   Else
     acReplaceTracker.Visible := False;
@@ -6880,8 +6905,8 @@ Var
   UpSpeed, DownSpeed: Double;
   DownCnt, SeedCnt, CompletedCnt, ActiveCnt, StoppedCnt, ErrorCnt,
   WaitingCnt, ft: Integer;
-  DownSize, SeedSize, CompletedSize, ActiveSize, StoppedSize,
-  ErrorSize, WaitingSize, AllSize: Double;
+  DownSize, SeedSize, CompletedSize, ActiveSize, StoppedSize, ErrorSize,
+  WaitingSize, AllSize: Double;
   IsActive: Boolean;
   Labels, Paths: TStringList;
   alabels: TStringList;
@@ -7081,9 +7106,10 @@ Begin
           f := t.Floats['recheckProgress'] * 100.0
         Else
         Begin
-          f := t.Floats['sizeWhenDone'];
-          If f <> 0 Then
-            f := (f - t.Floats['leftUntilDone']) * 100.0 / f;
+          //f := t.Floats['sizeWhenDone'];
+          f := t.Floats['percentDone'] * 100;
+          //If f <> 0 Then
+          //  f := (f - t.Floats['leftUntilDone']) * 100.0 / f;
           If StateImg = imgDone Then
             If (t.Floats['leftUntilDone'] <> 0) Or
               (t.Floats['sizeWhenDone'] = 0) Then
@@ -7227,7 +7253,9 @@ Begin
           Begin
             w := CountData.Create;
             w.Count := 1;
-            w.Size := t.floats['totalSize'];
+            //w.Size := t.floats['totalSize'];
+            w.Size := FTorrents[idxSizeToDowload, row];
+
 
             Paths.AddObject(s, TObject(w));
           End
@@ -7235,7 +7263,8 @@ Begin
           Begin
             w := CountData(Paths.Objects[j]);
             w.Count := w.Count + 1;
-            w.Size := w.Size + t.floats['totalSize'];
+            //w.Size := w.Size + t.floats['totalSize'];
+            w.Size := w.Size + FTorrents[idxSizeToDowload, row];
             Paths.Objects[j] := TObject(w);
           End;
 
@@ -7271,14 +7300,16 @@ Begin
             Begin
               w := CountData.Create;
               w.Count := 1;
-              w.Size := t.floats['totalSize'];
+              //w.Size := w.Size + t.floats['totalSize'];
+              w.Size := w.Size + FTorrents[idxSizeToDowload, row];
               Labels.AddObject(ss, TObject(w));
             End
             Else
             Begin
               w := CountData(Labels.Objects[p]);
               w.Count := w.Count + 1;
-              w.Size := w.Size + t.floats['totalSize'];
+              //w.Size := w.Size + t.floats['totalSize'];
+              w.Size := w.Size + FTorrents[idxSizeToDowload, row];
               Labels.Objects[p] := TObject(w);
             End;
           End;
@@ -7290,14 +7321,16 @@ Begin
             Begin
               w := CountData.Create;
               w.Count := 1;
-              w.Size := t.floats['totalSize'];
+              //w.Size := w.Size + t.floats['totalSize'];
+              w.Size := w.Size + FTorrents[idxSizeToDowload, row];
               Labels.AddObject(ss, TObject(w));
             End
             Else
             Begin
               w := CountData(Labels.Objects[p]);
               w.Count := w.Count + 1;
-              w.Size := w.Size + t.floats['totalSize'];
+              //w.Size := w.Size + t.floats['totalSize'];
+              w.Size := w.Size + FTorrents[idxSizeToDowload, row];
               Labels.Objects[p] := TObject(w);
             End;
           End;
@@ -7346,36 +7379,43 @@ Begin
           If IsActive Then
           Begin
             Inc(ActiveCnt);
-            ActiveSize := ActiveSize + FTorrents[idxSize, i];
+            //ActiveSize := ActiveSize + FTorrents[idxSize, i];
+            ActiveSize := ActiveSize + FTorrents[idxSizeToDowload, i];
           End;
 
           j := FTorrents[idxStatus, i];
-          AllSize := AllSize + FTorrents[idxSize, i];
+          //AllSize := AllSize + FTorrents[idxSize, i];
+          AllSize := AllSize + FTorrents[idxSizeToDowload, i];
           If j = TR_STATUS_DOWNLOAD Then
           Begin
             Inc(DownCnt);
-            DownSize := DownSize + FTorrents[idxSize, i];
+            //DownSize := DownSize + FTorrents[idxSize, i];
+            DownSize := DownSize + FTorrents[idxSizeToDowload, i];
           End
           Else
             If j = TR_STATUS_SEED Then
             Begin
               Inc(SeedCnt);
-              SeedSize := SeedSize + FTorrents[idxSize, i];
+              //SeedSize := SeedSize + FTorrents[idxSize, i];
+              SeedSize := SeedSize + FTorrents[idxSizeToDowload, i];
               Inc(CompletedCnt);
-              CompletedSize := CompletedSize + FTorrents[idxSize, i];
+              //CompletedSize := CompletedSize + FTorrents[idxSize, i];
+              CompletedSize := CompletedSize + FTorrents[idxSizeToDowload, i];
             End
             Else
               If j = TR_STATUS_FINISHED Then
               Begin
                 Inc(CompletedCnt);
-                CompletedSize := CompletedSize + FTorrents[idxSize, i];
+                //CompletedSize := CompletedSize + FTorrents[idxSize, i];
+                CompletedSize := CompletedSize + FTorrents[idxSizeToDowload, i];
               End;
 
           If (j = TR_STATUS_CHECK) Or (j = TR_STATUS_CHECK_WAIT) Or
             (j = TR_STATUS_DOWNLOAD_WAIT) Then
           Begin
             Inc(WaitingCnt);
-            WaitingSize := WaitingSize + FTorrents[idxSize, i];
+            //WaitingSize := WaitingSize + FTorrents[idxSize, i];
+            WaitingSize := WaitingSize + FTorrents[idxSizeToDowload, i];
 
           End;
 
@@ -7383,14 +7423,16 @@ Begin
           If StateImg In [imgStopped, imgDone] Then
           Begin
             Inc(StoppedCnt);
-            StoppedSize := StoppedSize + FTorrents[idxSize, i];
+            //StoppedSize := StoppedSize + FTorrents[idxSize, i];
+            StoppedSize := StoppedSize + FTorrents[idxSizeToDowload, i];
 
           End
           Else
             If StateImg In [imgDownError, imgSeedError, imgError] Then
             Begin
               Inc(ErrorCnt);
-              ErrorSize := ErrorSize + FTorrents[idxSize, i];
+              //ErrorSize := ErrorSize + FTorrents[idxSize, i];
+              ErrorSize := ErrorSize + FTorrents[idxSizeToDowload, i];
             End;
 
           If Not VarIsEmpty(FTorrents[idxTracker, i]) Then
@@ -7586,8 +7628,8 @@ Begin
               End;
             w := CountData(Paths.Objects[i]);
             lvFilter.Items[0, j] :=
-              UTF8Decode(Format('%s (%d) (%s) %s',
-              [s, w.Count, Format(sTotalSize, [GetHumanSize(w.Size, 0, '?')]),
+              UTF8Decode(Format('%s (%d) (%s) %s', [s,
+              w.Count, Format(sTotalSize, [GetHumanSize(w.Size, 0, '?')]),
               FreeSpacePaths[Paths[i]]]));
             lvFilter.Items[-1, j] := UTF8Decode(Paths[i]);
             lvFilter.Items[-2, j] := 1;
@@ -8019,8 +8061,8 @@ Begin
   Begin
     f := t.Integers['secondsDownloading'];
     If f > 0 Then
-      s := Format('%s (%s: %s)', [s, SAverage,
-        GetHumanSize(t.Floats['downloadedEver'] / f, 1) + sPerSecond]);
+      s := Format('%s (%s: %s)',
+        [s, SAverage, GetHumanSize(t.Floats['downloadedEver'] / f, 1) + sPerSecond]);
   End;
   txDownSpeed.Caption := s;
   txUpSpeed.Caption := GetHumanSize(gTorrents.Items[idxUpSpeed, idx], 1) + sPerSecond;
@@ -8834,8 +8876,8 @@ Function TMainForm.ExecRemoteFile(Const FileName: String; SelectFile: Boolean;
       {$ifdef mswindows}
       If Userdef Then
       Begin
-        p := Format(FUserDefinedMenuParam, [s, RpcObj.Url,
-          TorrentId.ToString()]);
+        p := Format(FUserDefinedMenuParam,
+          [s, RpcObj.Url, TorrentId.ToString()]);
         s := FUserDefinedMenuEx;
       End
       Else
