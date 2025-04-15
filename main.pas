@@ -7628,8 +7628,8 @@ Begin
               End;
             w := CountData(Paths.Objects[i]);
             lvFilter.Items[0, j] :=
-              UTF8Decode(Format('%s (%d) (%s) %s', [s,
-              w.Count, Format(sTotalSize, [GetHumanSize(w.Size, 0, '?')]),
+              UTF8Decode(Format('%s (%d) (%s) %s',
+              [s, w.Count, Format(sTotalSize, [GetHumanSize(w.Size, 0, '?')]),
               FreeSpacePaths[Paths[i]]]));
             lvFilter.Items[-1, j] := UTF8Decode(Paths[i]);
             lvFilter.Items[-2, j] := 1;
@@ -8061,8 +8061,8 @@ Begin
   Begin
     f := t.Integers['secondsDownloading'];
     If f > 0 Then
-      s := Format('%s (%s: %s)',
-        [s, SAverage, GetHumanSize(t.Floats['downloadedEver'] / f, 1) + sPerSecond]);
+      s := Format('%s (%s: %s)', [s, SAverage,
+        GetHumanSize(t.Floats['downloadedEver'] / f, 1) + sPerSecond]);
   End;
   txDownSpeed.Caption := s;
   txUpSpeed.Caption := GetHumanSize(gTorrents.Items[idxUpSpeed, idx], 1) + sPerSecond;
@@ -8876,8 +8876,8 @@ Function TMainForm.ExecRemoteFile(Const FileName: String; SelectFile: Boolean;
       {$ifdef mswindows}
       If Userdef Then
       Begin
-        p := Format(FUserDefinedMenuParam,
-          [s, RpcObj.Url, TorrentId.ToString()]);
+        p := Format(FUserDefinedMenuParam, [s, RpcObj.Url,
+          TorrentId.ToString()]);
         s := FUserDefinedMenuEx;
       End
       Else
