@@ -7110,7 +7110,7 @@ Begin
           f := t.Floats['percentDone'] * 100;
           //If f <> 0 Then
           //  f := (f - t.Floats['leftUntilDone']) * 100.0 / f;
-          If StateImg = imgDone Then
+          If StateImg in[ imgDone, imgError] Then
             If (t.Floats['leftUntilDone'] <> 0) Or
               (t.Floats['sizeWhenDone'] = 0) Then
               StateImg := imgStopped
@@ -7253,19 +7253,26 @@ Begin
           Begin
             w := CountData.Create;
             w.Count := 1;
-            //w.Size := t.floats['totalSize'];
             w.Size := FTorrents[idxSizeToDowload, row];
-
-
             Paths.AddObject(s, TObject(w));
           End
           Else
           Begin
             w := CountData(Paths.Objects[j]);
-            w.Count := w.Count + 1;
-            //w.Size := w.Size + t.floats['totalSize'];
-            w.Size := w.Size + FTorrents[idxSizeToDowload, row];
-            Paths.Objects[j] := TObject(w);
+            If w <> nil Then
+            Begin
+              w.Count := w.Count + 1;
+              //w.Size := w.Size + t.floats['totalSize'];
+              w.Size := w.Size + FTorrents[idxSizeToDowload, row];
+              Paths.Objects[j] := TObject(w);
+            End
+            Else
+            Begin
+              w := CountData.Create;
+              w.Count := 1;
+              w.Size := FTorrents[idxSizeToDowload, row];
+              Paths.AddObject(s, TObject(w));
+            End;
           End;
 
         End;
@@ -7300,17 +7307,25 @@ Begin
             Begin
               w := CountData.Create;
               w.Count := 1;
-              //w.Size := w.Size + t.floats['totalSize'];
-              w.Size := w.Size + FTorrents[idxSizeToDowload, row];
+              w.Size := FTorrents[idxSizeToDowload, row];
               Labels.AddObject(ss, TObject(w));
             End
             Else
             Begin
               w := CountData(Labels.Objects[p]);
-              w.Count := w.Count + 1;
-              //w.Size := w.Size + t.floats['totalSize'];
-              w.Size := w.Size + FTorrents[idxSizeToDowload, row];
-              Labels.Objects[p] := TObject(w);
+              If w <> nil Then
+              Begin
+                w.Count := w.Count + 1;
+                w.Size := w.Size + FTorrents[idxSizeToDowload, row];
+                Labels.Objects[p] := TObject(w);
+              End
+              Else
+              Begin
+               w := CountData.Create;
+               w.Count := 1;
+               w.Size := FTorrents[idxSizeToDowload, row];
+               Labels.AddObject(ss, TObject(w));
+              End;
             End;
           End;
           If a.Count = 0 Then
@@ -7321,17 +7336,25 @@ Begin
             Begin
               w := CountData.Create;
               w.Count := 1;
-              //w.Size := w.Size + t.floats['totalSize'];
-              w.Size := w.Size + FTorrents[idxSizeToDowload, row];
+              w.Size := FTorrents[idxSizeToDowload, row];
               Labels.AddObject(ss, TObject(w));
             End
             Else
             Begin
               w := CountData(Labels.Objects[p]);
-              w.Count := w.Count + 1;
-              //w.Size := w.Size + t.floats['totalSize'];
-              w.Size := w.Size + FTorrents[idxSizeToDowload, row];
-              Labels.Objects[p] := TObject(w);
+              If w <> nil Then
+              Begin
+                w.Count := w.Count + 1;
+                w.Size := w.Size + FTorrents[idxSizeToDowload, row];
+                Labels.Objects[p] := TObject(w);
+              End
+              Else
+              Begin
+               w := CountData.Create;
+               w.Count := 1;
+               w.Size := FTorrents[idxSizeToDowload, row];
+               Labels.AddObject(ss, TObject(w));
+              End;
             End;
           End;
           alabels.Sort;
@@ -7491,8 +7514,8 @@ Begin
               If FTorrents[idxStatus, i] <> TR_STATUS_DOWNLOAD Then
                 continue;
             fltDone:
-              If (StateImg <> imgDone) And
-                (FTorrents[idxStatus, i] <> TR_STATUS_SEED) Then
+              If (Not (StateImg In [imgError, imgDone]))and
+                 ((FTorrents[idxStatus, i] <>TR_STATUS_SEED) and  (FTorrents[idxStatus, i] <>TR_STATUS_FINISHED)) Then
                 continue;
             fltStopped:
               If Not (StateImg In [imgStopped, imgDone]) Then
@@ -7628,8 +7651,8 @@ Begin
               End;
             w := CountData(Paths.Objects[i]);
             lvFilter.Items[0, j] :=
-              UTF8Decode(Format('%s (%d) (%s) %s',
-              [s, w.Count, Format(sTotalSize, [GetHumanSize(w.Size, 0, '?')]),
+              UTF8Decode(Format('%s (%d) (%s) %s', [s,
+              w.Count, Format(sTotalSize, [GetHumanSize(w.Size, 0, '?')]),
               FreeSpacePaths[Paths[i]]]));
             lvFilter.Items[-1, j] := UTF8Decode(Paths[i]);
             lvFilter.Items[-2, j] := 1;
@@ -8061,8 +8084,8 @@ Begin
   Begin
     f := t.Integers['secondsDownloading'];
     If f > 0 Then
-      s := Format('%s (%s: %s)', [s, SAverage,
-        GetHumanSize(t.Floats['downloadedEver'] / f, 1) + sPerSecond]);
+      s := Format('%s (%s: %s)',
+        [s, SAverage, GetHumanSize(t.Floats['downloadedEver'] / f, 1) + sPerSecond]);
   End;
   txDownSpeed.Caption := s;
   txUpSpeed.Caption := GetHumanSize(gTorrents.Items[idxUpSpeed, idx], 1) + sPerSecond;
@@ -8410,6 +8433,7 @@ Procedure TMainForm.FillSessionInfo(s: TJSONObject);
 Var
   d, u: Integer;
   str: String;
+
 Begin
   {$ifdef LCLcarbon}
   TrayIcon.Tag := 0;
@@ -8452,7 +8476,7 @@ Begin
     str := Format(SFreeSpace, [GetHumanSize(s.Floats['download-dir-free-space'])]);
   If (RpcObj.IncompleteDir <> '') Then
   Begin
-    If copy(RpcObj.IncompleteDir, 1, 3) <> copy(s.Strings['download-dir'], 1, 3) Then
+    If (copy(RpcObj.IncompleteDir, 1, 3) <> copy(s.Strings['download-dir'], 1, 3)) or (Pos(':',RpcObj.IncompleteDir)= 0) Then
       If s.IndexOfName('incomplete-dir-free-space') >= 0 Then
         str := str + ' ' + Format(STempSpace,
           [GetHumanSize(s.Floats['incomplete-dir-free-space'])]);
@@ -8876,8 +8900,8 @@ Function TMainForm.ExecRemoteFile(Const FileName: String; SelectFile: Boolean;
       {$ifdef mswindows}
       If Userdef Then
       Begin
-        p := Format(FUserDefinedMenuParam, [s, RpcObj.Url,
-          TorrentId.ToString()]);
+        p := Format(FUserDefinedMenuParam,
+          [s, RpcObj.Url, TorrentId.ToString()]);
         s := FUserDefinedMenuEx;
       End
       Else
@@ -9003,14 +9027,14 @@ Begin
     _Exec(s);
     exit;
   End;
-  If FileExistsUTF8(FileName) Or DirectoryExistsUTF8(FileName) Then
+  If FileExistsUTF8(CorrectPath(MapRemoteToLocal(FileName))) Or DirectoryExistsUTF8(CorrectPath(MapRemoteToLocal(FileName))) Then
   Begin
-    _Exec(FileName);
+    _Exec(CorrectPath(MapRemoteToLocal(FileName)));
     exit;
   End;
-  If FileExistsUTF8(FileName + '.part') Then
+  If FileExistsUTF8(CorrectPath(MapRemoteToLocal(FileName + '.part'))) Then
   Begin
-    _Exec(FileName + '.part');
+    _Exec(CorrectPath(MapRemoteToLocal(FileName + '.part')));
     exit;
   End;
 
@@ -9552,8 +9576,15 @@ End;
 
 Function TMainForm.FixSeparators(Const p: String): String;
 Begin
-  Result := StringReplace(p, '/', DirectorySeparator, [rfReplaceAll]);
-  Result := StringReplace(Result, '\', DirectorySeparator, [rfReplaceAll]);
+  //if(unix) then
+  //begin
+  //  Result := StringReplace(p, '\', '/', [rfReplaceAll]);
+  //end
+  //else
+  //begin
+    Result := StringReplace(p, '/', DirectorySeparator, [rfReplaceAll]);
+    Result := StringReplace(Result, '\', DirectorySeparator, [rfReplaceAll]);
+  //end;
 End;
 
 Function TMainForm.MapRemoteToLocal(Const RemotePath: String): String;

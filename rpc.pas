@@ -1100,7 +1100,11 @@ Begin
   Finally
     RequestStartTime := 0;
     If locked Then
+    Try
       HttpLock.Leave;
+
+    Finally
+    End;
   End;
   Until i >= RetryCnt;
   If Status <> '' Then OutputDebugString(LPCSTR(Status));
@@ -1328,7 +1332,11 @@ End;
 
 Procedure TRpc.Lock;
 Begin
-  FLock.Enter;
+  Try
+    FLock.Enter;
+
+  Finally
+  End;
 End;
 
 Procedure TRpc.Unlock;
