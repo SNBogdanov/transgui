@@ -1007,6 +1007,8 @@ Const
   imgActive = 20;
   imgInactive = 15;
   imgWaiting = 42;
+  imgCheck = 49;
+  imgCheckWaiting = 50;
 
   StatusFiltersCount = 8;
 
@@ -7043,9 +7045,9 @@ Begin
           (FTorrents[idxStatus, row] = TR_STATUS_DOWNLOAD) Then
           DownloadFinished(UTF8Encode(WideString(FTorrents[idxName, row])));
         FTorrents[idxStatus, row] := j;
-        If j = TR_STATUS_CHECK_WAIT Then StateImg := imgDownQueue
+        If j = TR_STATUS_CHECK_WAIT Then StateImg := imgCheckWaiting
         Else
-          If j = TR_STATUS_CHECK Then StateImg := imgDownQueue
+          If j = TR_STATUS_CHECK Then StateImg := imgCheck
           Else
             If j = TR_STATUS_DOWNLOAD_WAIT Then StateImg := imgDownQueue
             Else
@@ -7053,18 +7055,20 @@ Begin
               Else
                 If j = TR_STATUS_SEED_WAIT Then StateImg := imgSeedQueue
                 Else
-                  If j = TR_STATUS_SEED Then StateImg := imgSeed
+                  If j = TR_STATUS_SEED Then
+                    StateImg := imgSeed
                   Else
-                    If j = TR_STATUS_STOPPED Then StateImg := imgDone;
+                    If j = TR_STATUS_STOPPED Then
+                      StateImg := imgDone;
 
-        If GetTorrentError(t, j) <> '' Then
-          If t.Strings['errorString'] <> '' Then
-            StateImg := imgError
-          Else
-            If StateImg In [imgDown, imgSeed] Then
-              Inc(StateImg, 2);
+        //If GetTorrentError(t, j) <> '' Then
+        //  If t.Strings['errorString'] <> '' Then
+        //    StateImg := imgError
+        //  Else
+        //    If StateImg In [imgDown, imgSeed] Then
+        //      Inc(StateImg, 2);
 
-        If j <> TR_STATUS_STOPPED Then
+        If not (j  in [ TR_STATUS_STOPPED,TR_STATUS_CHECK,TR_STATUS_CHECK_WAIT]) Then
         Begin
           s := GetTorrentError(t, j);
           If s <> '' Then
@@ -7110,7 +7114,8 @@ Begin
           f := t.Floats['percentDone'] * 100;
           //If f <> 0 Then
           //  f := (f - t.Floats['leftUntilDone']) * 100.0 / f;
-          If StateImg in[ imgDone, imgError] Then
+          //          If StateImg In [imgDone, imgError] Then
+          If StateImg In [imgDone] Then
             If (t.Floats['leftUntilDone'] <> 0) Or
               (t.Floats['sizeWhenDone'] = 0) Then
               StateImg := imgStopped
@@ -7321,10 +7326,10 @@ Begin
               End
               Else
               Begin
-               w := CountData.Create;
-               w.Count := 1;
-               w.Size := FTorrents[idxSizeToDowload, row];
-               Labels.AddObject(ss, TObject(w));
+                w := CountData.Create;
+                w.Count := 1;
+                w.Size := FTorrents[idxSizeToDowload, row];
+                Labels.AddObject(ss, TObject(w));
               End;
             End;
           End;
@@ -7350,10 +7355,10 @@ Begin
               End
               Else
               Begin
-               w := CountData.Create;
-               w.Count := 1;
-               w.Size := FTorrents[idxSizeToDowload, row];
-               Labels.AddObject(ss, TObject(w));
+                w := CountData.Create;
+                w.Count := 1;
+                w.Size := FTorrents[idxSizeToDowload, row];
+                Labels.AddObject(ss, TObject(w));
               End;
             End;
           End;
@@ -7514,8 +7519,9 @@ Begin
               If FTorrents[idxStatus, i] <> TR_STATUS_DOWNLOAD Then
                 continue;
             fltDone:
-              If (Not (StateImg In [imgError, imgDone]))and
-                 ((FTorrents[idxStatus, i] <>TR_STATUS_SEED) and  (FTorrents[idxStatus, i] <>TR_STATUS_FINISHED)) Then
+              If (Not (StateImg In [imgError, imgDone])) And
+                ((FTorrents[idxStatus, i] <> TR_STATUS_SEED) And
+                (FTorrents[idxStatus, i] <> TR_STATUS_FINISHED)) Then
                 continue;
             fltStopped:
               If Not (StateImg In [imgStopped, imgDone]) Then
@@ -8057,6 +8063,13 @@ Begin
   //  panTransfer.ChildSizing.Layout:=cclNone;
   txStatus.Caption := GetTorrentStatus(idx);
   tr := GetTorrentError(t, gTorrents.Items[idxStatus, idx]);
+  If tr <> '' Then
+  Begin
+    If t.Strings['errorString'] <> '' Then
+      tr := t.Strings['errorString'];
+  End;
+
+
   txError.Constraints.MinWidth := 400;
   If Ini.ReadBool('Translation', 'TranslateMsg', True) Then
     txError.Caption := TranslateString(tr, True)
@@ -8433,7 +8446,6 @@ Procedure TMainForm.FillSessionInfo(s: TJSONObject);
 Var
   d, u: Integer;
   str: String;
-
 Begin
   {$ifdef LCLcarbon}
   TrayIcon.Tag := 0;
@@ -8476,7 +8488,8 @@ Begin
     str := Format(SFreeSpace, [GetHumanSize(s.Floats['download-dir-free-space'])]);
   If (RpcObj.IncompleteDir <> '') Then
   Begin
-    If (copy(RpcObj.IncompleteDir, 1, 3) <> copy(s.Strings['download-dir'], 1, 3)) or (Pos(':',RpcObj.IncompleteDir)= 0) Then
+    If (copy(RpcObj.IncompleteDir, 1, 3) <> copy(s.Strings['download-dir'], 1, 3)) Or
+      (Pos(':', RpcObj.IncompleteDir) = 0) Then
       If s.IndexOfName('incomplete-dir-free-space') >= 0 Then
         str := str + ' ' + Format(STempSpace,
           [GetHumanSize(s.Floats['incomplete-dir-free-space'])]);
@@ -9027,7 +9040,8 @@ Begin
     _Exec(s);
     exit;
   End;
-  If FileExistsUTF8(CorrectPath(MapRemoteToLocal(FileName))) Or DirectoryExistsUTF8(CorrectPath(MapRemoteToLocal(FileName))) Then
+  If FileExistsUTF8(CorrectPath(MapRemoteToLocal(FileName))) Or
+    DirectoryExistsUTF8(CorrectPath(MapRemoteToLocal(FileName))) Then
   Begin
     _Exec(CorrectPath(MapRemoteToLocal(FileName)));
     exit;
@@ -9582,8 +9596,8 @@ Begin
   //end
   //else
   //begin
-    Result := StringReplace(p, '/', DirectorySeparator, [rfReplaceAll]);
-    Result := StringReplace(Result, '\', DirectorySeparator, [rfReplaceAll]);
+  Result := StringReplace(p, '/', DirectorySeparator, [rfReplaceAll]);
+  Result := StringReplace(Result, '\', DirectorySeparator, [rfReplaceAll]);
   //end;
 End;
 
