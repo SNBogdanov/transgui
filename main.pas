@@ -544,6 +544,7 @@ Type
     ToolButton6: TToolButton;
     ToolButton7: TToolButton;
     ToolButton8: TToolButton;
+    ToolButton11: TToolButton;
     txComment: TLabel;
     txCommentLabel: TLabel;
     txHash: TLabel;
