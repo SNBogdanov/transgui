@@ -545,15 +545,15 @@ Begin
           sl.Delete(i);
     End;
 
-    i := sl.IndexOf('downloadDir');
-    If FRpc.RequestFullInfo Then
-    Begin
-      If i < 0 Then
-        sl.Add('downloadDir');
-    End
-    Else
-      If i >= 0 Then
-        sl.Delete(i);
+    //i := sl.IndexOf('downloadDir');
+    //If FRpc.RequestFullInfo Then
+    //Begin
+    //  If i < 0 Then
+    //    sl.Add('downloadDir');
+    //End
+    //Else
+    //  If i >= 0 Then
+    //    sl.Delete(i);
 
     SetLength(ExtraFields, sl.Count);
     For i := 0 To sl.Count - 1 Do
@@ -564,7 +564,7 @@ Begin
 
   args := FRpc.RequestInfo(0, ['id', 'name', 'status', 'errorString',
     'announceResponse', 'recheckProgress', 'sizeWhenDone', 'leftUntilDone',
-    'percentDone', 'rateDownload', 'rateUpload', 'trackerStats',
+    'percentDone', 'rateDownload', 'rateUpload', 'trackerStats','downloadDir',
     'metadataPercentComplete'], ExtraFields);
   Try
     If (args <> nil) And Not Terminated Then
