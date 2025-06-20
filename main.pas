@@ -981,6 +981,7 @@ Const
   idxTrackersListStatus = 1;
   idxTrackersListUpdateIn = 2;
   idxTrackersListSeeds = 3;
+  idxTrackersListLeechers = 4;
   idxTrackerTag = -1;
   idxTrackerID = -2;
   TrackersExtraColumns = 2;
@@ -3788,7 +3789,7 @@ End;
 
 Function TMainForm.GetSeedsText(Seeds, SeedsTotal: Integer): String;
 Begin
-  If SeedsTotal <> -1 Then
+  If SeedsTotal > 0 Then
     Result := Format('%d/%d', [Seeds, SeedsTotal])
   Else
     Result := Format('%d', [Seeds]);
@@ -3797,7 +3798,7 @@ End;
 Function TMainForm.GetPeersText(Peers, PeersTotal, Leechers: Integer): String;
 Begin
   Result := Format('%d', [Peers]);
-  If Leechers <> -1 Then
+  If Leechers > 0 Then
     Result := Format('%s/%d', [Result, Leechers]);
   Dec(PeersTotal);
   If PeersTotal >= 0 Then
@@ -5380,8 +5381,9 @@ Begin
           Text := GetSeedsText(Sender.Items[idxSeeds, ARow],
             Sender.Items[idxSeedsTotal, ARow]);
       idxPeers:
-        Text := GetPeersText(Sender.Items[idxPeers, ARow], -1,
-          Sender.Items[idxLeechersTotal, ARow]);
+        If Not VarIsNull(Sender.Items[idxLeechersTotal, ARow]) Then
+          Text := GetPeersText(Sender.Items[idxPeers, ARow], -1,
+            Sender.Items[idxLeechersTotal, ARow]);
       idxDownSpeed, idxUpSpeed:
       Begin
         j := Sender.Items[ADataCol, ARow];
@@ -5757,6 +5759,9 @@ Begin
     If Text = '' Then exit;
     Case ADataCol Of
       idxTrackersListSeeds:
+        If lvTrackers.Items[ADataCol, ARow] < 0 Then
+          Text := '';
+      idxTrackersListLeechers:
         If lvTrackers.Items[ADataCol, ARow] < 0 Then
           Text := '';
       idxTrackersListUpdateIn:
@@ -7085,24 +7090,28 @@ Begin
           Begin
             s := '';
             If t.Arrays['trackerStats'].Count > 0 Then
-              With t.Arrays['trackerStats'].Objects[0] Do
+              For j := 0 To t.Arrays['trackerStats'].Count - 1 Do
               Begin
-                If Booleans['isBackup'] Then
-                  s := sTrackerBackup
-                Else
-                  If Integer(Integers['announceState']) In [2, 3] Then
-                    s := sTrackerUpdating
+                With t.Arrays['trackerStats'].Objects[j] Do
+                Begin
+                  If Booleans['isBackup'] Then
+                    continue
                   Else
-                    If Booleans['hasAnnounced'] Then
-                      If Booleans['lastAnnounceSucceeded'] Then
-                        s := sTrackerWorking
-                      Else
-                        s :=
-                          TranslateString(
-                          UTF8Encode(Strings['lastAnnounceResult']), True);
-
-                If s = 'Success' Then
-                  s := sTrackerWorking;
+                    If Integer(Integers['announceState']) In [2, 3] Then
+                      s := sTrackerUpdating
+                    Else
+                      If Booleans['hasAnnounced'] Then
+                        If Booleans['lastAnnounceSucceeded'] Then
+                          s := sTrackerWorking
+                        Else
+                          s :=
+                            TranslateString(
+                            UTF8Encode(Strings['lastAnnounceResult']), True);
+                  If s = 'Success' Then
+                    s := sTrackerWorking;
+                End;
+                If s <> '' Then
+                  break;
               End;
           End
           Else
@@ -7167,13 +7176,23 @@ Begin
 
         If RpcObj.RPCVersion >= 7 Then
         Begin
+          FTorrents[idxSeedsTotal, row] := 0;
+          FTorrents[idxLeechersTotal, row] := 0;
           If t.Arrays['trackerStats'].Count > 0 Then
-            With t.Arrays['trackerStats'].Objects[0] Do
+            For j := 0 To t.Arrays['trackerStats'].Count - 1 Do
             Begin
-              FTorrents[idxSeedsTotal, row] := Integers['seederCount'];
-              FTorrents[idxLeechersTotal, row] :=
-                Integers['leecherCount'];
+              With t.Arrays['trackerStats'].Objects[j] Do
+              Begin
+                If Integers['seederCount'] > 0 Then
+                  FTorrents[idxSeedsTotal, row] :=
+                    FTorrents[idxSeedsTotal, row] + Integers['seederCount'];
+                If Integers['leecherCount'] > 0 Then
+                  FTorrents[idxLeechersTotal, row] :=
+                    FTorrents[idxLeechersTotal, row] + Integers['leecherCount'];
+              End;
             End
+
+
           Else
           Begin
             FTorrents[idxSeedsTotal, row] := -1;
@@ -7207,7 +7226,15 @@ Begin
         If RpcObj.RPCVersion >= 7 Then
         Begin
           If t.Arrays['trackerStats'].Count > 0 Then
-            s := t.Arrays['trackerStats'].Objects[0].Strings['announce']
+            For j := 0 To t.Arrays['trackerStats'].Count - 1 Do
+            Begin
+              With t.Arrays['trackerStats'].Objects[j] Do
+              Begin
+                If Booleans['isBackup'] Then continue;
+                s := Strings['announce'];
+                If s <> '' Then break;
+              End;
+            End
           Else
             s := sNoTracker;
         End
@@ -8178,10 +8205,18 @@ Begin
     Begin
       If Count > 0 Then
       Begin
-        If Integer(Objects[0].Integers['announceState']) In [2, 3] Then
-          f := 1
-        Else
-          f := Objects[0].Floats['nextAnnounceTime'];
+        For j := 0 To t.Arrays['trackerStats'].Count - 1 Do
+        Begin
+          With t.Arrays['trackerStats'].Objects[j] Do
+          Begin
+            If Booleans['isBackup'] Then continue;
+            If Integer(Integers['announceState']) In [2, 3] Then
+              f := 1
+            Else
+              f := Floats['nextAnnounceTime'];
+            break;
+          End;
+        End
       End
       Else
         f := 0;
@@ -8198,18 +8233,37 @@ Begin
   txTrackerUpdate.Caption := s;
   txTrackerUpdate.Hint := TorrentDateTimeToString(Trunc(f), Not (FFromNow));
   txTracker.Caption := UTF8Encode(WideString(gTorrents.Items[idxTracker, idx]));
+  i := 0;
   If RpcObj.RPCVersion >= 7 Then
     If t.Arrays['trackerStats'].Count > 0 Then
-      i := t.Arrays['trackerStats'].Objects[0].Integers['seederCount']
+      For j := 0 To t.Arrays['trackerStats'].Count - 1 Do
+      Begin
+        With t.Arrays['trackerStats'].Objects[j] Do
+        Begin
+          If Integers['seederCount'] > 0 Then
+            i := i + Integers['seederCount'];
+        End;
+      End
+
+    //i := t.Arrays['trackerStats'].Objects[0].Integers['seederCount']
     Else
       i := -1
   Else
     i := t.Integers['seeders'];
   s := GetSeedsText(t.Integers['peersSendingToUs'], i);
   txSeeds.Caption := StringReplace(s, '/', ' ' + sOf + ' ', []) + ' ' + sConnected;
+  i := 0;
   If RpcObj.RPCVersion >= 7 Then
     If t.Arrays['trackerStats'].Count > 0 Then
-      i := t.Arrays['trackerStats'].Objects[0].Integers['leecherCount']
+      For j := 0 To t.Arrays['trackerStats'].Count - 1 Do
+      Begin
+        With t.Arrays['trackerStats'].Objects[j] Do
+        Begin
+          If Integers['leecherCount'] > 0 Then
+            i := i + Integers['leecherCount'];
+        End;
+      End
+    //i := t.Arrays['trackerStats'].Objects[0].Integers['leecherCount']
     Else
       i := -1
   Else
@@ -8373,6 +8427,7 @@ Begin
       Begin
         lvTrackers.Items[idxTrackersListStatus, row] := NULL;
         lvTrackers.Items[idxTrackersListSeeds, row] := NULL;
+        lvTrackers.Items[idxTrackersListLeechers, row] := NULL;
         f := 0;
       End
       Else
@@ -8404,6 +8459,8 @@ Begin
               // UTF8Decode
               lvTrackers.Items[idxTrackersListSeeds, row] :=
                 Integers['seederCount'];
+              lvTrackers.Items[idxTrackersListLeechers, row] :=
+                Integers['leecherCount'];
 
               If Integer(Integers['announceState']) In [2, 3] Then
                 f := 1
@@ -8419,6 +8476,8 @@ Begin
               gTorrents.Items[idxTrackerStatus, tidx];
             lvTrackers.Items[idxTrackersListSeeds, row] :=
               gTorrents.Items[idxSeedsTotal, tidx];
+            lvTrackers.Items[idxTrackersListLeechers, row] :=
+              gTorrents.Items[idxLeechersTotal, tidx];
           End;
           f := TrackersData.Floats['nextAnnounceTime'];
         End;

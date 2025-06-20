@@ -1036,6 +1036,11 @@ inherited MainForm: TMainForm
             MinSize = 15
             MaxSize = 300
             Title.Caption = 'Seeds'
+          end
+          item
+            MinSize = 15
+            MaxSize = 300
+            Title.Caption = 'Peers'
           end>
         FixedCols = 0
         Options = [goFixedVertLine, goFixedHorzLine, goColSizing, goColMoving, goRowSelect, goThumbTracking, goDblClickAutoSize, goHeaderHotTracking, goHeaderPushedLook]
