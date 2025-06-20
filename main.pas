@@ -107,6 +107,7 @@ Resourcestring
   sHave = '%d x %s (have %d)';
   sUnableExtractFlag = 'Unable to extract flag image.';
   sTrackerWorking = 'Working';
+  sTrackerBackup = 'Backup';
   sTrackerUpdating = 'Updating';
   sRestartRequired = 'You need to restart the application to apply changes.';
   sRemoveTorrentData =
@@ -6726,6 +6727,7 @@ Begin
       With stats.Objects[i] Do
       Begin
         err := '';
+        If Booleans['isBackup'] Then continue;
         If Booleans['hasAnnounced'] And Not
           Booleans['lastAnnounceSucceeded'] Then
           err := Strings['lastAnnounceResult'];
@@ -7069,7 +7071,7 @@ Begin
         //    If StateImg In [imgDown, imgSeed] Then
         //      Inc(StateImg, 2);
 
-        If not (j  in [ TR_STATUS_STOPPED,TR_STATUS_CHECK,TR_STATUS_CHECK_WAIT]) Then
+        If Not (j In [TR_STATUS_STOPPED, TR_STATUS_CHECK, TR_STATUS_CHECK_WAIT]) Then
         Begin
           s := GetTorrentError(t, j);
           If s <> '' Then
@@ -7085,16 +7087,19 @@ Begin
             If t.Arrays['trackerStats'].Count > 0 Then
               With t.Arrays['trackerStats'].Objects[0] Do
               Begin
-                If Integer(Integers['announceState']) In [2, 3] Then
-                  s := sTrackerUpdating
+                If Booleans['isBackup'] Then
+                  s := sTrackerBackup
                 Else
-                  If Booleans['hasAnnounced'] Then
-                    If Booleans['lastAnnounceSucceeded'] Then
-                      s := sTrackerWorking
-                    Else
-                      s :=
-                        TranslateString(
-                        UTF8Encode(Strings['lastAnnounceResult']), True);
+                  If Integer(Integers['announceState']) In [2, 3] Then
+                    s := sTrackerUpdating
+                  Else
+                    If Booleans['hasAnnounced'] Then
+                      If Booleans['lastAnnounceSucceeded'] Then
+                        s := sTrackerWorking
+                      Else
+                        s :=
+                          TranslateString(
+                          UTF8Encode(Strings['lastAnnounceResult']), True);
 
                 If s = 'Success' Then
                   s := sTrackerWorking;
@@ -8378,15 +8383,18 @@ Begin
             With TrackerStats.Objects[i] Do
             Begin
               s := '';
-              If Integer(Integers['announceState']) In [2, 3] Then
-                s := sTrackerUpdating
+              If Booleans['isBackup'] Then
+                s := sTrackerBackup
               Else
-                If Booleans['hasAnnounced'] Then
-                  If Booleans['lastAnnounceSucceeded'] Then
-                    s := sTrackerWorking
-                  Else
-                    s := TranslateString(
-                      UTF8Encode(Strings['lastAnnounceResult']), True);
+                If Integer(Integers['announceState']) In [2, 3] Then
+                  s := sTrackerUpdating
+                Else
+                  If Booleans['hasAnnounced'] Then
+                    If Booleans['lastAnnounceSucceeded'] Then
+                      s := sTrackerWorking
+                    Else
+                      s := TranslateString(
+                        UTF8Encode(Strings['lastAnnounceResult']), True);
 
               If s = 'Success' Then
                 s := sTrackerWorking;

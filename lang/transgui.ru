@@ -396,5 +396,7 @@ Finish Torrent=Закончить торрент
 Sort torrents=Отсортировать торренты
 Copy torrents to HUAWEI=Скопировать торренты на HUAWEI
 Copy torrents to QNAP=Скопировать торренты на QNAP
-Copy torrents to SAMSUNG-PC==Скопировать торренты на SAMSUNG-PC
+Copy torrents to SAMSUNG-PC=Скопировать торренты на SAMSUNG-PC
+Copy torrents to TRANSMISSION=Скопировать торренты на TRANSMISSION
 Restart daemon=Перезапустить transmission-daemon
+Backup=В резерве
