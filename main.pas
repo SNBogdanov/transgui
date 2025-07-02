@@ -65,7 +65,8 @@ Resourcestring
   sUnknown = 'Unknown';
   sCompleted = 'Completed';
   sConnected = 'connected';
-  sActive = 'Active';
+  sActiveDown = 'Active download';
+  sActiveUp = 'Active upload';
   sInactive = 'Inactive';
   sErrorState = 'Error';
   sUpdating = 'Updating...';
@@ -990,11 +991,12 @@ Const
   fltAll = 0;
   fltDown = 1;
   fltDone = 2;
-  fltActive = 3;
-  fltInactive = 4;
-  fltStopped = 5;
-  fltError = 6;
-  fltWaiting = 7;
+  fltActiveDown = 3;
+  fltActiveUp = 4;
+  fltInactive = 5;
+  fltStopped = 6;
+  fltError = 7;
+  fltWaiting = 8;
 
   // Status images
   imgDown = 9;
@@ -1007,13 +1009,14 @@ Const
   imgDownQueue = 16;
   imgSeedQueue = 17;
   imgAll = 19;
-  imgActive = 20;
+  imgActiveDown = 20;
+  imgActiveUp=   64;
   imgInactive = 15;
   imgWaiting = 42;
   imgCheck = 49;
   imgCheckWaiting = 50;
 
-  StatusFiltersCount = 8;
+  StatusFiltersCount = 9;
 
   TorrentFieldsMap: Array[idxName..idxLabels] Of String =
     ('', 'totalSize', '', 'status', 'peersSendingToUs,seeders',
@@ -5330,11 +5333,12 @@ Begin
       VK_1: lvFilter.Row := fltAll;
       VK_2: lvFilter.Row := fltDown;
       VK_3: lvFilter.Row := fltDone;
-      VK_4: lvFilter.Row := fltActive;
-      VK_5: lvFilter.Row := fltInactive;
-      VK_6: lvFilter.Row := fltStopped;
-      VK_7: lvFilter.Row := fltError;
-      VK_8: lvFilter.Row := fltWaiting;
+      VK_4: lvFilter.Row := fltActiveDown;
+      VK_5: lvFilter.Row := fltActiveUp;
+      VK_6: lvFilter.Row := fltInactive;
+      VK_7: lvFilter.Row := fltStopped;
+      VK_8: lvFilter.Row := fltError;
+      VK_9: lvFilter.Row := fltWaiting;
       Else
         Key := KeyPressed;
     End;
@@ -5656,11 +5660,12 @@ Begin
       0: ImageIndex := imgAll;
       1: ImageIndex := imgDown;
       2: ImageIndex := imgSeed;
-      3: ImageIndex := imgActive;
-      4: ImageIndex := imgInactive;
-      5: ImageIndex := imgStopped;
-      6: ImageIndex := imgError;
-      7: ImageIndex := imgWaiting
+      3: ImageIndex := imgActiveDown;
+      4: ImageIndex := imgActiveUp;
+      5: ImageIndex := imgInactive;
+      6: ImageIndex := imgStopped;
+      7: ImageIndex := imgError;
+      8: ImageIndex := imgWaiting
       Else
         If Text <> '' Then
           If VarIsNull(Sender.Items[-1, ARow]) Then
@@ -6278,11 +6283,12 @@ Begin
     // ALERT - VERIFY - PETROV
     Items[0, 1] := UTF8Decode(SDownloading);
     Items[0, 2] := UTF8Decode(SCompleted);
-    Items[0, 3] := UTF8Decode(SActive);
-    Items[0, 4] := UTF8Decode(SInactive);
-    Items[0, 5] := UTF8Decode(sStopped);
-    Items[0, 6] := UTF8Decode(sErrorState);
-    Items[0, 7] := UTF8Decode(sWaiting);
+    Items[0, 3] := UTF8Decode(SActiveDown);
+    Items[0, 4] := UTF8Decode(SActiveUp);
+    Items[0, 5] := UTF8Decode(SInactive);
+    Items[0, 6] := UTF8Decode(sStopped);
+    Items[0, 7] := UTF8Decode(sErrorState);
+    Items[0, 8] := UTF8Decode(sWaiting);
   End;
   edSearch.Enabled := False;
   edSearch.Color := gTorrents.Color;
@@ -6913,9 +6919,9 @@ Var
   FilterIdx, OldId: Integer;
   TrackerFilter, PathFilter, LabelFilter: String;
   UpSpeed, DownSpeed: Double;
-  DownCnt, SeedCnt, CompletedCnt, ActiveCnt, StoppedCnt, ErrorCnt,
+  DownCnt, SeedCnt, CompletedCnt, ActiveDownCnt,ActiveUpCnt, StoppedCnt, ErrorCnt,
   WaitingCnt, ft: Integer;
-  DownSize, SeedSize, CompletedSize, ActiveSize, StoppedSize, ErrorSize,
+  DownSize, SeedSize, CompletedSize, ActiveDownSize,ActiveUpSize, StoppedSize, ErrorSize,
   WaitingSize, AllSize: Double;
   IsActive: Boolean;
   Labels, Paths: TStringList;
@@ -6992,14 +6998,16 @@ Begin
       DownCnt := 0;
       SeedCnt := 0;
       CompletedCnt := 0;
-      ActiveCnt := 0;
+      ActiveDownCnt := 0;
+      ActiveUpCnt := 0;
       StoppedCnt := 0;
       ErrorCnt := 0;
       WaitingCnt := 0;
       DownSize := 0;
       SeedSize := 0;
       CompletedSize := 0;
-      ActiveSize := 0;
+      ActiveDownSize := 0;
+      ActiveUpSize := 0;
       StoppedSize := 0;
       ErrorSize := 0;
       WaitingSize := 0;
@@ -7437,12 +7445,6 @@ Begin
         Begin
           IsActive := (FTorrents[idxDownSpeed, i] <> 0) Or
             (FTorrents[idxUpSpeed, i] <> 0);
-          If IsActive Then
-          Begin
-            Inc(ActiveCnt);
-            //ActiveSize := ActiveSize + FTorrents[idxSize, i];
-            ActiveSize := ActiveSize + FTorrents[idxSizeToDowload, i];
-          End;
 
           j := FTorrents[idxStatus, i];
           //AllSize := AllSize + FTorrents[idxSize, i];
@@ -7452,10 +7454,22 @@ Begin
             Inc(DownCnt);
             //DownSize := DownSize + FTorrents[idxSize, i];
             DownSize := DownSize + FTorrents[idxSizeToDowload, i];
+            If (FTorrents[idxDownSpeed, i] <> 0) Then
+            Begin
+              Inc(ActiveDownCnt);
+              //ActiveSize := ActiveSize + FTorrents[idxSize, i];
+              ActiveDownSize := ActiveDownSize + FTorrents[idxSizeToDowload, i];
+            End;
           End
           Else
             If j = TR_STATUS_SEED Then
             Begin
+              If (FTorrents[idxUpSpeed, i] <> 0) Then
+              Begin
+                Inc(ActiveUpCnt);
+                //ActiveSize := ActiveSize + FTorrents[idxSize, i];
+                ActiveUpSize := ActiveUpSize + FTorrents[idxSizeToDowload, i];
+              End;
               Inc(SeedCnt);
               //SeedSize := SeedSize + FTorrents[idxSize, i];
               SeedSize := SeedSize + FTorrents[idxSizeToDowload, i];
@@ -7541,8 +7555,14 @@ Begin
           End;
 
           Case FilterIdx Of
-            fltActive:
-              If Not IsActive Then
+            fltActiveDown:
+              If Not IsActive Or
+                (FTorrents[idxStatus, i] <> TR_STATUS_DOWNLOAD)Then
+                continue;
+            fltActiveUp:
+              If Not IsActive Or
+                ((FTorrents[idxStatus, i] <> TR_STATUS_SEED) And
+                (FTorrents[idxStatus, i] <> TR_STATUS_FINISHED)) Then
                 continue;
             fltInactive:
               If (IsActive = True) Or
@@ -7631,19 +7651,22 @@ Begin
           UTF8Decode(Format('%s (%d) (%s)', [SCompleted, CompletedCnt,
           Format(sTotalSize, [GetHumanSize(CompletedSize, 0, '?')])]));
         lvFilter.Items[0, 3] :=
-          UTF8Decode(Format('%s (%d) (%s)', [SActive, ActiveCnt,
-          Format(sTotalSize, [GetHumanSize(ActiveSize, 0, '?')])]));
+          UTF8Decode(Format('%s (%d) (%s)', [SActiveDown, ActiveDownCnt,
+          Format(sTotalSize, [GetHumanSize(ActiveDownSize, 0, '?')])]));
         lvFilter.Items[0, 4] :=
-          UTF8Decode(Format('%s (%d) (%s)', [SInactive, FTorrents.Count -
-          ActiveCnt - StoppedCnt, Format(sTotalSize,
-          [GetHumanSize(AllSize - ActiveSize - StoppedSize, 0, '?')])]));
+          UTF8Decode(Format('%s (%d) (%s)', [SActiveUp, ActiveUpCnt,
+          Format(sTotalSize, [GetHumanSize(ActiveUpSize, 0, '?')])]));
         lvFilter.Items[0, 5] :=
+          UTF8Decode(Format('%s (%d) (%s)', [SInactive, FTorrents.Count -
+          ActiveDownCnt -ActiveUpCnt - StoppedCnt, Format(sTotalSize,
+          [GetHumanSize(AllSize - ActiveDownSize -ActiveUpSize - StoppedSize, 0, '?')])]));
+        lvFilter.Items[0, 6] :=
           UTF8Decode(Format('%s (%d) (%s)', [sStopped, StoppedCnt,
           Format(sTotalSize, [GetHumanSize(StoppedSize, 0, '?')])]));
-        lvFilter.Items[0, 6] :=
+        lvFilter.Items[0, 7] :=
           UTF8Decode(Format('%s (%d) (%s)', [sErrorState, ErrorCnt,
           Format(sTotalSize, [GetHumanSize(ErrorSize, 0, '?')])]));
-        lvFilter.Items[0, 7] :=
+        lvFilter.Items[0, 8] :=
           UTF8Decode(Format('%s (%d) (%s)', [sWaiting, WaitingCnt,
           Format(sTotalSize, [GetHumanSize(WaitingSize, 0, '?')])]));
 

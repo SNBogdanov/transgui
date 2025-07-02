@@ -400,3 +400,5 @@ Copy torrents to SAMSUNG-PC=Скопировать торренты на SAMSUNG
 Copy torrents to TRANSMISSION=Скопировать торренты на TRANSMISSION
 Restart daemon=Перезапустить transmission-daemon
 Backup=В резерве
+Active download=Активная загрузка
+Active upload=Активная раздача
