@@ -7454,7 +7454,7 @@ Begin
             Inc(DownCnt);
             //DownSize := DownSize + FTorrents[idxSize, i];
             DownSize := DownSize + FTorrents[idxSizeToDowload, i];
-            If (FTorrents[idxDownSpeed, i] <> 0) Then
+            If isActive Then
             Begin
               Inc(ActiveDownCnt);
               //ActiveSize := ActiveSize + FTorrents[idxSize, i];
