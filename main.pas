@@ -48,7 +48,7 @@ windows, ShellApi,LCLIntf,
   fpjson, jsonparser, ExtCtrls, rpc, syncobjs, variants, varlist, IpResolver,
   zipper, ResTranslator, VarGrid, StrUtils, LCLProc, Grids, Buttons, BaseForm,
   utils, AddTorrent, Types, LazFileUtils, LazUTF8, StringToVK, passwcon,
-  GContnrs, RegExpr, fgl;
+  GContnrs, RegExpr, fgl, WhisparrClient;
 
 Const
   AppName = 'Transmission Remote GUI';
@@ -56,12 +56,19 @@ Const
 
 Resourcestring
   sAll = 'All torrents';
+  sArchiveUnsupported = 'Archiving is not supported by the connected Transmission daemon.';
+  sWhisparrNotConfigured = 'Configure Whisparr in Options before using this command.';
+  sScriptHostSettingsRequired = 'Set required host script parameters in Transmission options';
+  sRestartDaemonConfirm = 'Restart the Transmission daemon?';
+  sRestartDaemonScheduled = 'Daemon restart scheduled';
   sWaiting = 'Waiting';
   sVerifying = 'Verifying';
   sDownloading = 'Downloading';
   sSeeding = 'Seeding';
   sFinished = 'Finished';
   sStopped = 'Stopped';
+  sSpacePaused = 'Paused: not enough free space';
+  sPendingMove = 'Waiting for space to move';
   sUnknown = 'Unknown';
   sCompleted = 'Completed';
   sConnected = 'connected';
@@ -120,6 +127,8 @@ Resourcestring
   sRemoveTorrent = 'Are you sure to remove torrent ''%s''?';
   sRemoveTorrentMulti = 'Are you sure to remove %d selected torrents?';
   sUnableGetFilesList = 'Unable to get files list';
+  sFileNotFound =
+    'File not found in the download folder or the daemon temporary folder.';
   sTrackerError = 'Tracker';
   sSkip = 'skip';
   sLow = 'low';
@@ -267,6 +276,9 @@ Type
     acAddLink: TAction;
     acReannounceTorrent: TAction;
     acMoveTorrent: TAction;
+    acArchiveSave: TAction;
+    acArchiveManager: TAction;
+    acWhisparrRename: TAction;
     acSelectAll: TAction;
     acShowApp: TAction;
     acHideApp: TAction;
@@ -461,6 +473,8 @@ Type
     txLastActiveLabel: TLabel;
     txLabels: TLabel;
     txLabelsLabel: TLabel;
+    txIncompleteDir: TLabel;
+    txIncompleteDirLabel: TLabel;
     txTracker: TLabel;
     txTrackerLabel: TLabel;
     txCompletedOn: TLabel;
@@ -469,6 +483,7 @@ Type
     txAddedOnLabel: TLabel;
     MenuItem19: TMenuItem;
     MenuItem20: TMenuItem;
+    MenuItemWhisparrRename: TMenuItem;
     MenuItem21: TMenuItem;
     MenuItem22: TMenuItem;
     MenuItem23: TMenuItem;
@@ -552,6 +567,7 @@ Type
     txHash: TLabel;
     txHashLabel: TLabel;
     panGeneralInfo: TPanel;
+    pmFilePriority: TPopupMenu;
     lvFiles: TVarGrid;
     lvPeers: TVarGrid;
     MainMenu: TMainMenu;
@@ -600,6 +616,8 @@ Type
     Procedure acFilterTorrentPropsExecute(Sender: TObject);
     Procedure ScaleImageList(ImgList: TImageList; Var ImgListOut: TImageList;
       NewWidth: Integer);
+    Procedure AddArchiveIcons;
+    Procedure UpdateWhisparrAction;
     Procedure acCheckNewVersionExecute(Sender: TObject);
     Procedure acConnectExecute(Sender: TObject);
     Procedure acConnOptionsExecute(Sender: TObject);
@@ -613,6 +631,9 @@ Type
     Procedure acLabelGroupingExecute(Sender: TObject);
     Procedure acMenuShowExecute(Sender: TObject);
     Procedure acMoveTorrentExecute(Sender: TObject);
+    Procedure acArchiveSaveExecute(Sender: TObject);
+    Procedure acArchiveManagerExecute(Sender: TObject);
+    Procedure acWhisparrRenameExecute(Sender: TObject);
     Procedure acNewConnectionExecute(Sender: TObject);
     Procedure acOpenContainingFolderExecute(Sender: TObject);
     Procedure acOpenFileExecute(Sender: TObject);
@@ -659,6 +680,10 @@ Type
     Procedure lvFilesClick(Sender: TObject);
     Procedure lvFilesMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
+    Procedure lvFilesHeaderClick(Sender: TObject; IsColumn: Boolean; Index: Integer);
+    Procedure lvFilesDrawHeader(Sender: TVarGrid; ACol, ADataCol: Integer;
+      AState: TGridDrawState; Const R: TRect);
+    Procedure FilePriorityFilterClick(Sender: TObject);
     Procedure MenuItem107Click(Sender: TObject);
     Procedure MenuShowExecute(Sender: TObject);
     Procedure acToolbarShowExecute(Sender: TObject);
@@ -796,11 +821,52 @@ Type
     FDetailsWaitStart: TDateTime;
     FMainFormShown: Boolean;
     FFilesTree: TFilesTree;
+    FFilePriorityMask: Integer;
+    FFilePriorityIconRect: TRect;
     FFilesCapt: String;
     FCalcAvg: Boolean;
     FPasswords: TStringList;
     FAppProps: TApplicationProperties;
+    FScripts: TJSONArray;
+    FScriptExternalHosts: TJSONArray;
+    FScriptsMenu: TMenuItem;
+    FScriptsSep: TMenuItem;
+    FTorrentScriptsMenu: TMenuItem;
+    FTorrentScriptsSep: TMenuItem;
+    FFileScriptsMenu: TMenuItem;
+    FFileScriptsSep: TMenuItem;
+    FRestartDaemonMenu: TMenuItem;
+    FRestartDaemonSep: TMenuItem;
+    FRestartDaemonEnabled: Boolean;
+    FRestartDaemonName: String;
+    FRestartDaemonImageIndex: Integer;
+    FScriptsRevision: String;
+    FScriptRunnerLoaded: Boolean;
+    FScriptMenuImageIndex: Integer;
+    FWhisparrMenuImageIndex: Integer;
+    Procedure ClearScriptMenus;
+    Procedure LoadScriptRunner(AData: TJSONData = nil);
+    Procedure UpdateScriptRunner(AData: TJSONData);
+    Procedure BuildScriptMenus;
+    Procedure SystemScriptClick(Sender: TObject);
+    Procedure TorrentScriptClick(Sender: TObject);
+    Procedure FileScriptClick(Sender: TObject);
+    Procedure RestartDaemonClick(Sender: TObject);
+    Procedure ExecuteScript(AIndex: Integer; Const AContext: String);
+    Function GetSelectedFileIndices: TStringList;
+    Function GetTorrentHashes(Ids: Variant; Hashes: TStringList): Boolean;
+    Function ScriptHasContext(Obj: TJSONObject; Const AContext: String): Boolean;
+    Function ScriptString(Obj: TJSONObject; Const AName, ADefault: String): String;
+    Function ScriptInt(Obj: TJSONObject; Const AName: String; ADefault: Int64): Int64;
+    Function ScriptRuntimeSection(Const AId: String): String;
+    Function LoadScriptRuntimeParams(Const AId: String): TJSONObject;
+    Procedure SaveScriptRuntimeParams(Const AId: String; AParams: TJSONObject);
+    Function CheckScriptHostSettings(Const AId: String): Boolean;
 
+    Procedure FixDetailsHeight;
+    Procedure DebugWindowLog(Const Msg: String);
+    Function DebugWindowState: String;
+    Function GetFilePriorityFilterMask: Integer;
     Procedure UpdateUI;
     Procedure UpdateUIRpcVersion(RpcVersion: Integer);
     Function DoConnect: Boolean;
@@ -809,6 +875,7 @@ Type
     Procedure DoDisconnect;
     Procedure DoOpenFlagsZip(Sender: TObject; Var AStream: TStream);
     Procedure TorrentProps(PageNo: Integer; filtered: Boolean = False);
+    Procedure NormalizeTrackerLines(Lines: TStrings);
     Procedure ShowConnOptions(NewConnection: Boolean);
     Procedure SaveColumns(LV: TVarGrid; Const AName: String;
       FullInfo: Boolean = True);
@@ -891,6 +958,8 @@ Type
     Procedure SetTorrentPriority(APriority: Integer);
     Procedure ClearDetailsInfo(Skip: TAdvInfoType = aiNone);
     Function SelectRemoteFolder(Const CurFolder, DialogTitle: String): String;
+    Function MapLocalToRemote(Const LocalPath: String): String;
+    Function GetWhisparrConfig: TWhisparrConfig;
     Procedure ConnectionSettingsChanged(Const ActiveConnection: String;
       ForceReconnect: Boolean);
     Procedure StatusBarSizes;
@@ -1044,8 +1113,8 @@ urllistenerosx,
   {$endif darwin}
   synacode, ConnOptions, clipbrd, DateUtils, TorrProps, DaemonOptions, About,
   ToolWin, download, ColSetup, AddLink, MoveTorrent, ssl_openssl_lib, AddTracker,
-  lcltype,
-  Options, ButtonPanel, BEncode, synautil, Math;
+  lcltype, ArchiveForm, ArchiveSaveForm, WhisparrRenameForm,
+  Options, ButtonPanel, BEncode, synautil, Math, ScriptRunnerUI;
 
 {TMyHashMap}
 Function TMyHashMap.DefaultHashKey(Const Key: Integer): Integer;
@@ -1096,9 +1165,18 @@ Const
   // Queued to seed
   TR_STATUS_SEED_2 = 6;
   // Seeding
+  TR_STATUS_SPACE_PAUSED_2 = 7;
+  // Paused: not enough free space
+  TR_STATUS_PENDING_MOVE_2 = 8;
+  // Waiting for space to move to the download directory
 
   TR_STATUS_FINISHED = $100;
   // Torrent is finished (pseudo status)
+
+  TR_STAT_OK = 0;
+  TR_STAT_TRACKER_WARNING = 1;
+  TR_STAT_TRACKER_ERROR = 2;
+  TR_STAT_LOCAL_ERROR = 3;
 
   TR_SPEEDLIMIT_GLOBAL = 0;
   // only follow the overall speed limit
@@ -1115,7 +1193,7 @@ Const
 Var
   TR_STATUS_STOPPED, TR_STATUS_CHECK_WAIT, TR_STATUS_CHECK,
   TR_STATUS_DOWNLOAD_WAIT, TR_STATUS_DOWNLOAD, TR_STATUS_SEED_WAIT,
-  TR_STATUS_SEED: Integer;
+  TR_STATUS_SEED, TR_STATUS_SPACE_PAUSED, TR_STATUS_PENDING_MOVE: Integer;
 
 
 {$ifdef windows}
@@ -1738,10 +1816,15 @@ RegisterURLHandler(@AddTorrentFile);
   txTransferHeader.Font.Size := Font.Size + 2;
   txTorrentHeader.Font.Size := txTransferHeader.Font.Size;
   TrayIcon.Icon.Assign(Application.Icon);
+  FScriptMenuImageIndex := -1;
+  FWhisparrMenuImageIndex := -1;
+  FRestartDaemonImageIndex := -1;
+  AddArchiveIcons;
   RpcObj := TRpc.Create;
   FTorrents := TVarList.Create(gTorrents.Columns.Count, 0);
   FTorrents.ExtraColumns := TorrentsExtraColumns;
   gTorrents.Items.ExtraColumns := TorrentsExtraColumns;
+  UpdateWhisparrAction;
   lvFiles.Items.ExtraColumns := FilesExtraColumns;
   FFiles := lvFiles.Items;
   FFilesTree := TFilesTree.Create(lvFiles);
@@ -1787,6 +1870,28 @@ RegisterURLHandler(@AddTorrentFile);
     panDetailsWait.Height := Height;
     Parent := panDetailsWait;
   End;
+
+  FCol := -1;
+  FRow := -1;
+  FFilePriorityMask := 15;
+  pmFilePriority := TPopupMenu.Create(Self);
+  For i := 0 To 3 Do
+  Begin
+    MI := TMenuItem.Create(pmFilePriority);
+    Case i Of
+      0: MI.Caption := sSkip;
+      1: MI.Caption := sLow;
+      2: MI.Caption := sNormal;
+      Else MI.Caption := sHigh;
+    End;
+    MI.AutoCheck := True;
+    MI.Checked := True;
+    MI.Tag := i;
+    MI.OnClick := @FilePriorityFilterClick;
+    pmFilePriority.Items.Add(MI);
+  End;
+  lvFiles.OnHeaderClick := @lvFilesHeaderClick;
+  lvFiles.OnDrawHeader := @lvFilesDrawHeader;
 
   DoDisconnect;
   PageInfo.ActivePageIndex := 0;
@@ -1854,7 +1959,7 @@ tbtAltSpeed.ImageIndex := i;
     Top := Ini.ReadInteger('MainForm', 'Top', Top);
     Width := Ini.ReadInteger('MainForm', 'Width', Width);
     Height := Ini.ReadInteger('MainForm', 'Height', Height);
-    If ws = wsMaximized Then
+    If ws In [wsMaximized, wsFullScreen] Then
       showMaximized := True;
     //       LCLIntf.ShowWindow(Handle, SW_MAXIMIZE);
     //        WindowState:=wsMaximized;
@@ -2143,6 +2248,7 @@ Begin
   End;
 
   DeleteFileUTF8(FRunFileName);
+  ClearScriptMenus;
   FPasswords.Free;
   FResolver.Free;
   FTrackers.Free;
@@ -2163,14 +2269,90 @@ GlobalDeleteAtom(HotKeyID);
 
 End;
 
+Procedure TMainForm.DebugWindowLog(Const Msg: String);
+Var
+  F: TextFile;
+  FN: String;
+Begin
+  If SysUtils.GetEnvironmentVariable('TRANSGUI_DEBUG_WINDOW') = '' Then
+    exit;
+  FN := IncludeTrailingPathDelimiter(GetTempDir) + 'transgui-window.log';
+  Try
+    AssignFile(F, FN);
+    {$I-}
+    If FileExists(FN) Then
+      Append(F)
+    Else
+      Rewrite(F);
+    {$I+}
+    If IOResult = 0 Then
+      Try
+        Writeln(F, FormatDateTime('hh:nn:ss.zzz', Now), ' ', Msg);
+      Finally
+        CloseFile(F);
+      End;
+  Except
+  End;
+End;
+
+Function TMainForm.DebugWindowState: String;
+Var
+  AP: String;
+Begin
+  If (PageInfo <> nil) And (PageInfo.ActivePage <> nil) Then
+    AP := PageInfo.ActivePage.Name
+  Else
+    AP := '-';
+  If (PageInfo <> nil) And (VSplitter <> nil) And (panTop <> nil) Then
+    Result := Format('state=%d bounds=%d,%d,%dx%d client=%dx%d ' +
+      'pageTop=%d pageH=%d vsplitTop=%d vsplitH=%d panTopH=%d active=%s',
+      [Ord(WindowState), Left, Top, Width, Height, ClientWidth, ClientHeight,
+      PageInfo.Top, PageInfo.Height, VSplitter.Top, VSplitter.Height,
+      panTop.Height, AP])
+  Else
+    Result := Format('state=%d bounds=%d,%d,%dx%d client=%dx%d active=%s',
+      [Ord(WindowState), Left, Top, Width, Height, ClientWidth, ClientHeight,
+      AP]);
+End;
+
+Procedure TMainForm.FixDetailsHeight;
+Var
+  MaxDetailsHeight: Integer;
+Begin
+  If Application.ModalLevel > 0 Then
+    exit;
+  If (PageInfo = nil) Or (VSplitter = nil) Or (panTop = nil) Or
+    (StatusBar = nil) Or (MainToolBar = nil) Then
+    exit;
+  If Not PageInfo.Visible Or Not VSplitter.Visible Then
+    exit;
+  If (ClientHeight <= 0) Or (WindowState = wsMinimized) Or
+    (panTop.Top <= 0) Then
+    exit;
+  MaxDetailsHeight := ClientHeight - StatusBar.Height -
+    VSplitter.Height - panTop.Top - panTop.Constraints.MinHeight;
+  If MaxDetailsHeight < PageInfo.Constraints.MinHeight Then
+    MaxDetailsHeight := PageInfo.Constraints.MinHeight;
+  Try
+    If PageInfo.Height > MaxDetailsHeight Then
+      PageInfo.Height := MaxDetailsHeight;
+  Except
+    // Ignore LCL autosize loops caused by a modal form or a window transition.
+  End;
+End;
+
 Procedure TMainForm.FormResize(Sender: TObject);
 Begin
+  DebugWindowLog('FormResize before ' + DebugWindowState);
+  FixDetailsHeight;
+  DebugWindowLog('FormResize after ' + DebugWindowState);
   If panReconnect.Visible Then
     CenterReconnectWindow;
 End;
 
 Procedure TMainForm.FormShow(Sender: TObject);
 Begin
+  DebugWindowLog('FormShow enter ' + DebugWindowState);
   If Not FMainFormShown Then
   Begin
     FMainFormShown := True;
@@ -2179,10 +2361,10 @@ Begin
     HSplitter.SetSplitterPosition(Ini.ReadInteger('MainForm',
       'HSplitter', HSplitter.GetSplitterPosition));
     MakeFullyVisible;
+    FixDetailsHeight;
     If showMaximized Then
     Begin
-      WindowState := wsFullScreen;
-      //      LCLIntf.ShowWindow(Handle, SW_MAXIMIZE);
+      WindowState := wsMaximized;
       showMaximized := False;
     End;
 
@@ -2190,6 +2372,7 @@ Begin
   If Not FStarted Then
     TickTimer.Enabled := True;
   UpdateTray;
+  DebugWindowLog('FormShow leave ' + DebugWindowState);
 End;
 
 Procedure TMainForm.lvFilterResize(Sender: TObject);
@@ -2334,6 +2517,7 @@ End;
 
 Procedure TMainForm.acInfoPaneExecute(Sender: TObject);
 Begin
+  DebugWindowLog('acInfoPaneExecute before ' + DebugWindowState);
   acInfoPane.Checked := Not acInfoPane.Checked;
   PageInfo.Visible := acInfoPane.Checked;
   VSplitter.Top := PageInfo.Top - VSplitter.Height;
@@ -2342,6 +2526,7 @@ Begin
     PageInfoChange(nil)
   Else
     RpcObj.AdvInfo := aiNone;
+  DebugWindowLog('acInfoPaneExecute after ' + DebugWindowState);
 End;
 
 Procedure TMainForm.acLabelGroupingExecute(Sender: TObject);
@@ -2456,6 +2641,88 @@ Begin
   End;
 End;
 
+Procedure TMainForm.acArchiveSaveExecute(Sender: TObject);
+Var
+  Ids: Variant;
+  Frm: TArchiveSaveForm;
+Begin
+  If (gTorrents.Items.Count = 0) Or Not RpcObj.Connected Then
+    exit;
+  If Not RpcObj.HasForkFeature('torrent_archive') Then
+  Begin
+    MessageDlg('', sArchiveUnsupported, mtError, [mbOK], 0);
+    exit;
+  End;
+  gTorrents.EnsureSelectionVisible;
+  If gTorrents.SelCount = 0 Then
+    gTorrents.RowSelected[gTorrents.Row] := True;
+  Ids := GetSelectedTorrents;
+  If VarIsEmpty(Ids) Then
+    exit;
+  Frm := TArchiveSaveForm.Create(Self);
+  Try
+    Frm.SelectedIds := Ids;
+    Frm.ShowModal;
+  Finally
+    Frm.Free;
+  End;
+End;
+
+Procedure TMainForm.acArchiveManagerExecute(Sender: TObject);
+Var
+  Frm: TArchiveForm;
+Begin
+  If Not RpcObj.Connected Then
+    exit;
+  If Not RpcObj.HasForkFeature('torrent_archive') Then
+  Begin
+    MessageDlg('', sArchiveUnsupported, mtError, [mbOK], 0);
+    exit;
+  End;
+  Frm := TArchiveForm.Create(Self);
+  Try
+    Frm.ShowModal;
+  Finally
+    Frm.Free;
+  End;
+End;
+
+Function TMainForm.GetWhisparrConfig: TWhisparrConfig;
+Begin
+  Result.Url := Trim(Ini.ReadString('Whisparr', 'Url', ''));
+  Result.ApiKey := Trim(DecodeBase64(Ini.ReadString('Whisparr', 'ApiKey', '')));
+  Result.VerifySsl := Ini.ReadBool('Whisparr', 'VerifySsl', True);
+End;
+
+Procedure TMainForm.acWhisparrRenameExecute(Sender: TObject);
+Var
+  Config: TWhisparrConfig;
+  Ids: Variant;
+  Frm: TWhisparrRenameForm;
+Begin
+  If Not RpcObj.Connected Or (gTorrents.Items.Count = 0) Then
+    exit;
+  Config := GetWhisparrConfig;
+  If Not WhisparrConfigured(Config) Then
+  Begin
+    MessageDlg('', sWhisparrNotConfigured, mtError, [mbOK], 0);
+    exit;
+  End;
+  gTorrents.EnsureSelectionVisible;
+  If gTorrents.SelCount = 0 Then
+    gTorrents.RowSelected[gTorrents.Row] := True;
+  Ids := GetSelectedTorrents;
+  If VarIsEmpty(Ids) Then
+    exit;
+  Frm := TWhisparrRenameForm.Create(Self);
+  Try
+    Frm.SelectedIds := Ids;
+    Frm.ShowModal;
+  Finally
+    Frm.Free;
+  End;
+End;
+
 Procedure TMainForm.acNewConnectionExecute(Sender: TObject);
 Begin
   ShowConnOptions(True);
@@ -2500,7 +2767,8 @@ Begin
     Begin
       s1 := FFilesTree.GetIncompleteFullPath(lvFiles.Row);
       If FileExistsUTF8(MapRemoteToLocal(s1)) Or FileExistsUTF8(
-        MapRemoteToLocal(s1 + '.part')) Then
+        MapRemoteToLocal(s1 + '.part')) Or DirectoryExistsUTF8(
+        MapRemoteToLocal(s1)) Then
         s := s1;
     End;
     If s = '' Then
@@ -2576,8 +2844,11 @@ Begin
         Begin
           s := FFilesTree.GetIncompleteFullPath(lvFiles.Row);
           If FileExistsUTF8(MapRemoteToLocal(s)) Or FileExistsUTF8(
-            MapRemoteToLocal(s + '.part')) Then
-            ExecRemoteFile(s, Userdef, RpcObj.CurTorrentId, Userdef);
+            MapRemoteToLocal(s + '.part')) Or DirectoryExistsUTF8(
+            MapRemoteToLocal(s)) Then
+            ExecRemoteFile(s, Userdef, RpcObj.CurTorrentId, Userdef)
+          Else
+            MessageDlg(sFileNotFound, mtInformation, [mbOK], 0);
         End;
 
   End
@@ -2592,7 +2863,6 @@ Begin
   AppBusy;
   With TOptionsForm.Create(Self) Do
   Try
-    ConnForm.ActiveConnection := FCurConn;
     edRefreshInterval.Value :=
       Ini.ReadInteger('Interface', 'RefreshInterval', 5);
     edRefreshIntervalMin.Value :=
@@ -2614,11 +2884,16 @@ Begin
       Ini.ReadBool('Interface', 'DeleteTorrentFile', False);
     cbLinksFromClipboard.Checked :=
       Ini.ReadBool('Interface', 'LinksFromClipboard', True);
+    edArchivePageSize.Value := Ini.ReadInteger('Archive', 'PageSize', 100);
     edIntfScale.Value := Ini.ReadInteger('Interface', 'Scaling', 100);
     cbCheckNewVersion.Checked :=
       Ini.ReadBool('Interface', 'CheckNewVersion', False);
     edCheckVersionDays.Value :=
       Ini.ReadInteger('Interface', 'CheckNewVersionDays', 5);
+    edWhisparrUrl.Text := Ini.ReadString('Whisparr', 'Url', '');
+    edWhisparrApiKey.Text :=
+      DecodeBase64(Ini.ReadString('Whisparr', 'ApiKey', ''));
+    cbWhisparrVerifySsl.Checked := Ini.ReadBool('Whisparr', 'VerifySsl', True);
     cbCheckNewVersionClick(nil);
     OldCheckVer := cbCheckNewVersion.Checked;
     {$ifdef linux}
@@ -2656,20 +2931,24 @@ Begin
         cbLinksFromClipboard.Checked);
       FLinksFromClipboard := cbLinksFromClipboard.Checked;
 
+      Ini.WriteInteger('Archive', 'PageSize', edArchivePageSize.Value);
       Ini.WriteInteger('Interface', 'Scaling', edIntfScale.Value);
 
       Ini.WriteBool('Interface', 'CheckNewVersion',
         cbCheckNewVersion.Checked);
       Ini.WriteInteger('Interface', 'CheckNewVersionDays',
         edCheckVersionDays.Value);
+      Ini.WriteString('Whisparr', 'Url', Trim(edWhisparrUrl.Text));
+      Ini.WriteString('Whisparr', 'ApiKey',
+        EncodeBase64(Trim(edWhisparrApiKey.Text)));
+      Ini.WriteBool('Whisparr', 'VerifySsl', cbWhisparrVerifySsl.Checked);
 
       If cbCheckNewVersion.Checked And Not OldCheckVer Then
         CheckNewVersion;
       Ini.UpdateFile;
       UpdateTray;
+      UpdateWhisparrAction;
       AppNormal;
-      With ConnForm Do
-        ConnectionSettingsChanged(ActiveConnection, ActiveSettingChanged);
     End;
   Finally
     Free;
@@ -2717,6 +2996,96 @@ Begin
   End;
   RpcObj.RefreshNow := RpcObj.RefreshNow + [rtSession];
   AppNormal;
+End;
+
+Procedure TMainForm.UpdateWhisparrAction;
+Begin
+  acWhisparrRename.Visible := WhisparrConfigured(GetWhisparrConfig);
+  acWhisparrRename.Enabled := acWhisparrRename.Visible And Assigned(RpcObj) And
+    RpcObj.Connected And (gTorrents.Items.Count > 0);
+  MenuItemWhisparrRename.Visible := acWhisparrRename.Visible;
+End;
+
+Procedure TMainForm.AddArchiveIcons;
+
+  Function LoadIcon(Const ResNames: array Of String; Images: TImageList): Integer;
+  Var
+    Pics: Array Of TCustomBitmap;
+    i, n, j: Integer;
+    Stream: TLazarusResourceStream;
+    Pic: TPortableNetworkGraphic;
+  Begin
+    Result := -1;
+    If Images = nil Then
+      exit;
+    n := 0;
+    SetLength(Pics, Length(ResNames));
+    For i := Low(ResNames) To High(ResNames) Do
+    Begin
+      Stream := nil;
+      Try
+        Try
+          Stream := TLazarusResourceStream.Create(ResNames[i], nil);
+        Except
+          Stream := nil;
+        End;
+        If (Stream <> nil) And (Stream.Size > 0) Then
+        Begin
+          Pic := TPortableNetworkGraphic.Create;
+          Try
+            Pic.LoadFromStream(Stream);
+            Pics[n] := Pic;
+            Inc(n);
+          Except
+            Pic.Free;
+          End;
+        End;
+      Finally
+        Stream.Free;
+      End;
+    End;
+    If n = 0 Then
+      exit;
+    SetLength(Pics, n);
+    Try
+      If Images.ResolutionCount > 1 Then
+        Result := Images.AddMultipleResolutions(Pics)
+      Else
+      Begin
+        j := 0;
+        For i := 0 To n - 1 Do
+          If Pics[i].Width >= Images.Width Then
+          Begin
+            j := i;
+            break;
+          End;
+        Result := Images.Add(Pics[j], nil);
+      End;
+    Finally
+      For i := 0 To n - 1 Do
+        Pics[i].Free;
+    End;
+  End;
+
+Begin
+  acArchiveSave.ImageIndex := LoadIcon(
+    ['ArchiveSave16', 'ArchiveSave32', 'ArchiveSave48'], ImageList16);
+  acArchiveManager.ImageIndex := LoadIcon(
+    ['ArchiveManager16', 'ArchiveManager32', 'ArchiveManager48'], ImageList16);
+  LoadIcon(['ArchiveSave16', 'ArchiveSave32', 'ArchiveSave48'], ImageList32);
+  LoadIcon(['ArchiveManager16', 'ArchiveManager32', 'ArchiveManager48'],
+    ImageList32);
+  FScriptMenuImageIndex := LoadIcon(
+    ['ScriptRun16', 'ScriptRun32', 'ScriptRun48'], ImageList16);
+  LoadIcon(['ScriptRun16', 'ScriptRun32', 'ScriptRun48'], ImageList32);
+  FWhisparrMenuImageIndex := LoadIcon(
+    ['Whisparr16', 'Whisparr32', 'Whisparr48'], ImageList16);
+  LoadIcon(['Whisparr16', 'Whisparr32', 'Whisparr48'], ImageList32);
+  FRestartDaemonImageIndex := LoadIcon(
+    ['Restart16', 'Restart32', 'Restart48'], ImageList16);
+  LoadIcon(['Restart16', 'Restart32', 'Restart48'], ImageList32);
+  acWhisparrRename.ImageIndex := FWhisparrMenuImageIndex;
+  MenuItemWhisparrRename.ImageIndex := FWhisparrMenuImageIndex;
 End;
 
 Procedure TMainForm.ScaleImageList(ImgList: TImageList; Var ImgListOut: TImageList;
@@ -3377,11 +3746,11 @@ Begin
               args.Add('files-unwanted', files)
             Else
               files.Free;
-            If (RpcObj.RPCVersion >= 18) And cbStartTorrent.Checked Then
-            Begin
-              args.Add('sequentialDownload', 1);
-              args.Add('sequential_download', 1);
-            End;
+            //If (RpcObj.RPCVersion >= 18) And cbStartTorrent.Checked Then
+            //Begin
+            //  args.Add('sequentialDownload', 1);
+            //  args.Add('sequential_download', 1);
+            //End;
             If edLabel.Text <> '' Then
             Begin
               alabels := TJSONArray.Create;
@@ -3784,10 +4153,16 @@ Begin
               If i = TR_STATUS_STOPPED Then
                 Result := sStopped
               Else
-                If i = TR_STATUS_FINISHED Then
-                  Result := sFinished
+                If i = TR_STATUS_SPACE_PAUSED Then
+                  Result := sSpacePaused
                 Else
-                  Result := sUnknown;
+                  If i = TR_STATUS_PENDING_MOVE Then
+                    Result := sPendingMove
+                  Else
+                    If i = TR_STATUS_FINISHED Then
+                      Result := sFinished
+                    Else
+                      Result := sUnknown;
 End;
 
 Function TMainForm.GetSeedsText(Seeds, SeedsTotal: Integer): String;
@@ -4008,10 +4383,20 @@ End;
 
 Procedure TMainForm.acDaemonOptionsExecute(Sender: TObject);
 Var
-  req, args: TJSONObject;
-  s: String;
-  i, j: Integer;
+  req, args, req2, args2: TJSONObject;
+  s, margin: String;
+  i, j, k: Integer;
+  d: TJSONData;
+  rules, fieldsArr: TJSONArray;
+  sl: TStringList;
+  hasMinFree, hasMargin: Boolean;
+  hasScriptAdded, hasScriptDone, hasScriptDoneSeeding: Boolean;
 Begin
+  hasMinFree := False;
+  hasMargin := False;
+  hasScriptAdded := False;
+  hasScriptDone := False;
+  hasScriptDoneSeeding := False;
   With TDaemonOptionsForm.Create(Self) Do
   Try
     AppBusy;
@@ -4160,12 +4545,127 @@ Begin
         edMaxDown.Value := args.Integers['speed-limit-down'];
         cbMaxUp.Checked := args.Integers['speed-limit-up-enabled'] <> 0;
         edMaxUp.Value := args.Integers['speed-limit-up'];
+        If RpcObj.RPCVersion >= 18 Then
+        Begin
+          cbSequentialDownload.Visible:=True;
+          cbSequentialDownload.Checked:=args.Integers['sequential_download'] <> 0;
+        End
+        else
+        cbSequentialDownload.Visible:=False;
+
+        hasScriptAdded :=
+          args.IndexOfName('script-torrent-added-enabled') >= 0;
+        hasScriptDone :=
+          args.IndexOfName('script-torrent-done-enabled') >= 0;
+        hasScriptDoneSeeding :=
+          args.IndexOfName('script-torrent-done-seeding-enabled') >= 0;
+        tabScripts.TabVisible := hasScriptAdded Or hasScriptDone Or
+          hasScriptDoneSeeding;
+        gbScriptAdded.Visible := hasScriptAdded;
+        gbScriptDone.Visible := hasScriptDone;
+        gbScriptDoneSeeding.Visible := hasScriptDoneSeeding;
+        If hasScriptAdded Then
+        Begin
+          cbScriptAddedEnabled.Checked :=
+            args.Integers['script-torrent-added-enabled'] <> 0;
+          edScriptAddedFilename.Text :=
+            UTF8Encode(args.Strings['script-torrent-added-filename']);
+        End;
+        If hasScriptDone Then
+        Begin
+          cbScriptDoneEnabled.Checked :=
+            args.Integers['script-torrent-done-enabled'] <> 0;
+          edScriptDoneFilename.Text :=
+            UTF8Encode(args.Strings['script-torrent-done-filename']);
+        End;
+        If hasScriptDoneSeeding Then
+        Begin
+          cbScriptDoneSeedingEnabled.Checked :=
+            args.Integers['script-torrent-done-seeding-enabled'] <> 0;
+          edScriptDoneSeedingFilename.Text :=
+            UTF8Encode(args.Strings['script-torrent-done-seeding-filename']);
+        End;
+        cbScriptEnabledClick(nil);
+
+        hasMinFree := RpcObj.HasForkFeature('min_free_space');
+        hasMargin := hasMinFree Or
+          RpcObj.HasForkFeature('min_free_space_resume_margin');
+        tabFreeSpace.TabVisible := hasMinFree Or hasMargin;
+        txMinFreeSpace.Visible := hasMinFree;
+        gFreeSpace.Visible := hasMinFree;
+        btAddFreeSpace.Visible := hasMinFree;
+        btDelFreeSpace.Visible := hasMinFree;
+        txFreeSpaceMargin.Visible := hasMargin;
+        edFreeSpaceMargin.Visible := hasMargin;
+        cbFreeSpaceMarginUnit.Visible := hasMargin;
+
+        If hasMinFree Or hasMargin Then
+        Begin
+          rules := nil;
+          margin := '';
+          d := args.Find('min-free-space');
+          If d = nil Then
+            d := args.Find('min_free_space');
+          If (d <> nil) And (d Is TJSONArray) Then
+            rules := TJSONArray(d);
+          d := args.Find('min-free-space-resume-margin');
+          If d = nil Then
+            d := args.Find('min_free_space_resume_margin');
+          If (d <> nil) And (d.JSONType = jtString) Then
+            margin := d.AsString;
+
+          If (hasMinFree And (rules = nil)) Or
+            (hasMargin And (margin = '')) Then
+          Begin
+            req2 := TJSONObject.Create;
+            Try
+              req2.Add('method', 'session-get');
+              args2 := TJSONObject.Create;
+              fieldsArr := TJSONArray.Create;
+              fieldsArr.Add('min-free-space');
+              fieldsArr.Add('min-free-space-resume-margin');
+              args2.Add('fields', fieldsArr);
+              req2.Add('arguments', args2);
+              args2 := RpcObj.SendRequest(req2);
+              If args2 <> nil Then
+              Try
+                If hasMinFree Then
+                Begin
+                  d := args2.Find('min-free-space');
+                  If d = nil Then
+                    d := args2.Find('min_free_space');
+                  If (d <> nil) And (d Is TJSONArray) Then
+                    rules := TJSONArray(d);
+                End;
+                If hasMargin Then
+                Begin
+                  d := args2.Find('min-free-space-resume-margin');
+                  If d = nil Then
+                    d := args2.Find('min_free_space_resume_margin');
+                  If (d <> nil) And (d.JSONType = jtString) Then
+                    margin := d.AsString;
+                End;
+                SetFreeSpaceData(rules, margin);
+              Finally
+                args2.Free;
+              End
+              Else
+                SetFreeSpaceData(rules, margin);
+            Finally
+              req2.Free;
+            End;
+          End
+          Else
+            SetFreeSpaceData(rules, margin);
+        End;
+
       Finally
         args.Free;
       End
       Else
       Begin
         CheckStatus(False);
+        AppNormal;
         exit;
       End;
     Finally
@@ -4272,12 +4772,58 @@ Begin
           args.Add('queue-stalled-enabled', Integer(cbStalled.Checked) And 1);
           args.Add('queue-stalled-minutes', edStalledTime.Value);
         End;
+        If RpcObj.RPCVersion >= 18 Then
+        Begin
+          args.Add('sequential_download', Integer(cbSequentialDownload.Checked) And 1);
+        End;
+        If tabScripts.TabVisible Then
+        Begin
+          If hasScriptAdded Then
+          Begin
+            args.Add('script-torrent-added-enabled',
+              Integer(cbScriptAddedEnabled.Checked) And 1);
+            args.Add('script-torrent-added-filename',
+              UTF8Decode(edScriptAddedFilename.Text));
+          End;
+          If hasScriptDone Then
+          Begin
+            args.Add('script-torrent-done-enabled',
+              Integer(cbScriptDoneEnabled.Checked) And 1);
+            args.Add('script-torrent-done-filename',
+              UTF8Decode(edScriptDoneFilename.Text));
+          End;
+          If hasScriptDoneSeeding Then
+          Begin
+            args.Add('script-torrent-done-seeding-enabled',
+              Integer(cbScriptDoneSeedingEnabled.Checked) And 1);
+            args.Add('script-torrent-done-seeding-filename',
+              UTF8Decode(edScriptDoneSeedingFilename.Text));
+          End;
+        End;
+        If tabFreeSpace.TabVisible Then
+        Begin
+          If hasMinFree Then
+          Begin
+            sl := GetFreeSpaceRules;
+            Try
+              fieldsArr := TJSONArray.Create;
+              For k := 0 To sl.Count - 1 Do
+                fieldsArr.Add(sl[k]);
+              args.Add('min-free-space', fieldsArr);
+            Finally
+              sl.Free;
+            End;
+          End;
+          If hasMargin Then
+            args.Add('min-free-space-resume-margin', GetResumeMargin);
+        End;
 
         req.Add('arguments', args);
         args := RpcObj.SendRequest(req, False);
         If args = nil Then
         Begin
           CheckStatus(False);
+          AppNormal;
           exit;
         End;
       Finally
@@ -4602,10 +5148,20 @@ Procedure TMainForm.gTorrentsMouseMove(Sender: TObject; Shift: TShiftState;
 Var
   r, c, ADatacol: Integer;
 Begin
-  ADataCol := 0;
+  ADataCol := -1;
   gTorrents.MouseToCell(x, y, c, r);
   If c >= 0 Then ADataCol := gTorrents.ColToDataCol(c);
-  If r = 0 Then gTorrents.Hint := '';
+  If (r < 1) Or (r > gTorrents.Items.Count) Then
+  Begin
+    If (FCol <> -1) Or (FRow <> -1) Then
+    Begin
+      FCol := -1;
+      FRow := -1;
+      gTorrents.Hint := '';
+      Application.CancelHint;
+    End;
+    exit;
+  End;
   If (ADataCol <> FCol) Or (r <> FRow) Then
   Begin
     FCol := ADataCol;
@@ -4615,8 +5171,7 @@ Begin
       Begin
         Application.CancelHint;
         gTorrents.Hint :=
-
-          TorrentDateTimeToString(gTorrents.Items[ADataCol, FRow - 1],
+          TorrentDateTimeToString(gTorrents.Items[ADataCol, r - 1],
           Not (FFromNow));
       End
       Else
@@ -4651,6 +5206,103 @@ Procedure TMainForm.lvFilesMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 Begin
   If Button = mbRight Then pmFiles.PopUp;
+End;
+
+Function TMainForm.GetFilePriorityFilterMask: Integer;
+Begin
+  Result := FFilePriorityMask;
+End;
+
+Procedure TMainForm.lvFilesHeaderClick(Sender: TObject; IsColumn: Boolean;
+  Index: Integer);
+Var
+  P: TPoint;
+Begin
+  If IsColumn And (lvFiles.ColToDataCol(Index) = idxFilePriority) Then
+  Begin
+    P := lvFiles.ScreenToClient(Mouse.CursorPos);
+    If PtInRect(FFilePriorityIconRect, P) Then
+    Begin
+      lvFiles.SkipNextHeaderSort := True;
+      pmFilePriority.PopUp(Mouse.CursorPos.X, Mouse.CursorPos.Y);
+    End;
+  End;
+End;
+
+Procedure TMainForm.FilePriorityFilterClick(Sender: TObject);
+Var
+  mi: TMenuItem;
+  bit: Integer;
+Begin
+  mi := Sender As TMenuItem;
+  bit := 1 Shl mi.Tag;
+  If mi.Checked Then
+    FFilePriorityMask := FFilePriorityMask Or bit
+  Else
+    FFilePriorityMask := FFilePriorityMask And Not bit;
+  If FFilesTree <> nil Then
+    FFilesTree.ApplyPriorityFilter(FFilePriorityMask);
+  lvFiles.Invalidate;
+End;
+
+Procedure TMainForm.lvFilesDrawHeader(Sender: TVarGrid; ACol, ADataCol: Integer;
+  AState: TGridDrawState; Const R: TRect);
+Var
+  state: TCheckBoxState;
+  title: String;
+  rc: TRect;
+  x, y, sz, m: Integer;
+Begin
+  If ADataCol <> idxFilePriority Then
+    exit;
+  If FFilePriorityMask = 15 Then
+    state := cbChecked
+  Else
+    If FFilePriorityMask = 0 Then
+      state := cbUnchecked
+    Else
+      state := cbGrayed;
+
+  title := Sender.Columns[Sender.DataColToCol(ADataCol)].Title.Caption;
+  sz := R.Bottom - R.Top - 4;
+  If sz < 9 Then
+    sz := R.Bottom - R.Top - 2;
+  If sz < 1 Then
+    sz := 1;
+  x := R.Left + Sender.Canvas.TextWidth(title) + 8;
+  If x + sz > R.Right - 2 Then
+    x := R.Right - sz - 2;
+  If x < R.Left + 2 Then
+    x := R.Left + 2;
+  y := R.Top + (R.Bottom - R.Top - sz) Div 2;
+  rc := Rect(x, y, x + sz, y + sz);
+  FFilePriorityIconRect := rc;
+  m := sz Div 4;
+  If m < 2 Then
+    m := 2;
+
+  With Sender.Canvas Do
+  Begin
+    Brush.Color := clWindow;
+    FillRect(rc);
+    Pen.Color := clGrayText;
+    Brush.Style := bsClear;
+    Rectangle(rc);
+    Brush.Style := bsSolid;
+    If state = cbChecked Then
+    Begin
+      Pen.Color := clWindowText;
+      MoveTo(rc.Left + m, rc.Top + sz Div 2);
+      LineTo(rc.Left + sz Div 2, rc.Bottom - m);
+      LineTo(rc.Right - m, rc.Top + m);
+    End
+    Else
+      If state = cbGrayed Then
+      Begin
+        Brush.Color := clGrayText;
+        FillRect(Rect(rc.Left + m, rc.Top + m, rc.Right - m, rc.Bottom - m));
+      End;
+  End;
 End;
 
 Procedure TMainForm.MenuItem107Click(Sender: TObject);
@@ -4764,6 +5416,42 @@ Begin
   TorrentProps(0);
 End;
 
+Procedure TMainForm.NormalizeTrackerLines(Lines: TStrings);
+Var
+  i: Integer;
+  s: String;
+  Seen: TStringList;
+Begin
+  If Lines = nil Then
+    exit;
+  Seen := TStringList.Create;
+  Try
+    Seen.Sorted := True;
+    Seen.CaseSensitive := False;
+    Seen.Duplicates := dupIgnore;
+    i := 0;
+    While i < Lines.Count Do
+    Begin
+      s := Trim(Lines[i]);
+      If (s = '') Then
+      Begin
+        Lines.Delete(i);
+        continue;
+      End;
+      If Seen.IndexOf(s) >= 0 Then
+      Begin
+        Lines.Delete(i);
+        continue;
+      End;
+      Seen.Add(s);
+      Lines[i] := s;
+      Inc(i);
+    End;
+  Finally
+    Seen.Free;
+  End;
+End;
+
 Procedure TMainForm.TorrentProps(PageNo: Integer; filtered: Boolean = False);
 Const
   TR_RATIOLIMIT_GLOBAL = 0;
@@ -4780,12 +5468,13 @@ Const
   TR_IDLELIMIT_UNLIMITED = 2;
   // override the global settings, seeding regardless of activity
 Var
-  req, args, t, tr: TJSONObject;
+  req, args, req2, args2, t, tr: TJSONObject;
   i, j, id, c1, c2: Integer;
-  ids, Trackers, AddT, EditT, DelT: TJSONArray;
-  listT: String;
+  ids, ids2, Trackers, AddT, EditT, DelT: TJSONArray;
+  listT, InitialIncompleteDir: String;
   TorrentIds: Variant;
-  s: String;
+  s, ss: String;
+  AllSame: Boolean;
   trlist, sl: TStringList;
 Begin
   gTorrentsClick(nil);
@@ -4803,24 +5492,70 @@ Begin
       TorrentIds := GetFilteredTorrents
     Else
       TorrentIds := GetSelectedTorrents;
+    If VarIsEmpty(TorrentIds) Or VarIsNull(TorrentIds) Then
+    Begin
+      AppNormal;
+      exit;
+    End;
     args := RpcObj.RequestInfos(TorrentIds, ['downloadLimit',
       'sequential_download', 'sequentialDownload', 'downloadLimitMode',
       'downloadLimited', 'uploadLimit', 'uploadLimitMode', 'uploadLimited',
       'name', 'maxConnectedPeers', 'seedRatioMode', 'seedRatioLimit',
-      'seedIdleLimit', 'seedIdleMode', 'trackers']);
+      'seedIdleLimit', 'seedIdleMode', 'trackers', 'incomplete-dir']);
     If args = nil Then
     Begin
       CheckStatus(True);
+      AppNormal;
       exit;
     End;
     If args.Arrays['torrents'].Count = 0 Then
     Begin
       CheckStatus(True);
+      AppNormal;
       exit;
     End;
     Try
       t := args.Arrays['torrents'].Objects[0];
       c1 := args.Arrays['torrents'].Count;
+
+      tabIncompleteDir.TabVisible :=
+        RpcObj.HasForkFeature('per_torrent_incomplete_dir', 1) And
+        RpcObj.HasForkFeature('torrent_set_incomplete_dir', 1);
+      InitialIncompleteDir := '';
+      If tabIncompleteDir.TabVisible Then
+      Begin
+        AllSame := True;
+        s := '';
+        For i := 0 To c1 - 1 Do
+        Begin
+          tr := args.Arrays['torrents'].Objects[i];
+          ss := '';
+          If tr.IndexOfName('incomplete_dir') >= 0 Then
+            ss := tr.Strings['incomplete_dir']
+          Else
+            If tr.IndexOfName('incomplete-dir') >= 0 Then
+              ss := tr.Strings['incomplete-dir'];
+          If ss = '' Then
+            ss := RpcObj.IncompleteDir;
+          If i = 0 Then
+            s := ss
+          Else
+            If ss <> s Then
+            Begin
+              AllSame := False;
+              break;
+            End;
+        End;
+        tabIncompleteDir.TabVisible := AllSame;
+        If tabIncompleteDir.TabVisible Then
+        Begin
+          If s = '' Then
+            s := RpcObj.IncompleteDir;
+          edIncompleteDir.Text := UTF8Encode(s);
+          InitialIncompleteDir := edIncompleteDir.Text;
+          cbMoveIncompleteDir.Checked := False;
+        End;
+      End;
 
       //      if gTorrents.SelCount > 1 then
       //        s:=Format(sSeveralTorrents, [gTorrents.SelCount])
@@ -4902,6 +5637,7 @@ Begin
             TObject(PtrUInt(tr.Integers['id'])));
         End;
         edTrackers.Lines.Assign(trlist);
+        NormalizeTrackerLines(edTrackers.Lines);
       End
       Else
       Begin
@@ -5051,6 +5787,7 @@ Begin
           sl := TStringList.Create;
           Try
             sl.Assign(edTrackers.Lines);
+            NormalizeTrackerLines(sl);
             // Removing unchanged trackers
             If (rpcObj.RPCVersion >= 17) Then
             Begin
@@ -5140,11 +5877,48 @@ Begin
         If args = nil Then
         Begin
           CheckStatus(True);
+          AppNormal;
           exit;
         End;
       Finally
         args.Free;
         req.Free;
+      End;
+      If tabIncompleteDir.TabVisible Then
+      Begin
+        s := Trim(edIncompleteDir.Text);
+        If s <> Trim(InitialIncompleteDir) Then
+        Begin
+          If s = '' Then
+          Begin
+            MessageDlg(SNoIncompleteDir, mtError, [mbOK], 0);
+            AppNormal;
+            exit;
+          End;
+          req2 := TJSONObject.Create;
+          Try
+            req2.Add('method', 'torrent_set_incomplete_dir');
+            args2 := TJSONObject.Create;
+            ids2 := TJSONArray.Create;
+            For i := VarArrayLowBound(TorrentIds, 1) To
+              VarArrayHighBound(TorrentIds, 1) Do
+              ids2.Add(Integer(TorrentIds[i]));
+            args2.Add('ids', ids2);
+            args2.Add('incomplete_dir', UTF8Decode(s));
+            args2.Add('move', Integer(cbMoveIncompleteDir.Checked) And 1);
+            req2.Add('arguments', args2);
+            args2 := RpcObj.SendRequest(req2, False);
+            If args2 = nil Then
+            Begin
+              CheckStatus(True);
+              AppNormal;
+              exit;
+            End;
+          Finally
+            args2.Free;
+            req2.Free;
+          End;
+        End;
       End;
       TorrentAction(TorrentIds, 'torrent-reannounce');
       DoRefresh;
@@ -5305,6 +6079,7 @@ End;
 
 Procedure TMainForm.FormActivate(Sender: TObject);
 Begin
+  DebugWindowLog('FormActivate ' + DebugWindowState);
   CheckClipboardLink;
 End;
 
@@ -5348,12 +6123,16 @@ End;
 
 Procedure TMainForm.FormWindowStateChange(Sender: TObject);
 Begin
+  DebugWindowLog('WindowStateChange before ' + DebugWindowState);
   {$ifdef lclgtk2}
   If WindowState = wsMinimized Then
     ApplicationPropertiesMinimize(Nil)
   Else
     ApplicationPropertiesRestore(Nil);
   {$endif lclgtk2}
+  If WindowState <> wsMinimized Then
+    FixDetailsHeight;
+  DebugWindowLog('WindowStateChange after ' + DebugWindowState);
 End;
 
 Procedure TMainForm.gTorrentsCellAttributes(Sender: TVarGrid;
@@ -5444,6 +6223,8 @@ Begin
       i := gTorrents.Items[idxTorrentId, gTorrents.Row]
     Else
       i := 0;
+    DebugWindowLog(Format('gTorrentsClick id=%d cur=%d row=%d page=%s',
+      [i, RpcObj.CurTorrentId, gTorrents.Row, PageInfo.ActivePage.Name]));
     If RpcObj.CurTorrentId = i Then
       exit;
     RpcObj.CurTorrentId := i;
@@ -5458,8 +6239,7 @@ Begin
   Else
     ClearDetailsInfo();
 
-
-
+  DebugWindowLog('gTorrentsClick after clear ' + DebugWindowState);
   TorrentsListTimer.Enabled := False;
   TorrentsListTimer.Enabled := True;
 End;
@@ -5860,6 +6640,7 @@ End;
 
 Procedure TMainForm.PageInfoResize(Sender: TObject);
 Begin
+  DebugWindowLog('PageInfoResize ' + DebugWindowState);
   If FDetailsWait.Visible Then
     CenterDetailsWait;
 End;
@@ -5985,6 +6766,7 @@ Begin
         FDetailsWaitStart := 0;
         FDetailsWait.Visible := False;
         panDetailsWait.Visible := False;
+        DebugWindowLog('DetailsWait hidden ' + DebugWindowState);
       End;
     End
     Else
@@ -5995,6 +6777,7 @@ Begin
         FDetailsWait.Visible := True;
         panDetailsWait.Visible := True;
         panDetailsWait.BringToFront;
+        DebugWindowLog('DetailsWait shown ' + DebugWindowState);
       End;
 
     {$ifdef LCLcarbon}
@@ -6053,6 +6836,7 @@ End;
 
 Procedure TMainForm.PageInfoChange(Sender: TObject);
 Begin
+  DebugWindowLog('PageInfoChange ' + DebugWindowState);
   If PageInfo.ActivePage.Tag <> 0 Then
     FDetailsWaitStart := Now;
   RpcObj.Lock;
@@ -6102,6 +6886,7 @@ End;
 
 Procedure TMainForm.VSplitterChangeBounds(Sender: TObject);
 Begin
+  DebugWindowLog('VSplitterChangeBounds ' + DebugWindowState);
   {$ifdef windows}
   Update;
   {$endif windows}
@@ -6177,6 +6962,7 @@ Begin
     Begin
       MessageDlg(Format(sSSLLoadError, [DLLSSLName, DLLUtilName]),
         mtError, [mbOK], 0);
+      Result := False;
       exit;
     End;
     RpcObj.Url := 'https';
@@ -6261,6 +7047,8 @@ Procedure TMainForm.DoDisconnect;
 Var
   i: Integer;
 Begin
+  ClearScriptMenus;
+  FScriptRunnerLoaded := False;
   TorrentsListTimer.Enabled := False;
   FilterTimer.Enabled := False;
   ClearDetailsInfo;
@@ -6330,6 +7118,862 @@ Begin
   tbConnect.Caption := Format(SConnectTo, ['Transmission']);
 End;
 
+Function TMainForm.ScriptHasContext(Obj: TJSONObject; Const AContext: String): Boolean;
+Var
+  d: TJSONData;
+  a: TJSONArray;
+  i: Integer;
+Begin
+  Result := False;
+  If Obj = nil Then
+    exit;
+  d := Obj.Find('contexts');
+  If (d = nil) Or Not (d Is TJSONArray) Then
+    exit;
+  a := TJSONArray(d);
+  For i := 0 To a.Count - 1 Do
+    If (a.Items[i].JSONType = jtString) And
+      (CompareText(a.Items[i].AsString, AContext) = 0) Then
+    Begin
+      Result := True;
+      exit;
+    End;
+End;
+
+Function TMainForm.ScriptString(Obj: TJSONObject; Const AName,
+  ADefault: String): String;
+Var
+  d: TJSONData;
+Begin
+  Result := ADefault;
+  If Obj = nil Then
+    exit;
+  d := Obj.Find(AName);
+  If (d <> nil) And (d.JSONType = jtString) Then
+    Result := d.AsString;
+End;
+
+Function TMainForm.ScriptInt(Obj: TJSONObject; Const AName: String;
+  ADefault: Int64): Int64;
+Var
+  d: TJSONData;
+Begin
+  Result := ADefault;
+  If Obj = nil Then
+    exit;
+  d := Obj.Find(AName);
+  If (d <> nil) And (d.JSONType = jtNumber) Then
+    Result := StrToInt64Def(d.AsString, ADefault);
+End;
+
+Function TMainForm.ScriptRuntimeSection(Const AId: String): String;
+Begin
+  If FCurConn <> '' Then
+    Result := 'ScriptRuntime.' + FCurConn + '.' + AId
+  Else
+    Result := 'ScriptRuntime.default.' + AId;
+End;
+
+Function TMainForm.LoadScriptRuntimeParams(Const AId: String): TJSONObject;
+Var
+  s: String;
+  d: TJSONData;
+Begin
+  Result := nil;
+  If (Ini = nil) Or (AId = '') Then
+    exit;
+
+  s := Ini.ReadString(ScriptRuntimeSection(AId), 'Values', '');
+  If s = '' Then
+    exit;
+
+  Try
+    d := GetJSON(s);
+    If d Is TJSONObject Then
+      Result := TJSONObject(d)
+    Else
+      d.Free;
+  Except
+    Result := nil;
+  End;
+End;
+
+Procedure TMainForm.SaveScriptRuntimeParams(Const AId: String;
+  AParams: TJSONObject);
+Begin
+  If (Ini = nil) Or (AId = '') Or (AParams = nil) Then
+    exit;
+  Try
+    Ini.WriteString(ScriptRuntimeSection(AId), 'Values', AParams.AsJSON);
+    Ini.UpdateFile;
+  Except
+  End;
+End;
+
+Function TMainForm.CheckScriptHostSettings(Const AId: String): Boolean;
+Var
+  Req, Res, o: TJSONObject;
+  d: TJSONData;
+  i: Integer;
+  ready: Boolean;
+  msg: String;
+Begin
+  Result := True;
+  If Not RpcObj.Connected Or
+    Not RpcObj.HasForkFeature('script_runner_settings') Then
+    exit;
+
+  Req := TJSONObject.Create;
+  Try
+    Req.Add('method', 'script_settings_get');
+    Req.Add('arguments', TJSONObject.Create);
+    Res := RpcObj.SendRequest(Req);
+  Finally
+    Req.Free;
+  End;
+  If Res = nil Then
+  Begin
+    msg := RpcObj.Status;
+    If msg = '' Then
+      msg := SScriptSettingsUnavailable;
+    MessageDlg('', msg, mtError, [mbOK], 0);
+    exit(False);
+  End;
+
+  Try
+    d := Res.Find('scripts');
+    If d Is TJSONArray Then
+      For i := 0 To TJSONArray(d).Count - 1 Do
+      Begin
+        o := TJSONArray(d).Objects[i];
+        If (o = nil) Or (ScriptString(o, 'id', '') <> AId) Then
+          continue;
+        d := o.Find('ready');
+        ready := (d <> nil) And (d.JSONType = jtBoolean) And d.AsBoolean;
+        If Not ready Then
+        Begin
+          MessageDlg('', sScriptHostSettingsRequired, mtInformation, [mbOK], 0);
+          Result := False;
+        End;
+        break;
+      End;
+  Finally
+    Res.Free;
+  End;
+End;
+
+Procedure TMainForm.ClearScriptMenus;
+Begin
+  If FScriptsMenu <> nil Then
+    FreeAndNil(FScriptsMenu);
+  If FScriptsSep <> nil Then
+    FreeAndNil(FScriptsSep);
+  If FTorrentScriptsMenu <> nil Then
+    FreeAndNil(FTorrentScriptsMenu);
+  If FTorrentScriptsSep <> nil Then
+    FreeAndNil(FTorrentScriptsSep);
+  If FFileScriptsMenu <> nil Then
+    FreeAndNil(FFileScriptsMenu);
+  If FFileScriptsSep <> nil Then
+    FreeAndNil(FFileScriptsSep);
+  If FRestartDaemonMenu <> nil Then
+    FreeAndNil(FRestartDaemonMenu);
+  If FRestartDaemonSep <> nil Then
+    FreeAndNil(FRestartDaemonSep);
+  FreeAndNil(FScripts);
+  FreeAndNil(FScriptExternalHosts);
+  FRestartDaemonEnabled := False;
+  FRestartDaemonName := '';
+  FScriptsRevision := '';
+End;
+
+Procedure TMainForm.UpdateScriptRunner(AData: TJSONData);
+Var
+  d, v: TJSONData;
+  Obj: TJSONObject;
+  Rev: String;
+Begin
+  If (AData = nil) Or Not (AData Is TJSONObject) Then
+  Begin
+    ClearScriptMenus;
+    exit;
+  End;
+  Obj := TJSONObject(AData);
+  Rev := ScriptString(Obj, 'revision', '');
+  If (Rev <> '') And (Rev = FScriptsRevision) Then
+    exit;
+  FreeAndNil(FScripts);
+  FreeAndNil(FScriptExternalHosts);
+  d := Obj.Find('scripts');
+  If (d <> nil) And (d Is TJSONArray) Then
+    FScripts := TJSONArray(d.Clone);
+  d := Obj.Find('external_hosts');
+  If (d <> nil) And (d Is TJSONArray) Then
+    FScriptExternalHosts := TJSONArray(d.Clone);
+  FRestartDaemonEnabled := False;
+  FRestartDaemonName := '';
+  d := Obj.Find('restart_daemon');
+  If d Is TJSONObject Then
+  Begin
+    FRestartDaemonName := ScriptString(TJSONObject(d), 'name', 'Restart daemon');
+    v := TJSONObject(d).Find('enabled');
+    If (v <> nil) And (v.JSONType = jtBoolean) And v.AsBoolean And
+      RpcObj.HasForkFeature('script_restart_daemon') Then
+      FRestartDaemonEnabled := True;
+  End;
+  FScriptsRevision := Rev;
+  BuildScriptMenus;
+End;
+
+Procedure TMainForm.LoadScriptRunner(AData: TJSONData);
+Var
+  Req, Params, Res: TJSONObject;
+  Fields: TJSONArray;
+  d: TJSONData;
+Begin
+  If Not RpcObj.Connected Or Not RpcObj.HasForkFeature('script_runner') Then
+  Begin
+    ClearScriptMenus;
+    FScriptRunnerLoaded := True;
+    exit;
+  End;
+  If AData = nil Then
+  Begin
+    Req := TJSONObject.Create;
+    Try
+      Req.Add('method', 'session-get');
+      Params := TJSONObject.Create;
+      Fields := TJSONArray.Create;
+      Fields.Add('script_runner');
+      Params.Add('fields', Fields);
+      Req.Add('arguments', Params);
+      Res := RpcObj.SendRequest(Req);
+    Finally
+      Req.Free;
+    End;
+    If Res = nil Then
+    Begin
+      ClearScriptMenus;
+      FScriptRunnerLoaded := False;
+      exit;
+    End;
+    Try
+      d := Res.Find('script_runner');
+      UpdateScriptRunner(d);
+      FScriptRunnerLoaded := d Is TJSONObject;
+    Finally
+      Res.Free;
+    End;
+    exit;
+  End;
+  If AData Is TJSONObject Then
+  Begin
+    UpdateScriptRunner(AData);
+    FScriptRunnerLoaded := True;
+  End
+  Else
+  Begin
+    ClearScriptMenus;
+    FScriptRunnerLoaded := False;
+  End;
+End;
+
+Procedure TMainForm.BuildScriptMenus;
+Var
+  SystemMenu, SystemSep, TorrentMenu, TorrentSep, FileMenu, FileSep: TMenuItem;
+
+  Procedure BuildOne(AParent: TMenuItem; Const AContext: String;
+    Var AMenu, ASep: TMenuItem; AOnClick: TNotifyEvent);
+  Var
+    i, j, idx, Order: Integer;
+    Obj: TJSONObject;
+    Item, GroupMenu, ParentMenu: TMenuItem;
+    List, Groups: TStringList;
+    CaptionName, GroupName: String;
+  Begin
+    AMenu := nil;
+    ASep := nil;
+    If (FScripts = nil) Or (FScripts.Count = 0) Then
+      exit;
+    List := TStringList.Create;
+    Try
+      For i := 0 To FScripts.Count - 1 Do
+      Begin
+        Obj := FScripts.Objects[i];
+        If (Obj = nil) Or Not ScriptHasContext(Obj, AContext) Then
+          continue;
+        Order := ScriptInt(Obj, 'order', 0);
+        CaptionName := TranslateString(
+          ScriptString(Obj, 'name', ScriptString(Obj, 'id', '')), True);
+        List.AddObject(Format('%.10d', [Order + 1000000]) + #9 +
+          LowerCase(CaptionName), TObject(PtrInt(i)));
+      End;
+      If List.Count = 0 Then
+        exit;
+      List.Sort;
+      ASep := TMenuItem.Create(AParent);
+      ASep.Caption := '-';
+      AParent.Add(ASep);
+      AMenu := TMenuItem.Create(AParent);
+      AMenu.Caption := TranslateString('Scripts', True);
+      AMenu.ImageIndex := FScriptMenuImageIndex;
+      AParent.Add(AMenu);
+      Groups := TStringList.Create;
+      Try
+        For j := 0 To List.Count - 1 Do
+        Begin
+          idx := PtrInt(List.Objects[j]);
+          Obj := FScripts.Objects[idx];
+          CaptionName := TranslateString(
+            ScriptString(Obj, 'name', ScriptString(Obj, 'id', '')), True);
+          GroupName := TranslateString(ScriptString(Obj, 'group', ''), True);
+          ParentMenu := AMenu;
+          If GroupName <> '' Then
+          Begin
+            i := Groups.IndexOf(GroupName);
+            If i < 0 Then
+            Begin
+              GroupMenu := TMenuItem.Create(AMenu);
+              GroupMenu.Caption := GroupName;
+              AMenu.Add(GroupMenu);
+              i := Groups.AddObject(GroupName, GroupMenu);
+            End;
+            ParentMenu := TMenuItem(Groups.Objects[i]);
+          End;
+          Item := TMenuItem.Create(ParentMenu);
+          Item.Caption := CaptionName;
+          Item.Hint := TranslateString(
+            ScriptString(Obj, 'description', ''), True);
+          Item.Tag := idx;
+          Item.OnClick := AOnClick;
+          ParentMenu.Add(Item);
+        End;
+      Finally
+        Groups.Free;
+      End;
+    Finally
+      List.Free;
+    End;
+  End;
+
+Begin
+  If FScriptsMenu <> nil Then
+    FreeAndNil(FScriptsMenu);
+  If FScriptsSep <> nil Then
+    FreeAndNil(FScriptsSep);
+  If FTorrentScriptsMenu <> nil Then
+    FreeAndNil(FTorrentScriptsMenu);
+  If FTorrentScriptsSep <> nil Then
+    FreeAndNil(FTorrentScriptsSep);
+  If FFileScriptsMenu <> nil Then
+    FreeAndNil(FFileScriptsMenu);
+  If FFileScriptsSep <> nil Then
+    FreeAndNil(FFileScriptsSep);
+  If FRestartDaemonMenu <> nil Then
+    FreeAndNil(FRestartDaemonMenu);
+  If FRestartDaemonSep <> nil Then
+    FreeAndNil(FRestartDaemonSep);
+  BuildOne(miTools, 'system', SystemMenu, SystemSep, @SystemScriptClick);
+  FScriptsMenu := SystemMenu;
+  FScriptsSep := SystemSep;
+  BuildOne(pmTorrents.Items, 'torrent', TorrentMenu, TorrentSep,
+    @TorrentScriptClick);
+  FTorrentScriptsMenu := TorrentMenu;
+  FTorrentScriptsSep := TorrentSep;
+  BuildOne(pmFiles.Items, 'file', FileMenu, FileSep, @FileScriptClick);
+  FFileScriptsMenu := FileMenu;
+  FFileScriptsSep := FileSep;
+  If FRestartDaemonEnabled Then
+  Begin
+    FRestartDaemonSep := TMenuItem.Create(miTools);
+    FRestartDaemonSep.Caption := '-';
+    miTools.Add(FRestartDaemonSep);
+    FRestartDaemonMenu := TMenuItem.Create(miTools);
+    FRestartDaemonMenu.Caption := TranslateString(FRestartDaemonName, True);
+    FRestartDaemonMenu.ImageIndex := FRestartDaemonImageIndex;
+    FRestartDaemonMenu.OnClick := @RestartDaemonClick;
+    miTools.Add(FRestartDaemonMenu);
+  End;
+End;
+Function TMainForm.GetTorrentHashes(Ids: Variant; Hashes: TStringList): Boolean;
+Var
+  Res: TJSONObject;
+  d: TJSONData;
+  a: TJSONArray;
+  o: TJSONObject;
+  i: Integer;
+  Hash: String;
+Begin
+  Result := False;
+  Hashes.Clear;
+  If VarIsEmpty(Ids) Or VarIsNull(Ids) Then
+    exit;
+  Res := RpcObj.RequestInfos(Ids, ['hashString']);
+  If Res = nil Then
+    exit;
+  Try
+    d := Res.Find('torrents');
+    If (d <> nil) And (d Is TJSONArray) Then
+    Begin
+      a := TJSONArray(d);
+      For i := 0 To a.Count - 1 Do
+      Begin
+        o := a.Objects[i];
+        Hash := ScriptString(o, 'hashString', '');
+        If Hash <> '' Then
+          Hashes.Add(Hash);
+      End;
+    End;
+    Result := True;
+  Finally
+    Res.Free;
+  End;
+End;
+
+Function TMainForm.GetSelectedFileIndices: TStringList;
+Var
+  i, j, level, Row: Integer;
+  V: Variant;
+  s: String;
+
+  Procedure AddFileIndex(ARow: Integer);
+  Begin
+    If FFilesTree.IsFolder(ARow) Then
+      exit;
+    V := lvFiles.Items[idxFileId, ARow];
+    If VarIsEmpty(V) Or VarIsNull(V) Then
+      exit;
+    s := IntToStr(Integer(V));
+    If Result.IndexOf(s) < 0 Then
+      Result.Add(s);
+  End;
+
+Begin
+  Result := TStringList.Create;
+  If lvFiles.Items.Count = 0 Then
+    exit;
+  If lvFiles.SelCount = 0 Then
+  Begin
+    Row := lvFiles.Row;
+    If (Row >= 0) And (Row < lvFiles.Items.Count) Then
+      If FFilesTree.IsFolder(Row) Then
+      Begin
+        level := FFilesTree.RowLevel[Row];
+        For j := Row + 1 To lvFiles.Items.Count - 1 Do
+        Begin
+          If FFilesTree.RowLevel[j] <= level Then
+            break;
+          AddFileIndex(j);
+        End;
+      End
+      Else
+        AddFileIndex(Row);
+    exit;
+  End;
+  For i := 0 To lvFiles.Items.Count - 1 Do
+    If lvFiles.RowSelected[i] Then
+      If FFilesTree.IsFolder(i) Then
+      Begin
+        level := FFilesTree.RowLevel[i];
+        For j := i + 1 To lvFiles.Items.Count - 1 Do
+        Begin
+          If FFilesTree.RowLevel[j] <= level Then
+            break;
+          AddFileIndex(j);
+        End;
+      End
+      Else
+        AddFileIndex(i);
+End;
+
+Function StripAnsiCodes(Const S: String): String;
+Var
+  i, j: Integer;
+  c: Char;
+Begin
+  SetLength(Result, Length(S));
+  i := 1;
+  j := 0;
+  While i <= Length(S) Do
+  Begin
+    If S[i] = #27 Then
+    Begin
+      If (i < Length(S)) And (S[i + 1] = '[') Then
+      Begin
+        Inc(i, 2);
+        While i <= Length(S) Do
+        Begin
+          c := S[i];
+          Inc(i);
+          If (Ord(c) >= 64) And (Ord(c) <= 126) Then
+            break;
+        End;
+        continue;
+      End;
+      If (i < Length(S)) And (S[i + 1] = ']') Then
+      Begin
+        Inc(i, 2);
+        While i <= Length(S) Do
+        Begin
+          If S[i] = #7 Then
+          Begin
+            Inc(i);
+            break;
+          End;
+          If (S[i] = #27) And (i < Length(S)) And (S[i + 1] = '\') Then
+          Begin
+            Inc(i, 2);
+            break;
+          End;
+          Inc(i);
+        End;
+        continue;
+      End;
+      Inc(i);
+      If i <= Length(S) Then
+        Inc(i);
+      continue;
+    End;
+    If Ord(S[i]) = 155 Then
+    Begin
+      Inc(i);
+      While i <= Length(S) Do
+      Begin
+        c := S[i];
+        Inc(i);
+        If (Ord(c) >= 64) And (Ord(c) <= 126) Then
+          break;
+      End;
+      continue;
+    End;
+    Inc(j);
+    Result[j] := S[i];
+    Inc(i);
+  End;
+  SetLength(Result, j);
+End;
+
+Function BuildScriptResultText(Const AStdout, AStderr, AState: String): String;
+Begin
+  Result := StripAnsiCodes(AStdout);
+  If AStderr <> '' Then
+  Begin
+    If Result <> '' Then
+      Result := Result + LineEnding + LineEnding;
+    Result := Result + '--- stderr ---' + LineEnding +
+      StripAnsiCodes(AStderr);
+  End;
+  If Result = '' Then
+    Result := AState;
+End;
+
+Procedure TMainForm.SystemScriptClick(Sender: TObject);
+Begin
+  ExecuteScript(TMenuItem(Sender).Tag, 'system');
+End;
+
+Procedure TMainForm.TorrentScriptClick(Sender: TObject);
+Begin
+  ExecuteScript(TMenuItem(Sender).Tag, 'torrent');
+End;
+
+Procedure TMainForm.FileScriptClick(Sender: TObject);
+Begin
+  ExecuteScript(TMenuItem(Sender).Tag, 'file');
+End;
+
+Procedure TMainForm.RestartDaemonClick(Sender: TObject);
+Var
+  req, res: TJSONObject;
+  d: TJSONData;
+  accepted: Boolean;
+Begin
+  If Not RpcObj.Connected Then
+    exit;
+  If MessageDlg('', sRestartDaemonConfirm, mtConfirmation, [mbYes, mbNo], 0) <>
+    mrYes Then
+    exit;
+
+  AppBusy;
+  res := nil;
+  req := TJSONObject.Create;
+  Try
+    req.Add('method', 'script_restart_daemon');
+    req.Add('arguments', TJSONObject.Create);
+    res := RpcObj.SendRequest(req);
+  Finally
+    req.Free;
+    AppNormal;
+  End;
+  If res = nil Then
+  Begin
+    CheckStatus(False);
+    exit;
+  End;
+
+  Try
+    accepted := False;
+    d := res.Find('accepted');
+    If (d <> nil) And (d.JSONType = jtBoolean) Then
+      accepted := d.AsBoolean;
+    If accepted Then
+      MessageDlg('', sRestartDaemonScheduled, mtInformation, [mbOK], 0)
+    Else
+    Begin
+      If RpcObj.Status <> '' Then
+        MessageDlg('', RpcObj.Status, mtError, [mbOK], 0);
+    End;
+  Finally
+    res.Free;
+  End;
+End;
+
+Procedure TMainForm.ExecuteScript(AIndex: Integer; Const AContext: String);
+Var
+  i: Integer;
+  Obj, Item: TJSONObject;
+  Id, ScriptName, JobId, JobToken, State, OutText, ErrText, ResultText: String;
+  Req, Args, Payload, Params, Selection, Res, SReq, SArgs, SRes: TJSONObject;
+  Saved: TJSONObject;
+  Chunk, ErrChunk: String;
+  StdoutOffset, StderrOffset, StoredStdout, StoredStderr: Int64;
+  ResultForm: TScriptResultForm;
+  Hashes, Files: TJSONArray;
+  HashList, FileList: TStringList;
+  SelectedIds: Variant;
+  Err: String;
+Begin
+  If (FScripts = nil) Or (AIndex < 0) Or (AIndex >= FScripts.Count) Then
+    exit;
+  Obj := FScripts.Objects[AIndex];
+  If (Obj = nil) Or Not ScriptHasContext(Obj, AContext) Then
+    exit;
+  Id := ScriptString(Obj, 'id', '');
+  ScriptName := TranslateString(ScriptString(Obj, 'name', Id), True);
+  If Id = '' Then
+    exit;
+  If ScriptHasHostParams(Obj) And Not CheckScriptHostSettings(Id) Then
+    exit;
+
+  Params := nil;
+  If ScriptHasRuntimeParams(Obj) Then
+  Begin
+    Saved := LoadScriptRuntimeParams(Id);
+    Try
+      If Ini.ReadBool('Interface', 'AskScriptParams', True) Then
+      Begin
+        If Not TScriptParamsForm.Execute(Self, Obj, FScriptExternalHosts, Saved,
+          Params) Then
+          exit;
+      End
+      Else
+      Begin
+        If Not TScriptParamsForm.BuildFromSaved(Self, Obj, FScriptExternalHosts,
+          Saved, Params, Err) Then
+        Begin
+          MessageDlg('', Err, mtError, [mbOK], 0);
+          exit;
+        End;
+      End;
+      SaveScriptRuntimeParams(Id, Params);
+    Finally
+      Saved.Free;
+    End;
+  End;
+
+  Res := nil;
+  Req := TJSONObject.Create;
+  Try
+    Req.Add('method', 'script_run');
+    Args := TJSONObject.Create;
+    Req.Add('arguments', Args);
+    Args.Add('id', Id);
+    Payload := TJSONObject.Create;
+    Args.Add('payload', Payload);
+    Payload.Add('schema', 'transgui.script/v1');
+    Payload.Add('context', AContext);
+    Payload.Add('host', FCurConn);
+    If Params = nil Then
+      Params := TJSONObject.Create;
+    Payload.Add('parameters', Params);
+    Selection := TJSONObject.Create;
+    Payload.Add('selection', Selection);
+    Hashes := TJSONArray.Create;
+    Selection.Add('hashes', Hashes);
+    Files := TJSONArray.Create;
+    Selection.Add('files', Files);
+
+    If AContext = 'torrent' Then
+    Begin
+      HashList := TStringList.Create;
+      Try
+        SelectedIds := GetSelectedTorrents;
+        If Not GetTorrentHashes(SelectedIds, HashList) Then
+        Begin
+          CheckStatus(False);
+          exit;
+        End;
+        For i := 0 To HashList.Count - 1 Do
+          Hashes.Add(HashList[i]);
+      Finally
+        HashList.Free;
+      End;
+    End
+    Else If AContext = 'file' Then
+    Begin
+      If RpcObj.CurTorrentId = 0 Then
+      Begin
+        MessageDlg('', 'No torrent selected', mtInformation, [mbOK], 0);
+        exit;
+      End;
+      HashList := TStringList.Create;
+      Try
+        If Not GetTorrentHashes(VarArrayOf([RpcObj.CurTorrentId]), HashList) Then
+        Begin
+          CheckStatus(False);
+          exit;
+        End;
+        If HashList.Count = 0 Then
+        Begin
+          MessageDlg('', 'Torrent hash not found', mtError, [mbOK], 0);
+          exit;
+        End;
+        FileList := GetSelectedFileIndices;
+        Try
+          For i := 0 To FileList.Count - 1 Do
+          Begin
+            Item := TJSONObject.Create;
+            Item.Add('hash', HashList[0]);
+            Item.Add('file_index', StrToIntDef(FileList[i], 0));
+            Files.Add(Item);
+          End;
+        Finally
+          FileList.Free;
+        End;
+      Finally
+        HashList.Free;
+      End;
+    End;
+
+    AppBusy;
+    Try
+      Res := RpcObj.SendRequest(Req);
+    Finally
+      AppNormal;
+    End;
+  Finally
+    Req.Free;
+  End;
+
+  If Res = nil Then
+  Begin
+    CheckStatus(False);
+    exit;
+  End;
+  Try
+    JobId := ScriptString(Res, 'job_id', '');
+    JobToken := ScriptString(Res, 'job_token', '');
+    State := ScriptString(Res, 'state', '');
+  Finally
+    Res.Free;
+  End;
+  If (JobId = '') Or (JobToken = '') Then
+  Begin
+    CheckStatus(False);
+    exit;
+  End;
+
+  ResultForm := TScriptResultForm.Create(Self);
+  ResultForm.Caption := ScriptName + ': queued';
+  ResultForm.Width := Max(900, Ini.ReadInteger('ScriptResult', 'Width', 900));
+  ResultForm.Height := Max(620, Ini.ReadInteger('ScriptResult', 'Height', 620));
+  ResultForm.SetRunning(True);
+  ResultForm.SetOutput('queued', True);
+  ResultForm.Show;
+  Application.ProcessMessages;
+
+  State := '';
+  OutText := '';
+  ErrText := '';
+  StdoutOffset := 0;
+  StderrOffset := 0;
+  StoredStdout := 0;
+  StoredStderr := 0;
+  AppBusy;
+  Try
+    For i := 1 To 3000 Do
+    Begin
+      Sleep(200);
+      Application.ProcessMessages;
+      SRes := nil;
+      SReq := TJSONObject.Create;
+      Try
+        SReq.Add('method', 'script_status');
+        SArgs := TJSONObject.Create;
+        SReq.Add('arguments', SArgs);
+        SArgs.Add('job_id', JobId);
+        SArgs.Add('job_token', JobToken);
+        SArgs.Add('stdout_offset', StdoutOffset);
+        SArgs.Add('stdout_limit', 1048576);
+        SArgs.Add('stderr_offset', StderrOffset);
+        SArgs.Add('stderr_limit', 1048576);
+        SRes := RpcObj.SendRequest(SReq);
+      Finally
+        SReq.Free;
+      End;
+      If SRes = nil Then
+        break;
+      Try
+        State := ScriptString(SRes, 'state', State);
+        Chunk := ScriptString(SRes, 'stdout', '');
+        ErrChunk := ScriptString(SRes, 'stderr', '');
+        If Chunk <> '' Then
+        Begin
+          OutText := OutText + Chunk;
+          Inc(StdoutOffset, Length(Chunk));
+        End;
+        If ErrChunk <> '' Then
+        Begin
+          ErrText := ErrText + ErrChunk;
+          Inc(StderrOffset, Length(ErrChunk));
+        End;
+        StoredStdout := ScriptInt(SRes, 'stdout_stored_bytes', StdoutOffset);
+        StoredStderr := ScriptInt(SRes, 'stderr_stored_bytes', StderrOffset);
+      Finally
+        SRes.Free;
+      End;
+      ResultText := BuildScriptResultText(OutText, ErrText, State);
+      ResultForm.Caption := ScriptName + ': ' + State;
+      ResultForm.SetOutput(ResultText, True);
+      ResultForm.Update;
+      Application.ProcessMessages;
+      If ((State = 'finished') Or (State = 'failed') Or
+        (State = 'canceled') Or (State = 'timed_out')) And
+        (StdoutOffset >= StoredStdout) And
+        (StderrOffset >= StoredStderr) Then
+        break;
+    End;
+  Finally
+    AppNormal;
+  End;
+
+  ResultForm.SetRunning(False);
+  If State = '' Then
+  Begin
+    ResultForm.Caption := ScriptName + ': ' + RpcObj.Status;
+    ResultForm.SetOutput(ScriptName + ': ' + RpcObj.Status, True);
+    exit;
+  End;
+
+  ResultText := BuildScriptResultText(OutText, ErrText, State);
+  If Length(ResultText) > 1000000 Then
+    ResultText := Copy(ResultText, 1, 1000000) + '...';
+  ResultForm.Caption := ScriptName + ': ' + State;
+  ResultForm.SetOutput(ResultText, True);
+  ResultForm.Update;
+  Ini.WriteInteger('ScriptResult', 'Width', ResultForm.Width);
+  Ini.WriteInteger('ScriptResult', 'Height', ResultForm.Height);
+End;
 Procedure TMainForm.ClearDetailsInfo(Skip: TAdvInfoType);
 
   Procedure ClearChildren(AParent: TPanel);
@@ -6363,6 +8007,8 @@ Begin
     t := 1;
   FDetailsWaitStart := 0;
   RebuildTree := False;
+  DebugWindowLog(Format('ClearDetailsInfo skip=%d cur=%d %s',
+    [Ord(Skip), RpcObj.CurTorrentId, DebugWindowState]));
 
   If Skip <> aiFiles Then
   Begin
@@ -6386,6 +8032,7 @@ Begin
   End;
   For i := 0 To PageInfo.PageCount - 1 Do
     PageInfo.Pages[i].Tag := t;
+  DebugWindowLog('ClearDetailsInfo done ' + DebugWindowState);
 End;
 
 Function TMainForm.SelectRemoteFolder(Const CurFolder, DialogTitle: String): String;
@@ -6516,6 +8163,10 @@ Begin
   acReannounceTorrent.Enabled :=
     acVerifyTorrent.Enabled And (RpcObj.RPCVersion >= 5);
   acMoveTorrent.Enabled := acVerifyTorrent.Enabled And (RpcObj.RPCVersion >= 6);
+  acArchiveSave.Enabled := acVerifyTorrent.Enabled And
+    RpcObj.HasForkFeature('torrent_archive');
+  acArchiveManager.Enabled := e And RpcObj.HasForkFeature('torrent_archive');
+  UpdateWhisparrAction;
   acSetLabels.Enabled := acVerifyTorrent.Enabled And (RpcObj.RPCVersion >= 16);
   acTorrentProps.Enabled := acVerifyTorrent.Enabled;
   acOpenContainingFolder.Enabled :=
@@ -6659,6 +8310,20 @@ Begin
     End;
   Finally
     LV.Columns.EndUpdate;
+  End;
+  If (AName = 'TorrentsList') And
+    Not Ini.ReadBool('MainForm', 'SelectedSizeColumnMigrated', False) Then
+  Begin
+    For i := 0 To LV.Columns.Count - 1 Do
+      With LV.Columns[i] Do
+        If ID - 1 = idxSizeToDowload Then
+        Begin
+          Visible := True;
+          If Width < 40 Then
+            Width := 90;
+          break;
+        End;
+    Ini.WriteBool('MainForm', 'SelectedSizeColumnMigrated', True);
   End;
   LV.SortColumn := Ini.ReadInteger(AName, 'SortColumn', LV.SortColumn);
   LV.SortOrder := TSortOrder(Ini.ReadInteger(AName, 'SortOrder',
@@ -6936,9 +8601,12 @@ Begin
   If gTorrents.Tag <> 0 Then exit;
   If list = nil Then
   Begin
+    DebugWindowLog('FillTorrentsList nil ' + DebugWindowState);
     ClearDetailsInfo;
     exit;
   End;
+  DebugWindowLog(Format('FillTorrentsList begin count=%d %s',
+    [list.Count, DebugWindowState]));
 
 
 {
@@ -7075,7 +8743,13 @@ Begin
                     StateImg := imgSeed
                   Else
                     If j = TR_STATUS_STOPPED Then
-                      StateImg := imgDone;
+                      StateImg := imgDone
+                    Else
+                      If j = TR_STATUS_SPACE_PAUSED Then
+                        StateImg := imgWaiting
+                      Else
+                        If j = TR_STATUS_PENDING_MOVE Then
+                          StateImg := imgWaiting;
 
         //If GetTorrentError(t, j) <> '' Then
         //  If t.Strings['errorString'] <> '' Then
@@ -7084,15 +8758,28 @@ Begin
         //    If StateImg In [imgDown, imgSeed] Then
         //      Inc(StateImg, 2);
 
-        If Not (j In [TR_STATUS_STOPPED, TR_STATUS_CHECK, TR_STATUS_CHECK_WAIT]) Then
+        If Not (j In [TR_STATUS_STOPPED, TR_STATUS_CHECK, TR_STATUS_CHECK_WAIT,
+          TR_STATUS_SPACE_PAUSED, TR_STATUS_PENDING_MOVE]) Then
         Begin
           s := GetTorrentError(t, j);
-          If s <> '' Then
-            If t.Strings['errorString'] <> '' Then
-              StateImg := imgError
-            Else
-              If StateImg In [imgDown, imgSeed] Then
-                Inc(StateImg, 2);
+          If (t.IndexOfName('error') >= 0) And
+            (t.Integers['error'] > TR_STAT_OK) Then
+          Begin
+            Case t.Integers['error'] Of
+              TR_STAT_TRACKER_WARNING, TR_STAT_TRACKER_ERROR:
+                If StateImg In [imgDown, imgSeed] Then
+                  Inc(StateImg, 2);
+              TR_STAT_LOCAL_ERROR:
+                StateImg := imgError;
+            End;
+          End
+          Else
+            If s <> '' Then
+              If t.Strings['errorString'] <> '' Then
+                StateImg := imgError
+              Else
+                If StateImg In [imgDown, imgSeed] Then
+                  Inc(StateImg, 2);
 
           If RpcObj.RPCVersion >= 7 Then
           Begin
@@ -7134,7 +8821,8 @@ Begin
         Else
         Begin
           //f := t.Floats['sizeWhenDone'];
-          f := t.Floats['percentDone'] * 100;
+          f := t.Floats['percentDone'] * 100;   //!!! Bug in transmission
+                    //f := t.Floats['percentComplete'] * 100;
           //If f <> 0 Then
           //  f := (f - t.Floats['leftUntilDone']) * 100.0 / f;
           //          If StateImg In [imgDone, imgError] Then
@@ -7454,7 +9142,7 @@ Begin
             Inc(DownCnt);
             //DownSize := DownSize + FTorrents[idxSize, i];
             DownSize := DownSize + FTorrents[idxSizeToDowload, i];
-            If isActive Then
+            If (FTorrents[idxDownSpeed, i] <> 0) Then
             Begin
               Inc(ActiveDownCnt);
               //ActiveSize := ActiveSize + FTorrents[idxSize, i];
@@ -7486,7 +9174,10 @@ Begin
               End;
 
           If (j = TR_STATUS_CHECK) Or (j = TR_STATUS_CHECK_WAIT) Or
-            (j = TR_STATUS_DOWNLOAD_WAIT) Then
+            (j = TR_STATUS_DOWNLOAD_WAIT) Or
+            (j = TR_STATUS_SEED_WAIT) Or
+            (j = TR_STATUS_SPACE_PAUSED) Or
+            (j = TR_STATUS_PENDING_MOVE) Then
           Begin
             Inc(WaitingCnt);
             //WaitingSize := WaitingSize + FTorrents[idxSize, i];
@@ -7556,7 +9247,7 @@ Begin
 
           Case FilterIdx Of
             fltActiveDown:
-              If Not IsActive Or
+              If Not (FTorrents[idxDownSpeed, i] <> 0) Or
                 (FTorrents[idxStatus, i] <> TR_STATUS_DOWNLOAD)Then
                 continue;
             fltActiveUp:
@@ -7585,8 +9276,11 @@ Begin
                 continue;
             fltWaiting:
               If (FTorrents[idxStatus, i] <> TR_STATUS_CHECK) And
+                (FTorrents[idxStatus, i] <> TR_STATUS_SEED_WAIT) And
                 (FTorrents[idxStatus, i] <> TR_STATUS_CHECK_WAIT) And
-                (FTorrents[idxStatus, i] <> TR_STATUS_DOWNLOAD_WAIT) Then
+                (FTorrents[idxStatus, i] <> TR_STATUS_DOWNLOAD_WAIT) And
+                (FTorrents[idxStatus, i] <> TR_STATUS_SPACE_PAUSED) And
+                (FTorrents[idxStatus, i] <> TR_STATUS_PENDING_MOVE) Then
                 continue;
           End;
 
@@ -7723,7 +9417,14 @@ Begin
             Inc(j);
           End;
 
+        End
+        else
+        Begin
+          If FreeSpacePaths = nil Then
+            FreeSpacePaths := TStringMap.Create;
+          FreeSpacePaths.Clear;
         End;
+
         AppNormal;
 
         If acLabelGrouping.Checked Then
@@ -7787,10 +9488,10 @@ Begin
         '(FillTorrentsList 3)'));
     End;
     Try
-      If crow >= 0 Then
-        lvFilter.Row := crow
-      Else
-        If lvFilter.Row >= StatusFiltersCount Then
+      //If crow >= 0 Then
+      //  lvFilter.Row := crow
+      //Else
+        If (lvFilter.Row >= StatusFiltersCount) And (crow<0) Then
           lvFilterClick(nil);
 
       CheckStatus(True);
@@ -8054,6 +9755,8 @@ Procedure TMainForm.FillFilesList(ATorrentId: Integer;
   list, priorities, wanted: TJSONArray; Const DownloadDir: WideString);
 Var
   save, i: Integer;
+  saveFolder: String;
+  saveIsFolder: Boolean;
 Begin
   If lvFiles.Tag <> 0 Then exit;
   If (list = nil) Or (priorities = nil) Or (wanted = nil) Then
@@ -8062,24 +9765,43 @@ Begin
     exit;
   End;
 
-  If FFilesTree.IsFolder(lvFiles.Row) Then
-    save := -1
-  Else
-    save := Integer(lvFiles.Items[idxFileId, lvFiles.Row]);
+  save := -1;
+  saveFolder := '';
+  saveIsFolder := False;
+  If (lvFiles.Row >= 0) And (lvFiles.Row < lvFiles.Items.Count) Then
+  Begin
+    saveIsFolder := FFilesTree.IsFolder(lvFiles.Row);
+    If saveIsFolder Then
+      saveFolder := FFilesTree.GetFullPath(lvFiles.Row, False)
+    Else
+      save := Integer(lvFiles.Items[idxFileId, lvFiles.Row]);
+  End;
   lvFiles.Enabled := True;
   lvFiles.Color := clWindow;
   FFilesTree.DownloadDir := UTF8Encode(DownloadDir);
 
   FFilesTree.FillTree(ATorrentId, list, priorities, wanted, RebuildTree);
   RebuildTree := False;
+  FFilesTree.ApplyPriorityFilter(GetFilePriorityFilterMask);
   tabFiles.Caption := Format('%s (%d)', [FFilesCapt, list.Count]);
   For i := 0 To lvFiles.Items.Count - 1 Do
   Begin
-    If Integer(lvFiles.Items[idxFileId, i]) = save Then
+    If saveIsFolder Then
     Begin
-      lvFiles.Row := i;
-      break;
-    End;
+      If FFilesTree.IsFolder(i) And
+        (FFilesTree.GetFullPath(i, False) = saveFolder) Then
+      Begin
+        lvFiles.Row := i;
+        break;
+      End;
+    End
+    Else
+      If (save >= 0) And (Not FFilesTree.IsFolder(i)) And
+        (Integer(lvFiles.Items[idxFileId, i]) = save) Then
+      Begin
+        lvFiles.Row := i;
+        break;
+      End;
   End;
   DetailsUpdated;
 
@@ -8307,7 +10029,6 @@ Begin
 
 
   //  panGeneralInfo.ChildSizing.Layout:=cclNone;
-
   s := UTF8Encode(WideString(gTorrents.Items[idxName, idx]));
   If RpcObj.RPCVersion >= 4 Then
     s := IncludeProperTrailingPathDelimiter(
@@ -8392,6 +10113,20 @@ Begin
     alabels.Free;
 
   End;
+
+  s := '';
+  If t.IndexOfName('incomplete_dir') >= 0 Then
+    s := t.Strings['incomplete_dir']
+  Else
+    If t.IndexOfName('incomplete-dir') >= 0 Then
+      s := t.Strings['incomplete-dir'];
+  If s = '' Then
+    s := RpcObj.IncompleteDir;
+  If s = '' Then
+    s := '-';
+  txIncompleteDir.Caption := UTF8Encode(s);
+  txIncompleteDir.Hint := txIncompleteDir.Caption;
+
   DetailsUpdated;
 End;
 
@@ -8536,6 +10271,7 @@ End;
 Procedure TMainForm.FillSessionInfo(s: TJSONObject);
 Var
   d, u: Integer;
+  jd: TJSONData;
   str: String;
 Begin
   {$ifdef LCLcarbon}
@@ -8550,6 +10286,8 @@ Begin
     TR_STATUS_DOWNLOAD := TR_STATUS_DOWNLOAD_1;
     TR_STATUS_SEED_WAIT := -1;
     TR_STATUS_SEED := TR_STATUS_SEED_1;
+    TR_STATUS_SPACE_PAUSED := -1;
+    TR_STATUS_PENDING_MOVE := -1;
   End
   Else
   Begin
@@ -8560,6 +10298,16 @@ Begin
     TR_STATUS_DOWNLOAD := TR_STATUS_DOWNLOAD_2;
     TR_STATUS_SEED_WAIT := TR_STATUS_SEED_WAIT_2;
     TR_STATUS_SEED := TR_STATUS_SEED_2;
+    If RpcObj.HasForkFeature('status', 2) Then
+    Begin
+      TR_STATUS_SPACE_PAUSED := TR_STATUS_SPACE_PAUSED_2;
+      TR_STATUS_PENDING_MOVE := TR_STATUS_PENDING_MOVE_2;
+    End
+    Else
+    Begin
+      TR_STATUS_SPACE_PAUSED := -1;
+      TR_STATUS_PENDING_MOVE := -1;
+    End;
   End;
 
   UpdateUIRpcVersion(RpcObj.RPCVersion);
@@ -8617,6 +10365,21 @@ Begin
   If TrayIcon.Tag <> 0 Then
     TrayIcon.InternalUpdate;
   {$endif LCLcarbon}
+
+  If Not FScriptRunnerLoaded Then
+  Begin
+    jd := s.Find('script_runner');
+    If (jd <> nil) And (jd Is TJSONObject) Then
+      LoadScriptRunner(jd)
+    Else If RpcObj.HasForkFeature('script_runner') Then
+      LoadScriptRunner(nil)
+    Else
+    Begin
+      ClearScriptMenus;
+      FScriptRunnerLoaded := True;
+    End;
+  End;
+  UpdateUI;
 End;
 
 Procedure TMainForm.FillStatistics(s: TJSONObject);
@@ -8713,7 +10476,10 @@ Var
   i: Integer;
 Begin
   If VarIsEmpty(TorrentIds) Then
+  Begin
+    args.Free;
     exit;
+  End;
   Application.ProcessMessages;
   AppBusy;
   req := TJSONObject.Create;
@@ -9153,7 +10919,7 @@ End;
 
 Function TMainForm.GetFilteredTorrents: Variant;
 Var
-  i, j: Integer;
+  i, j, cnt: Integer;
 Begin
   With gTorrents Do
   Begin
@@ -9162,13 +10928,23 @@ Begin
       Result := Unassigned;
       exit;
     End;
-    Result := VarArrayCreate([0, gTorrents.Items.Count - 1], varinteger);
-    j := 0;
-    For i := 0 To gTorrents.Items.Count - 1 Do
+    cnt := 0;
+    For i := 0 To Items.Count - 1 Do
+      If RowVisible[i] Then
+        Inc(cnt);
+    If cnt = 0 Then
     Begin
-      Result[j] := Items[idxTorrentId, i];
-      Inc(j);
+      Result := Unassigned;
+      exit;
     End;
+    Result := VarArrayCreate([0, cnt - 1], varinteger);
+    j := 0;
+    For i := 0 To Items.Count - 1 Do
+      If RowVisible[i] Then
+      Begin
+        Result[j] := Items[idxTorrentId, i];
+        Inc(j);
+      End;
     exit;
   End;
 End;
@@ -9201,25 +10977,8 @@ Begin
 End;
 
 Function TMainForm.GetDisplayedTorrents: Variant;
-Var
-  i, j: Integer;
 Begin
-  With gTorrents Do
-  Begin
-    If Items.Count = 0 Then
-    Begin
-      Result := Unassigned;
-      exit;
-    End;
-    Result := VarArrayCreate([0, gTorrents.Items.Count - 1], varinteger);
-    j := 0;
-    For i := 0 To gTorrents.Items.Count - 1 Do
-      If gTorrents.RowVisible[i] Then
-      Begin
-        Result[j] := Items[idxTorrentId, i];
-        Inc(j);
-      End;
-  End;
+  Result := GetFilteredTorrents;
 End;
 
 Procedure TMainform.StatusBarSizes;
@@ -9248,22 +11007,23 @@ Begin
         MMap[StrToInt(Ftorrents.Items[idxTorrentId, i])] := i;
       End;
 
-      For i := VarArrayLowBound(ids, 1) To VarArrayHighBound(ids, 1) Do
-      Begin
-        Try
-          cidx := MMap[ids[i]];
-          TotalSize :=
-            TotalSize + FTorrents.Items[idxSize, cidx];
-          TorrentSizeToDownload := FTorrents.Items[idxSizetoDowload, cidx];
-          TorrentDownloaded :=
-            TorrentSizeToDownload * (FTorrents.Items[idxDone, cidx] / 100);
-          TotalSizeToDownload :=
-            TotalSizeToDownload + TorrentSizeToDownload;
-          TotalDownloaded := TotalDownloaded + TorrentDownloaded;
+      If Not VarIsEmpty(ids) And Not VarIsNull(ids) Then
+        For i := VarArrayLowBound(ids, 1) To VarArrayHighBound(ids, 1) Do
+        Begin
+          Try
+            cidx := MMap[ids[i]];
+            TotalSize :=
+              TotalSize + FTorrents.Items[idxSize, cidx];
+            TorrentSizeToDownload := FTorrents.Items[idxSizetoDowload, cidx];
+            TorrentDownloaded :=
+              TorrentSizeToDownload * (FTorrents.Items[idxDone, cidx] / 100);
+            TotalSizeToDownload :=
+              TotalSizeToDownload + TorrentSizeToDownload;
+            TotalDownloaded := TotalDownloaded + TorrentDownloaded;
 
-        Except
+          Except
+          End;
         End;
-      End;
       MMap.Free;
 
       StatusBar.Panels[4].Text :=
@@ -9570,6 +11330,7 @@ Begin
         If args = nil Then
         Begin
           CheckStatus(False);
+          AppNormal;
           exit;
         End;
       Finally
@@ -9717,6 +11478,49 @@ Begin
             Copy(fn, Length(ss) + 1, MaxInt);
         End;
         Result := FixSeparators(ss);
+        exit;
+      End;
+    End;
+  End;
+End;
+
+Function TMainForm.MapLocalToRemote(Const LocalPath: String): String;
+Var
+  i, j: Integer;
+  s, ss, sss, fn: String;
+  d: Char;
+Begin
+  Result := '';
+  fn := FixSeparators(Trim(LocalPath));
+  For i := 0 To FPathMap.Count - 1 Do
+  Begin
+    s := FPathMap[i];
+    j := Pos('=', s);
+    If j > 0 Then
+    Begin
+      ss := FixSeparators(Copy(s, j + 1, MaxInt));
+      sss := IncludeTrailingPathDelimiter(ss);
+      If (CompareFilePath(ss, fn) = 0) Or
+        (CompareFilePath(sss, Copy(fn, 1, Length(sss))) = 0) Then
+      Begin
+        Result := Copy(s, 1, j - 1);
+        d := '/';
+        For j := 1 To Length(Result) Do
+          If Result[j] In ['/', '\'] Then
+          Begin
+            d := Result[j];
+            break;
+          End;
+        If CompareFilePath(ss, fn) <> 0 Then
+        Begin
+          If (Result <> '') And (Copy(Result, Length(Result), 1) <> d) Then
+            Result := Result + d;
+          ss := IncludeProperTrailingPathDelimiter(ss);
+          Result := Result + Copy(fn, Length(ss) + 1, MaxInt);
+        End;
+        Result := StringReplace(Result, DirectorySeparator, d, [rfReplaceAll]);
+        If Copy(Result, Length(Result), 1) = d Then
+          SetLength(Result, Length(Result) - 1);
         exit;
       End;
     End;
@@ -9892,6 +11696,7 @@ End;
 
 Procedure TMainForm.DetailsUpdated;
 Begin
+  DebugWindowLog('DetailsUpdated ' + DebugWindowState);
   FDetailsWaitStart := 0;
   PageInfo.ActivePage.Tag := 0;
 End;
@@ -9957,6 +11762,26 @@ Var
   TorrentIds: Variant;
   //  ids:array of integer;
   //  Count:integer;
+
+  Function TorrentFilesExist(Const BaseDir: String): Boolean;
+  Var
+    j: Integer;
+    n: String;
+  Begin
+    Result := False;
+    If files = nil Then
+      exit;
+    For j := 0 To files.Count - 1 Do
+    Begin
+      n := UTF8Encode((files[j] As TJSONObject).Strings['name']);
+      If FileExistsUTF8(MapRemoteToLocal(
+        IncludeTrailingPathDelimiter(BaseDir) + n)) Or
+        FileExistsUTF8(MapRemoteToLocal(
+        IncludeTrailingPathDelimiter(BaseDir) + n + '.part')) Then
+        Exit(True);
+    End;
+  End;
+
 Begin
   If gTorrents.Items.Count = 0 Then
     exit;
@@ -9980,6 +11805,7 @@ Begin
     Begin
       If (Not gTorrents.RowSelected[i]) And (i <> gTorrents.Row) Then
         continue;
+      sel := False;
       p := '';
       Torrent := gTorrents.Items[idxTorrentId, i];
       res := RpcObj.RequestInfo(gTorrents.Items[idxTorrentId, i],
@@ -9993,7 +11819,8 @@ Begin
           If Not UserDef Then
           Begin
             files := Arrays['files'];
-            If files.Count = 0 Then exit;
+            If files.Count = 0 Then
+              Continue;
 
             If files.Count = 1 Then
             Begin
@@ -10010,24 +11837,46 @@ Begin
               Until (s = '') Or (s = p);
             End;
           End;
-          p1 := IncludeTrailingPathDelimiter(
-            UTF8Encode(Strings['downloadDir'])) + p;
-          If (Not (FileExistsUTF8(MapRemoteToLocal(p1)) Or
-            FileExistsUTF8(MapRemoteToLocal(p1 + '.part')) Or
-            DirectoryExistsUTF8(MapRemoteToLocal(p1)))) And
-            (RpcObj.IncompleteDir <> '') Then
+          If p = '' Then
           Begin
-            p2 := IncludeTrailingPathDelimiter(
-              UTF8Encode(RpcObj.IncompleteDir)) + p;
-            If FileExistsUTF8(MapRemoteToLocal(p2)) Or
-              FileExistsUTF8(MapRemoteToLocal(p2 + '.part')) Or
-              DirectoryExistsUTF8(MapRemoteToLocal(p2)) Then
-              p := p2
+            p1 := IncludeTrailingPathDelimiter(
+              UTF8Encode(Strings['downloadDir']));
+            If TorrentFilesExist(p1) Then
+              p := p1
             Else
-              p := p1;
+            Begin
+              If RpcObj.IncompleteDir <> '' Then
+                p2 := IncludeTrailingPathDelimiter(
+                  UTF8Encode(RpcObj.IncompleteDir))
+              Else
+                p2 := '';
+              If (p2 <> '') And TorrentFilesExist(p2) Then
+                p := p2
+              Else
+                p := p1;
+            End;
           End
           Else
-            p := p1;
+          Begin
+            p1 := IncludeTrailingPathDelimiter(
+              UTF8Encode(Strings['downloadDir'])) + p;
+            If (Not (FileExistsUTF8(MapRemoteToLocal(p1)) Or
+              FileExistsUTF8(MapRemoteToLocal(p1 + '.part')) Or
+              DirectoryExistsUTF8(MapRemoteToLocal(p1)))) And
+              (RpcObj.IncompleteDir <> '') Then
+            Begin
+              p2 := IncludeTrailingPathDelimiter(
+                UTF8Encode(RpcObj.IncompleteDir)) + p;
+              If FileExistsUTF8(MapRemoteToLocal(p2)) Or
+                FileExistsUTF8(MapRemoteToLocal(p2 + '.part')) Or
+                DirectoryExistsUTF8(MapRemoteToLocal(p2)) Then
+                p := p2
+              Else
+                p := p1;
+            End
+            Else
+              p := p1;
+          End;
         End;
       Finally
         res.Free;
@@ -10168,6 +12017,8 @@ End;
 
 Initialization
   {$I main.lrs}
+  {$I archiveicons.lrs}
+  {$I scripticons.lrs}
 
 
 Finalization

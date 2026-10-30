@@ -59,6 +59,14 @@ Uses
   MoveTorrent,
   AddTracker,
   Options,
+  ArchiveCommon,
+  ScriptRunnerUI,
+  ArchiveSaveForm,
+  ArchiveForm,
+  ArchiveViewForm,
+  ArchiveRestoreForm,
+  WhisparrRenameForm,
+  UserMenuForm,
   passwcon;
 
   //{$ifdef windows}

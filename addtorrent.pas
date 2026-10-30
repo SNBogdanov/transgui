@@ -100,11 +100,13 @@ Type
   Private
     FDiskSpaceCaption: String;
     FTree: TFilesTree;
+    FViewMode: Boolean;
     Procedure TreeStateChanged(Sender: TObject);
     Procedure UpdateSize;
   Public
     OrigCaption: String;
     Extension: String;
+    Procedure ShowContents(Const ATitle: String; Files: TJSONArray);
     Property FilesTree: TFilesTree read FTree;
   End;
 
@@ -120,6 +122,7 @@ Type
   TFilesTree = Class(TComponent)
   Private
     FCheckboxes: Boolean;
+    FCheckboxesReadOnly: Boolean;
     FDownloadDir: String;
     FGrid: TVarGrid;
     FHasFolders: Boolean;
@@ -166,6 +169,7 @@ Type
       RebuildTree: Boolean);
     Procedure SetStateAll(AState: TCheckBoxState);
     Procedure EnsureRowVisible(ARow: Integer);
+    Procedure ApplyPriorityFilter(AMask: Integer);
     Function GetFullPath(ARow: Integer; AbsolutePath: Boolean = True): String;
     Function GetIncompleteFullPath(ARow: Integer;
       AbsolutePath: Boolean = True): String;
@@ -174,6 +178,7 @@ Type
     Property Grid: TVarGrid read FGrid;
     Property HasFolders: Boolean read FHasFolders;
     Property Checkboxes: Boolean read FCheckboxes write SetCheckboxes;
+    Property CheckboxesReadOnly: Boolean read FCheckboxesReadOnly write FCheckboxesReadOnly;
     Property IsPlain: Boolean read FIsPlain write SetIsPlain;
     Property DownloadDir: String read FDownloadDir write FDownloadDir;
     Property Expanded[ARow: Integer]: Boolean read GetExpanded write SetExpanded;
@@ -208,6 +213,7 @@ Const
   roCollapsed = $040000;
   roHidden = $080000;
   roTag = $100000;
+  roFiltered = $200000;
 
   roCheckedShift = 16;
 
@@ -481,6 +487,62 @@ Begin
   DoOnStateChange;
 End;
 
+Procedure TFilesTree.ApplyPriorityFilter(AMask: Integer);
+Var
+  i, j, lev, bit: Integer;
+  HasMatch: Boolean;
+Begin
+  FFiles.BeginUpdate;
+  Try
+    For i := 0 To FFiles.Count - 1 Do
+      SetRowOption(i, roFiltered, False);
+
+    If AMask = 0 Then
+    Begin
+      For i := 0 To FFiles.Count - 1 Do
+        SetRowOption(i, roFiltered, True);
+    End
+    Else
+    Begin
+      For i := 0 To FFiles.Count - 1 Do
+        If Not IsFolder(i) Then
+        Begin
+          Case FFiles[idxFilePriority, i] Of
+            TR_PRI_SKIP: bit := 1;
+            TR_PRI_LOW: bit := 2;
+            TR_PRI_NORMAL: bit := 4;
+            TR_PRI_HIGH: bit := 8;
+            Else bit := 0;
+          End;
+          If (bit = 0) Or ((bit And AMask) = 0) Then
+            SetRowOption(i, roFiltered, True);
+        End;
+
+      For i := FFiles.Count - 1 Downto 0 Do
+        If IsFolder(i) Then
+        Begin
+          lev := FFiles[idxFileLevel, i];
+          HasMatch := False;
+          For j := i + 1 To FFiles.Count - 1 Do
+          Begin
+            If FFiles[idxFileLevel, j] <= lev Then
+              break;
+            If Not Longbool(FFiles.RowOptions[j] And roFiltered) Then
+            Begin
+              HasMatch := True;
+              break;
+            End;
+          End;
+          SetRowOption(i, roFiltered, Not HasMatch);
+        End;
+    End;
+
+    TreeChanged;
+  Finally
+    FFiles.EndUpdate;
+  End;
+End;
+
 Procedure TFilesTree.EnsureRowVisible(ARow: Integer);
 Var
   i, level: Integer;
@@ -638,6 +700,8 @@ End;
 
 Procedure TFilesTree.DoCheckBoxClick(Sender: TVarGrid; ACol, ARow, ADataCol: Integer);
 Begin
+  If FCheckboxesReadOnly Then
+    exit;
   If Checked[ARow] = cbChecked Then
     Checked[ARow] := cbUnchecked
   Else
@@ -834,9 +898,9 @@ Begin
     For i := 0 To FGrid.Items.Count - 1 Do
     Begin
       If IsPlain Then
-        f := Not IsFolder(i)
+        f := Not IsFolder(i) And Not Longbool(FFiles.RowOptions[i] And roFiltered)
       Else
-        f := Not Longbool(FFiles.RowOptions[i] And roHidden);
+        f := Not Longbool(FFiles.RowOptions[i] And (roHidden Or roFiltered));
       FGrid.RowVisible[i] := f;
       If f Then
       Begin
@@ -1007,6 +1071,11 @@ End;
 
 Procedure TAddTorrentForm.FormShow(Sender: TObject);
 Begin
+  If FViewMode Then
+  Begin
+    UpdateSize;
+    exit;
+  End;
   AppBusy;
   lvFiles.BeginUpdate;
   Try
@@ -1300,6 +1369,50 @@ End;
 Procedure TAddTorrentForm.edLabelChange(Sender: TObject);
 Begin
   //     Ini.WriteString('Interface', 'Label', edLabel.Text);
+End;
+
+Procedure TAddTorrentForm.ShowContents(Const ATitle: String; Files: TJSONArray);
+Var
+  i, FileIndex: Integer;
+Begin
+  FViewMode := True;
+  AutoSize := False;
+  Width := Ini.ReadInteger('ArchiveView', 'Width', 820);
+  Height := Ini.ReadInteger('ArchiveView', 'Height', 560);
+  Caption := ATitle;
+  gbSaveAs.Visible := False;
+  cbStartTorrent.Visible := False;
+  DiskSpaceTimer.Enabled := False;
+  txDiskSpace.Visible := False;
+  btSelectAll.Visible := False;
+  btSelectNone.Visible := False;
+  Buttons.ShowButtons := [pbClose];
+  FTree.Checkboxes := True;
+  FTree.CheckboxesReadOnly := True;
+  FTree.FillTree(0, Files, nil, nil, True);
+  FTree.SetStateAll(cbChecked);
+  For i := 0 To lvFiles.Items.Count - 1 Do
+    If Not FTree.IsFolder(i) Then
+    Begin
+      FileIndex := Integer(lvFiles.Items[idxFileId, i]);
+      If (FileIndex >= 0) And (FileIndex < Files.Count) And
+        (Files.Objects[FileIndex].Integers['wanted'] = 0) Then
+        FTree.Checked[i] := cbUnchecked;
+    End;
+  FTree.UpdateSummary;
+  UpdateSize;
+  For i := 0 To lvFiles.Columns.Count - 1 Do
+    lvFiles.Columns[i].Width := Ini.ReadInteger('ArchiveView',
+      Format('ColWidth%d', [i]), lvFiles.Columns[i].Width);
+  ShowModal;
+  If WindowState <> wsMinimized Then
+  Begin
+    Ini.WriteInteger('ArchiveView', 'Width', Width);
+    Ini.WriteInteger('ArchiveView', 'Height', Height);
+    For i := 0 To lvFiles.Columns.Count - 1 Do
+      Ini.WriteInteger('ArchiveView', Format('ColWidth%d', [i]),
+        lvFiles.Columns[i].Width);
+  End;
 End;
 
 Procedure TAddTorrentForm.TreeStateChanged(Sender: TObject);

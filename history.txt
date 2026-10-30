@@ -1,3 +1,24 @@
+5.19.0 (Oct 30, 2026)
+ - Fork maintained by Bogdanov Sergey
+ - Add torrent archive manager: save, restore, view, delete and browse archives
+ - Add per-host archive page size and persistent window/column sizes
+ - Add server-side script runner integration
+ - Add runtime script parameters with last-used values
+ - Add per-host stored script parameters in Transmission options
+ - Add live script output, ANSI color code removal and auto-scroll
+ - Add script runner daemon restart action
+ - Add script and Whisparr menu icons with 16/32/48 resolutions
+ - Add Whisparr recognize/rename integration
+ - Add waiting-for-space torrent states
+ - Add Russian translations for scripts, parameters and errors
+ - Add build date/time, fork link and updated copyright in About
+ - Add Windows installer build script
+ - Fix all commands remaining disabled after RPC reconnect
+ - Fix Transmission options crash on servers without script runner
+ - Fix duplicate tracker entries when editing torrent trackers
+ - Fix script output truncation for large logs
+ - Fix result window sizing and text wrapping
+
 5.18.0 (Oct 11, 2019)
  - Enable smart linking (#1252)
  - Add basic snap package files (#1109)

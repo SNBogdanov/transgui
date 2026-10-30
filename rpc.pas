@@ -50,6 +50,7 @@ Resourcestring
 
 Const
   DefaultRpcPath = '/transmission/rpc';
+  ClientFeaturesHeader = 'X-Transmission-Client-Features: status/v2';
 
 Type
   TAdvInfoType = (aiNone, aiGeneral, aiFiles, aiPeers, aiTrackers, aiStats);
@@ -109,6 +110,8 @@ Type
     FConnected: Boolean;
     FTorrentFields: String;
     FRPCVersion: Integer;
+    FForkFeatures: TStringList;
+    FForkFeaturesLoaded: Boolean;
     XTorrentSession: String;
     FMainThreadId: TThreadID;
     FRpcPath: String;
@@ -146,6 +149,10 @@ Type
 
     Procedure Connect;
     Procedure Disconnect;
+
+    Procedure ResetForkFeatures;
+    Procedure DetectForkFeatures;
+    Function HasForkFeature(Const AName: String; AVersion: Integer = 1): Boolean;
 
     Function SendRequest(req: TJSONObject; ReturnArguments: Boolean = True;
       ATimeOut: Integer = -1): TJSONObject;
@@ -316,13 +323,16 @@ Begin
     FRpc.ReconnectAllowed := True;
     If Status <> '' Then OutputDebugString(LPCSTR(Status));
     //    FRpc.RpcThread.destroy;
-    FRpc.RpcThread := nil;
     NotifyCheckStatus;
   End;
-  //  if FRpc.RpcThread<>nil then FRpc.RpcThread.destroy;
-  FRpc.RpcThread := nil;
-  FRpc.FConnected := False;
-  FRpc.FRPCVersion := 0;
+  // Do not let a finishing old thread clear the state of a newer connection.
+  If FRpc.RpcThread = Self Then
+  Begin
+    FRpc.RpcThread := nil;
+    FRpc.FConnected := False;
+    FRpc.FRPCVersion := 0;
+    FRpc.ResetForkFeatures;
+  End;
   Sleep(20);
 End;
 
@@ -442,6 +452,7 @@ Begin
   req := TJSONObject.Create;
   Try
     req.Add('method', 'session-get');
+    //req.Add('jsonrpc', '1.0');
     args := FRpc.SendRequest(req);
     If args <> nil Then
     Try
@@ -455,6 +466,7 @@ Begin
         FRpc.FRPCVersion := args.Integers['rpc-version']
       Else
         FRpc.FRPCVersion := 0;
+      FRpc.DetectForkFeatures;
       If args.IndexOfName('version') >= 0 Then
         s := ' ' + args.Strings['version']
       Else
@@ -562,9 +574,9 @@ Begin
     sl.Free;
   End;
 
-  args := FRpc.RequestInfo(0, ['id', 'name', 'status', 'errorString',
+  args := FRpc.RequestInfo(0, ['id', 'name', 'status', 'error', 'errorString',
     'announceResponse', 'recheckProgress', 'sizeWhenDone', 'leftUntilDone',
-    'percentDone', 'rateDownload', 'rateUpload', 'trackerStats','downloadDir',
+    'percentDone', 'rateDownload', 'rateUpload', 'trackerStats','downloadDir',  'percentComplete',
     'metadataPercentComplete'], ExtraFields);
   Try
     If (args <> nil) And Not Terminated Then
@@ -676,24 +688,35 @@ End;
 Procedure TRpcThread.GetInfo(TorrentId: Integer);
 Var
   args: TJSONObject;
+  s1: TJSONObject;
+  r: TJSONObject;
   t: TJSONArray;
+  s:string;
 Begin
   args := FRpc.RequestInfo(TorrentId, ['totalSize', 'sizeWhenDone',
     'leftUntilDone', 'pieceCount', 'pieceSize', 'haveValid', 'hashString',
     'comment', 'downloadedEver', 'uploadedEver', 'corruptEver',
-    'errorString', 'announceResponse', 'downloadLimit', 'downloadLimitMode',
+    'error', 'errorString', 'announceResponse', 'downloadLimit', 'downloadLimitMode',
     'uploadLimit', 'uploadLimitMode', 'maxConnectedPeers', 'nextAnnounceTime',
     'dateCreated', 'creator', 'eta', 'peersSendingToUs', 'seeders',
     'peersGettingFromUs', 'leechers', 'uploadRatio', 'addedDate',
     'doneDate', 'activityDate', 'downloadLimited', 'uploadLimited',
-    'downloadDir', 'id', 'pieces', 'trackerStats', 'secondsDownloading',
-    'secondsSeeding', 'magnetLink', 'isPrivate', 'labels', 'sequentialDownload']);
+    'downloadDir', 'incomplete_dir', 'incomplete-dir', 'id', 'pieces',
+    'trackerStats', 'secondsDownloading', 'secondsSeeding', 'magnetLink',
+    'isPrivate', 'labels', 'sequentialDownload']);
   Try
     If args <> nil Then
     Begin
       t := args.Arrays['torrents'];
       If t.Count > 0 Then
-        ResultData := t.Objects[0]
+      Begin
+        //r := t.Objects[0];
+        //s:=r.AsJSON;
+        //s1 := GetJSON(s)  as TJSONObject;
+        //r.Add('downloadDir',s1.Strings['download-dir']);
+        //ResultData:=r;
+        ResultData:=t.Objects[0];
+      end
       Else
         ResultData := nil;
       If Not Terminated Then
@@ -747,6 +770,7 @@ Begin
   FMainThreadId := GetCurrentThreadId;
   FLock := TCriticalSection.Create;
   HttpLock := TCriticalSection.Create;
+  FForkFeatures := TStringList.Create;
   ForceRequest := 0;
   RefreshNow := [];
   CreateHttp;
@@ -758,6 +782,7 @@ Begin
   //  RpcThread.Terminate;
   Disconnect;
   Http.Free;
+  FForkFeatures.Free;
   HttpLock.Free;
   FreeAndNil(FLock);//.Free;
   Inherited Destroy;
@@ -849,17 +874,27 @@ End;
 Function CreateJsonParser(serverResp: THTTPSend): TJSONParser;
 Var
   decompressed: TMemoryStream;
+    s : string;
+     Resp :TStringList;
 Begin
   Try
     If serverResp.Headers.IndexOf('Content-Encoding: gzip') <> -1 Then
     Begin
       { need to fully decompress as the parser relies on a working Seek() }
       decompressed := DecompressGzipContent(serverResp.Document);
+      //Resp.LoadFromStream(decompressed);
+      //s:=StringReplace(Resp.Strings[0],'"tag"}','"tag":0}', []);
+      //Result := TJSONParser.Create(s, [joUTF8]);
       Result := TJSONParser.Create(decompressed, [joUTF8]);
       decompressed.Free;
     End
     Else
     Begin
+       //Resp := TStringList.Create;
+       //Resp.LoadFromStream(serverResp.Document);
+       //s:=Resp.Strings[0];
+       ////s:=StringReplace(Resp.Strings[0],'"tag"}','"tag":0}', []);
+       //Result := TJSONParser.Create(s, [joUTF8]);
       Result := TJSONParser.Create(serverResp.Document, [joUTF8]);
     End;
   Except
@@ -882,6 +917,7 @@ Begin
     FRpcPath := DefaultRpcPath;
   Status := '';
   Result := nil;
+  req.Add('tag',0);
   RetryCnt := 3;
   i := 0;
   Repeat
@@ -898,6 +934,7 @@ Begin
       //s := '';
       Http.Headers.Clear;
       Http.Headers.Add('Accept-Encoding: gzip');
+      Http.Headers.Add(ClientFeaturesHeader);
       Http.MimeType := 'application/json';
       If XTorrentSession <> '' Then
         Http.Headers.Add(XTorrentSession);
@@ -1032,6 +1069,7 @@ Begin
         Try
           Try
             obj := jp.Parse;
+            //s := obj.AsJSON;
             Http.Document.Clear;
           Finally
             jp.Free;
@@ -1344,10 +1382,164 @@ Begin
   FLock.Leave;
 End;
 
+Procedure TRpc.ResetForkFeatures;
+Begin
+  Lock;
+  Try
+    FForkFeatures.Clear;
+    FForkFeaturesLoaded := False;
+  Finally
+    Unlock;
+  End;
+End;
+
+Procedure TRpc.DetectForkFeatures;
+
+  Procedure AddFeature(Const AName: String);
+  Begin
+    If FForkFeatures.IndexOf(AName) < 0 Then
+      FForkFeatures.Add(AName);
+  End;
+
+Var
+  req, args, params: TJSONObject;
+  fields, feats: TJSONArray;
+  d: TJSONData;
+  i: Integer;
+  OldStatus: String;
+  HasMarker, HasMinFree, HasMargin: Boolean;
+  ResponseOk: Boolean;
+Begin
+  Lock;
+  Try
+    If FForkFeaturesLoaded Then
+      exit;
+  Finally
+    Unlock;
+  End;
+
+  ResponseOk := False;
+  OldStatus := Status;
+  Try
+    // Ask for the fork feature marker.
+    req := TJSONObject.Create;
+    Try
+      req.Add('method', 'session-get');
+      params := TJSONObject.Create;
+      fields := TJSONArray.Create;
+      fields.Add('fork-features');
+      params.Add('fields', fields);
+      req.Add('arguments', params);
+      args := SendRequest(req);
+      If args <> nil Then
+      Try
+        feats := nil;
+        d := args.Find('fork-features');
+        If d = nil Then
+          d := args.Find('fork_features');
+        If (d <> nil) And (d Is TJSONArray) Then
+          feats := TJSONArray(d);
+        Lock;
+        Try
+          If feats <> nil Then
+            For i := 0 To feats.Count - 1 Do
+              If feats.Items[i].JSONType = jtString Then
+                AddFeature(AnsiLowerCase(feats.Strings[i]));
+        Finally
+          Unlock;
+        End;
+      Finally
+        args.Free;
+      End;
+    Finally
+      req.Free;
+    End;
+
+    Lock;
+    Try
+      HasMarker := FForkFeatures.Count > 0;
+    Finally
+      Unlock;
+    End;
+    If HasMarker Then
+      ResponseOk := True;
+
+    // Old fork builds may not expose the marker. Probe the settings directly.
+    If Not HasMarker Then
+    Begin
+      HasMinFree := False;
+      HasMargin := False;
+      req := TJSONObject.Create;
+      Try
+        req.Add('method', 'session-get');
+        params := TJSONObject.Create;
+        fields := TJSONArray.Create;
+        fields.Add('min-free-space');
+        fields.Add('min-free-space-resume-margin');
+        params.Add('fields', fields);
+        req.Add('arguments', params);
+        args := SendRequest(req);
+        If args <> nil Then
+        Try
+          ResponseOk := True;
+          d := args.Find('min-free-space');
+          If d = nil Then
+            d := args.Find('min_free_space');
+          HasMinFree := d <> nil;
+          d := args.Find('min-free-space-resume-margin');
+          If d = nil Then
+            d := args.Find('min_free_space_resume_margin');
+          HasMargin := d <> nil;
+          Lock;
+          Try
+            If HasMinFree Then
+              AddFeature('min_free_space/v1');
+            If HasMargin Then
+              AddFeature('min_free_space_resume_margin/v1');
+          Finally
+            Unlock;
+          End;
+        Finally
+          args.Free;
+        End;
+      Finally
+        req.Free;
+      End;
+    End;
+  Finally
+    If ResponseOk Then
+    Begin
+      Lock;
+      Try
+        FForkFeaturesLoaded := True;
+      Finally
+        Unlock;
+      End;
+    End;
+    Status := OldStatus;
+  End;
+End;
+
+Function TRpc.HasForkFeature(Const AName: String; AVersion: Integer): Boolean;
+Var
+  s: String;
+Begin
+  DetectForkFeatures;
+  s := AnsiLowerCase(AName) + '/v' + IntToStr(AVersion);
+  Lock;
+  Try
+    Result := FForkFeatures.IndexOf(s) >= 0;
+  Finally
+    Unlock;
+  End;
+End;
+
 Procedure TRpc.Connect;
 Begin
   CurTorrentId := 0;
   XTorrentSession := '';
+  FConnected := False;
+  ResetForkFeatures;
   RequestFullInfo := True;
   ReconnectAllowed := False;
   RefreshNow := [];
@@ -1384,6 +1576,7 @@ Begin
   Status := '';
   RequestStartTime := 0;
   FRpcPath := '';
+  ResetForkFeatures;
 End;
 
 End.

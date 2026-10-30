@@ -62,7 +62,9 @@ Type
     imgSynapse: TImage;
     imgLazarus: TImage;
     txHomePage: TLabel;
+    txFork: TLabel;
     txAuthor: TLabel;
+    txBuildInfo: TLabel;
     txVersion: TLabel;
     txAppName: TLabel;
     Page: TPageControl;
@@ -74,6 +76,7 @@ Type
     Procedure imgLazarusClick(Sender: TObject);
     Procedure imgSynapseClick(Sender: TObject);
     Procedure txHomePageClick(Sender: TObject);
+    Procedure txForkClick(Sender: TObject);
   Private
     { private declarations }
   Public
@@ -128,14 +131,14 @@ End;
 Procedure GoHomePage;
 Begin
   AppBusy;
-  OpenURL('https://github.com/transmission-remote-gui/transgui/releases');
+  OpenURL('https://github.com/SNBogdanov/transgui/releases');
   AppNormal;
 End;
 
 Procedure GoGitHub;
 Begin
   AppBusy;
-  OpenURL('https://github.com/transmission-remote-gui/transgui');
+  OpenURL('https://github.com/SNBogdanov/transgui');
   AppNormal;
 End;
 
@@ -163,7 +166,7 @@ Begin
 
   Application.ProcessMessages;
   AppBusy;
-  OpenURL('https://github.com/transmission-remote-gui/transgui/releases');
+  OpenURL('https://github.com/SNBogdanov/transgui/releases');
   AppNormal;
 End;
 
@@ -236,6 +239,30 @@ Begin
     CheckVersionThread := nil;
 End;
 
+Function BuildDateText: String;
+Var
+  s, y, m, d: String;
+  p: Integer;
+Begin
+  s := {$I %DATE%};
+  p := Pos('/', s);
+  If p = 0 Then
+    p := Pos('-', s);
+  If p = 0 Then
+    exit(s);
+  y := Copy(s, 1, p - 1);
+  Delete(s, 1, p);
+  p := Pos('/', s);
+  If p = 0 Then
+    p := Pos('-', s);
+  If p = 0 Then
+    exit(y);
+  m := Copy(s, 1, p - 1);
+  Delete(s, 1, p);
+  d := s;
+  Result := d + '.' + m + '.' + y;
+End;
+
 { TAboutForm }
 
 Procedure TAboutForm.imgSynapseClick(Sender: TObject);
@@ -248,6 +275,13 @@ End;
 Procedure TAboutForm.txHomePageClick(Sender: TObject);
 Begin
   GoHomePage;
+End;
+
+Procedure TAboutForm.txForkClick(Sender: TObject);
+Begin
+  AppBusy;
+  OpenURL('https://github.com/transmission-remote-gui/transgui');
+  AppNormal;
 End;
 
 Procedure TAboutForm.FormCreate(Sender: TObject);
@@ -263,6 +297,7 @@ Begin
   BorderStyle := bsSizeable;
   txAppName.Caption := AppName;
   txVersion.Caption := Format(txVersion.Caption, [AppVersion]);
+  txBuildInfo.Caption := 'Build: ' + BuildDateText + ' ' + {$I %TIME%};
   Page.ActivePageIndex := 0;
 
   txVersFPC.Caption := 'Fpc : ' + {$I %FPCVERSION%} + '   Lazarus : ' + lcl_version;

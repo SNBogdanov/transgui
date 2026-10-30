@@ -222,5 +222,55 @@ inherited TorrPropsForm: TTorrPropsForm
         ParentColor = False
       end
     end
+    object tabIncompleteDir: TTabSheet
+      Caption = 'Incomplete folder'
+      ClientHeight = 194
+      ClientWidth = 488
+      TabVisible = False
+      object txIncompleteDir: TLabel
+        Left = 10
+        Height = 14
+        Top = 10
+        Width = 104
+        Caption = 'Incomplete folder:'
+        ParentColor = False
+      end
+      object edIncompleteDir: TEdit
+        Left = 10
+        Height = 21
+        Top = 30
+        Width = 388
+        Anchors = [akTop, akLeft, akRight]
+        TabOrder = 0
+      end
+      object btBrowseIncompleteDir: TButton
+        Left = 408
+        Height = 25
+        Top = 28
+        Width = 72
+        Anchors = [akTop, akRight]
+        Caption = 'Browse...'
+        OnClick = btBrowseIncompleteDirClick
+        TabOrder = 1
+      end
+      object cbMoveIncompleteDir: TCheckBox
+        Left = 10
+        Height = 17
+        Top = 64
+        Width = 300
+        Caption = 'Move existing data to the new folder'
+        TabOrder = 2
+      end
+      object txIncompleteDirHint: TLabel
+        Left = 10
+        Height = 28
+        Top = 96
+        Width = 470
+        AutoSize = False
+        Caption = 'The session default is used when no per-torrent folder is set'
+        ParentColor = False
+        WordWrap = True
+      end
+    end
   end
 end

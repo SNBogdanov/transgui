@@ -1,0 +1,79 @@
+inherited ArchiveRestoreForm: TArchiveRestoreForm
+  Left = 360
+  Height = 220
+  Top = 220
+  Width = 560
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsDialog
+  Caption = 'Restore torrents'
+  ClientHeight = 220
+  ClientWidth = 560
+  OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
+  Position = poMainFormCenter
+  object cbChangePath: TCheckBox
+    Left = 12
+    Height = 19
+    Top = 12
+    Width = 536
+    Caption = 'Change download folder'
+    TabOrder = 0
+    OnClick = cbChangePathClick
+  end
+  object txPath: TLabel
+    Left = 12
+    Height = 15
+    Top = 42
+    Width = 134
+    Caption = 'New download folder'
+    ParentColor = False
+  end
+  object edPath: TEdit
+    Left = 12
+    Height = 23
+    Top = 60
+    Width = 456
+    Enabled = False
+    TabOrder = 1
+  end
+  object btBrowse: TButton
+    Left = 476
+    Height = 25
+    Top = 58
+    Width = 72
+    Caption = 'Browse...'
+    TabOrder = 2
+    OnClick = btBrowseClick
+  end
+  object cbRemove: TCheckBox
+    Left = 12
+    Height = 19
+    Top = 96
+    Width = 536
+    Caption = 'Remove restored torrents from the archive'
+    Checked = True
+    TabOrder = 3
+  end
+  object Buttons: TButtonPanel[0]
+    Left = 8
+    Height = 26
+    Top = 176
+    Width = 544
+    BorderSpacing.Left = 8
+    BorderSpacing.Right = 8
+    BorderSpacing.Bottom = 8
+    BorderSpacing.Around = 0
+    OKButton.Name = 'OKButton'
+    OKButton.DefaultCaption = True
+    HelpButton.Name = 'HelpButton'
+    HelpButton.DefaultCaption = True
+    CloseButton.Name = 'CloseButton'
+    CloseButton.DefaultCaption = True
+    CancelButton.Name = 'CancelButton'
+    CancelButton.DefaultCaption = True
+    TabOrder = 4
+    Spacing = 8
+    ShowButtons = [pbOK, pbCancel]
+    ShowBevel = False
+  end
+end

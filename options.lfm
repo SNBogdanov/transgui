@@ -1,13 +1,13 @@
 inherited OptionsForm: TOptionsForm
   Left = 313
-  Height = 331
+  Height = 409
   Top = 230
   Width = 564
   AutoSize = True
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
   Caption = 'Application options'
-  ClientHeight = 331
+  ClientHeight = 409
   ClientWidth = 564
   OnActivate = FormActivate
   OnCreate = FormCreate
@@ -16,7 +16,7 @@ inherited OptionsForm: TOptionsForm
   Position = poMainFormCenter
   object Page: TPageControl[0]
     Left = 8
-    Height = 329
+    Height = 407
     Top = 8
     Width = 548
     ActivePage = tabGeneral
@@ -26,7 +26,7 @@ inherited OptionsForm: TOptionsForm
     TabOrder = 0
     object tabGeneral: TTabSheet
       Caption = 'General'
-      ClientHeight = 253
+      ClientHeight = 331
       ClientWidth = 540
       object gbNewTorrent: TGroupBox
         Left = 8
@@ -61,6 +61,55 @@ inherited OptionsForm: TOptionsForm
           Width = 285
           Caption = 'Automatically add torrent links from the clipboard'
           TabOrder = 2
+        end
+      end
+      object gbArchive: TGroupBox
+        Left = 8
+        Height = 55
+        Top = 219
+        Width = 523
+        Anchors = [akTop, akLeft, akRight]
+        Caption = 'Archive'
+        ClientHeight = 35
+        ClientWidth = 519
+        TabOrder = 2
+        object txArchivePageSize: TLabel
+          Left = 10
+          Height = 15
+          Top = 9
+          Width = 106
+          Caption = 'Torrents per page'
+          ParentColor = False
+        end
+        object edArchivePageSize: TSpinEdit
+          Left = 358
+          Height = 23
+          Top = 4
+          Width = 70
+          Anchors = [akTop, akRight]
+          MaxValue = 10000
+          MinValue = 1
+          TabOrder = 0
+          Value = 100
+        end
+      end
+      object gbScripts: TGroupBox
+        Left = 8
+        Height = 45
+        Top = 280
+        Width = 523
+        Anchors = [akTop, akLeft, akRight]
+        Caption = 'Scripts'
+        ClientHeight = 25
+        ClientWidth = 519
+        TabOrder = 3
+        object cbAskScriptParams: TCheckBox
+          Left = 10
+          Height = 19
+          Top = 4
+          Width = 400
+          Caption = 'Ask for script parameters before running'
+          TabOrder = 0
         end
       end
       object gbData: TGroupBox
@@ -309,11 +358,163 @@ inherited OptionsForm: TOptionsForm
         TabOrder = 6
       end
     end
+    object tabWhisparr: TTabSheet
+      Caption = 'Whisparr'
+      ClientHeight = 253
+      ClientWidth = 540
+      object gbWhisparr: TGroupBox
+        Left = 8
+        Height = 135
+        Top = 6
+        Width = 523
+        Anchors = [akTop, akLeft, akRight]
+        Caption = 'Whisparr integration'
+        ClientHeight = 115
+        ClientWidth = 519
+        TabOrder = 0
+        object txWhisparrUrl: TLabel
+          Left = 10
+          Height = 15
+          Top = 10
+          Width = 29
+          Caption = 'URL:'
+          ParentColor = False
+        end
+        object edWhisparrUrl: TEdit
+          Left = 90
+          Height = 23
+          Top = 6
+          Width = 419
+          Anchors = [akTop, akLeft, akRight]
+          TabOrder = 0
+        end
+        object txWhisparrApiKey: TLabel
+          Left = 10
+          Height = 15
+          Top = 40
+          Width = 55
+          Caption = 'API key:'
+          ParentColor = False
+        end
+        object edWhisparrApiKey: TEdit
+          Left = 90
+          Height = 23
+          Top = 36
+          Width = 419
+          Anchors = [akTop, akLeft, akRight]
+          PasswordChar = '*'
+          TabOrder = 1
+        end
+        object cbWhisparrVerifySsl: TCheckBox
+          Left = 90
+          Height = 19
+          Top = 66
+          Width = 200
+          Caption = 'Verify SSL certificate'
+          TabOrder = 2
+        end
+        object btWhisparrTest: TButton
+          Left = 390
+          Height = 25
+          Top = 64
+          Width = 119
+          Anchors = [akTop, akRight]
+          Caption = 'Test connection'
+          OnClick = btWhisparrTestClick
+          TabOrder = 3
+        end
+        object txWhisparrHint: TLabel
+          Left = 10
+          Height = 30
+          Top = 90
+          Width = 499
+          AutoSize = False
+          Caption = 'Used to suggest archive names and rename episode torrents from Whisparr.'
+          ParentColor = False
+          WordWrap = True
+        end
+      end
+    end
+    object tabUserMenus: TTabSheet
+      Caption = 'User menus'
+      ClientHeight = 253
+      ClientWidth = 540
+      object gbTorrentMenu: TGroupBox
+        Left = 8
+        Height = 100
+        Top = 6
+        Width = 523
+        Anchors = [akTop, akLeft, akRight]
+        Caption = 'Torrent menu'
+        ClientHeight = 80
+        ClientWidth = 519
+        TabOrder = 0
+        object txTorrentMenu: TLabel
+          Left = 10
+          Height = 30
+          Top = 18
+          Width = 490
+          AutoSize = False
+          Caption = 'Commands added to the torrent context menu.'
+          ParentColor = False
+          WordWrap = True
+        end
+        object btEditTorrentMenu: TButton
+          Left = 10
+          Height = 25
+          Top = 50
+          Width = 120
+          Caption = 'Edit...'
+          OnClick = btEditTorrentMenuClick
+          TabOrder = 0
+        end
+      end
+      object gbFileMenu: TGroupBox
+        Left = 8
+        Height = 100
+        Top = 112
+        Width = 523
+        Anchors = [akTop, akLeft, akRight]
+        Caption = 'File menu'
+        ClientHeight = 80
+        ClientWidth = 519
+        TabOrder = 1
+        object txFileMenu: TLabel
+          Left = 10
+          Height = 30
+          Top = 18
+          Width = 490
+          AutoSize = False
+          Caption = 'Commands added to the file context menu.'
+          ParentColor = False
+          WordWrap = True
+        end
+        object btEditFileMenu: TButton
+          Left = 10
+          Height = 25
+          Top = 50
+          Width = 120
+          Caption = 'Edit...'
+          OnClick = btEditFileMenuClick
+          TabOrder = 0
+        end
+      end
+      object txUserMenuHint: TLabel
+        Left = 8
+        Height = 35
+        Top = 218
+        Width = 523
+        AutoSize = False
+        Caption = 'Changes take effect after restarting the application.'
+        ParentColor = False
+        WordWrap = True
+      end
+    end
   end
   object Buttons: TButtonPanel[1]
     Left = 8
     Height = 26
-    Top = 297
+    Top = 348
     Width = 548
     BorderSpacing.Left = 8
     BorderSpacing.Right = 8

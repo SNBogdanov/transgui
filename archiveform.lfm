@@ -1,0 +1,255 @@
+inherited ArchiveForm: TArchiveForm
+  Left = 300
+  Height = 560
+  Top = 150
+  Width = 960
+  AutoSize = False
+  Caption = 'Torrent archive manager'
+  ClientHeight = 560
+  ClientWidth = 960
+  Constraints.MinHeight = 360
+  Constraints.MinWidth = 840
+  OnCreate = FormCreate
+  OnShow = FormShow
+  Position = poMainFormCenter
+  object pnTop: TPanel
+    Left = 0
+    Height = 69
+    Top = 0
+    Width = 960
+    Align = alTop
+    BevelOuter = bvNone
+    TabOrder = 0
+    object txArchive: TLabel
+      Left = 8
+      Height = 15
+      Top = 14
+      Width = 52
+      Caption = 'Archive:'
+      ParentColor = False
+    end
+    object cbArchive: TComboBox
+      Left = 80
+      Height = 23
+      Top = 10
+      Width = 400
+      Anchors = [akTop, akLeft]
+      ItemHeight = 0
+      TabOrder = 0
+      OnChange = cbArchiveChange
+      OnSelect = cbArchiveSelect
+    end
+    object btRefresh: TButton
+      Left = 488
+      Height = 25
+      Top = 9
+      Width = 75
+      Caption = 'Refresh'
+      OnClick = btRefreshClick
+      TabOrder = 1
+    end
+    object btNewArchive: TButton
+      Left = 571
+      Height = 25
+      Top = 9
+      Width = 90
+      Caption = 'New archive...'
+      OnClick = btNewArchiveClick
+      TabOrder = 2
+    end
+    object btDeleteArchive: TButton
+      Left = 669
+      Height = 25
+      Top = 9
+      Width = 105
+      Caption = 'Delete archive...'
+      OnClick = btDeleteArchiveClick
+      TabOrder = 3
+    end
+    object txCount: TLabel
+      Left = 80
+      Height = 15
+      Top = 44
+      Width = 300
+      Caption = ''
+      ParentColor = False
+    end
+    object cbVerifyRestore: TCheckBox
+      Left = 400
+      Height = 19
+      Top = 41
+      Width = 300
+      Caption = 'Verify local data after restore'
+      TabOrder = 4
+    end
+  end
+  object pnActions: TPanel
+    Left = 0
+    Height = 41
+    Top = 519
+    Width = 960
+    Align = alBottom
+    BevelOuter = bvNone
+    TabOrder = 2
+    object btRestore: TButton
+      Left = 8
+      Height = 25
+      Top = 8
+      Width = 96
+      Caption = 'Restore...'
+      OnClick = btRestoreClick
+      TabOrder = 0
+    end
+    object btMove: TButton
+      Left = 112
+      Height = 25
+      Top = 8
+      Width = 80
+      Caption = 'Move...'
+      OnClick = btMoveClick
+      TabOrder = 1
+    end
+    object btView: TButton
+      Left = 200
+      Height = 25
+      Top = 8
+      Width = 80
+      Caption = 'View...'
+      OnClick = btViewClick
+      TabOrder = 2
+    end
+    object btDeleteEntry: TButton
+      Left = 288
+      Height = 25
+      Top = 8
+      Width = 80
+      Caption = 'Delete...'
+      OnClick = btDeleteEntryClick
+      TabOrder = 3
+    end
+    object btDownload: TButton
+      Left = 376
+      Height = 25
+      Top = 8
+      Width = 112
+      Caption = 'Download bundle...'
+      OnClick = btDownloadClick
+      TabOrder = 4
+    end
+    object btImport: TButton
+      Left = 496
+      Height = 25
+      Top = 8
+      Width = 96
+      Caption = 'Import bundle...'
+      OnClick = btImportClick
+      TabOrder = 5
+    end
+    object btPrevPage: TButton
+      Left = 600
+      Height = 25
+      Top = 8
+      Width = 70
+      Caption = 'Previous'
+      OnClick = btPrevPageClick
+      TabOrder = 6
+    end
+    object txPage: TLabel
+      Left = 678
+      Height = 15
+      Top = 13
+      Width = 90
+      Alignment = taCenter
+      Caption = 'Page 1 of 1'
+      ParentColor = False
+    end
+    object btNextPage: TButton
+      Left = 776
+      Height = 25
+      Top = 8
+      Width = 70
+      Caption = 'Next'
+      OnClick = btNextPageClick
+      TabOrder = 7
+    end
+    object btClose: TButton
+      Left = 864
+      Height = 25
+      Top = 8
+      Width = 88
+      Anchors = [akTop, akRight]
+      Caption = 'Close'
+      Cancel = True
+      ModalResult = 11
+      OnClick = btCloseClick
+      TabOrder = 8
+    end
+  end
+  object lvEntries: TVarGrid
+    Left = 0
+    Height = 450
+    Top = 69
+    Width = 960
+    Align = alClient
+    Columns = <
+      item
+        Title.Caption = 'Archive'
+        Width = 140
+      end
+      item
+        Title.Caption = 'Name'
+        Width = 260
+      end
+      item
+        Alignment = taRightJustify
+        Title.Caption = 'Size'
+        Width = 90
+      end
+      item
+        Title.Caption = 'Added'
+        Width = 130
+      end
+      item
+        Title.Caption = 'Archived'
+        Width = 130
+      end
+      item
+        Title.Caption = 'Download folder'
+        Width = 220
+      end
+      item
+        Title.Caption = 'Labels'
+        Width = 140
+      end
+      item
+        Title.Caption = 'Metadata'
+        Width = 150
+      end
+      item
+        Title.Caption = 'Local data'
+        Width = 100
+      end>
+    RowCount = 1
+    FixedCols = 0
+    FixedRows = 1
+    Options = [goFixedVertLine, goFixedHorzLine, goColSizing, goColMoving, goRowSelect, goThumbTracking, goDblClickAutoSize, goHeaderHotTracking, goHeaderPushedLook]
+    TabOrder = 1
+    MultiSelect = True
+    OnClick = lvEntriesClick
+    OnDblClick = lvEntriesDblClick
+    OnKeyDown = lvEntriesKeyDown
+  end
+  object SaveDialog1: TSaveDialog
+    DefaultExt = 'zip'
+    Filter = 'ZIP archives (*.zip)|*.zip|All files (*.*)|*.*'
+    Options = [ofOverwritePrompt, ofEnableSizing]
+    Left = 8
+    Top = 8
+  end
+  object OpenDialog1: TOpenDialog
+    Filter = 'ZIP archives (*.zip)|*.zip|All files (*.*)|*.*'
+    Options = [ofFileMustExist, ofEnableSizing]
+    Left = 40
+    Top = 8
+  end
+end

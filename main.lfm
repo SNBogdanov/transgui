@@ -295,9 +295,8 @@ inherited MainForm: TMainForm
           Alignment = taRightJustify
           MinSize = 15
           MaxSize = 300
-          Title.Caption = 'Size to download'
-          Width = 0
-          Visible = False
+          Title.Caption = 'Selected size'
+          Width = 90
         end      
         item
           Alignment = taRightJustify
@@ -614,6 +613,23 @@ inherited MainForm: TMainForm
             Width = 464
             Caption = 'txLabels'
             ParentColor = False
+          end
+          object txIncompleteDirLabel: TLabel
+            Left = 4
+            Height = 25
+            Top = 149
+            Width = 442
+            Caption = 'Incomplete folder:'
+            ParentColor = False
+          end
+          object txIncompleteDir: TLabel
+            Left = 462
+            Height = 25
+            Top = 149
+            Width = 461
+            Caption = 'txIncompleteDir'
+            ParentColor = False
+            ShowAccelChar = False
           end
         end
         object panTransfer: TPanel
@@ -1630,6 +1646,12 @@ inherited MainForm: TMainForm
         ImageIndex = 54
         OnClick = acMoveTorrentExecute
       end
+      object miArchiveSave: TMenuItem
+        Action = acArchiveSave
+      end
+      object miArchiveManager: TMenuItem
+        Action = acArchiveManager
+      end
       object MenuItem105: TMenuItem
         Action = acSetLabels
         ImageIndex = 44
@@ -1745,6 +1767,12 @@ inherited MainForm: TMainForm
       object MenuItem33: TMenuItem
         Action = acUpdateGeoIP
         OnClick = acUpdateGeoIPExecute
+      end
+      object miArchiveToolsSep: TMenuItem
+        Caption = '-'
+      end
+      object miArchiveManagerTools: TMenuItem
+        Action = acArchiveManager
       end
     end
     object miHelp: TMenuItem
@@ -2048,6 +2076,21 @@ inherited MainForm: TMainForm
       OnExecute = acMoveTorrentExecute
       ShortCut = 117
     end
+    object acArchiveSave: TAction
+      Category = 'Torrent'
+      Caption = 'Save to archive...'
+      OnExecute = acArchiveSaveExecute
+    end
+    object acArchiveManager: TAction
+      Category = 'Torrent'
+      Caption = 'Archive manager...'
+      OnExecute = acArchiveManagerExecute
+    end
+    object acWhisparrRename: TAction
+      Category = 'Torrent'
+      Caption = 'Whisparr: recognize and rename'
+      OnExecute = acWhisparrRenameExecute
+    end
     object acQMoveTop: TAction
       Category = 'Torrent'
       Caption = 'Move top'
@@ -2281,6 +2324,12 @@ inherited MainForm: TMainForm
       ImageIndex = 54
       OnClick = acMoveTorrentExecute
     end
+    object pmiArchiveSave: TMenuItem
+      Action = acArchiveSave
+    end
+    object pmiArchiveManager: TMenuItem
+      Action = acArchiveManager
+    end
     object MenuItem104: TMenuItem
       Action = acSetLabels
       ImageIndex = 44
@@ -2288,6 +2337,9 @@ inherited MainForm: TMainForm
     object MenuItem99: TMenuItem
       Action = acRename
       ImageIndex = 47
+    end
+    object MenuItemWhisparrRename: TMenuItem
+      Action = acWhisparrRename
     end
     object MenuItem19: TMenuItem
       Caption = '-'

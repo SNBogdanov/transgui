@@ -1,6 +1,9 @@
-# Transmission Remote GUI
+# Transmission Remote GUI (Bogdanov fork)
 
-[![Build Status](https://app.travis-ci.com/transmission-remote-gui/transgui.svg?branch=master)](https://app.travis-ci.com/transmission-remote-gui/transgui)
+> This is a fork of [Transmission Remote GUI](https://github.com/transmission-remote-gui/transgui), maintained by Bogdanov Sergey.
+> The fork adds archive management, script runner integration, Whisparr support and other workflow improvements.
+>
+> Fork repository: https://github.com/SNBogdanov/transgui
 
 ![Screenshot](http://i.imgur.com/XBbF4Vh.png)
 
@@ -43,10 +46,19 @@ Features:
 - View details about connected peers
 - Full information about each torrent
 - Per torrent options
+- Torrent archive manager: save, restore, view, delete and browse archives
+- Server-side script runner integration with torrent, file and system scopes
+- Runtime script parameters and per-host stored parameters
+- Live script output with scrolling and ANSI color code removal
+- Script runner daemon restart action
+- Whisparr integration: recognize and rename episodes
+- Waiting-for-space torrent states
+- Persistent window sizes and grid column widths
+- English and Russian UI, with translations for script commands and parameters
 
 ## Installation
 
-The installers are listed on the GitHub [Releases](https://github.com/transmission-remote-gui/transgui/releases/latest) page, and the installation instructions for different platform are listed as below :arrow_down:
+The installers are listed on the GitHub [Releases](https://github.com/SNBogdanov/transgui/releases/latest) page, and the installation instructions for different platform are listed as below :arrow_down:
 
 ### Linux
 
@@ -65,7 +77,7 @@ Additionally, you can create a desktop or menu shortcut to the transgui executab
 Build the program by yourself.
 
 1. Make sure you have working Lazarus and Free Pascal compiler installed.
-  - Free Pascal Compiler 2.6.2+ and Lazarus 1.6 is used to develop Transmission Remote GUI.
+  - Free Pascal Compiler 3.2.2+ and a current Lazarus 2.x/3.x release are used to build this fork.
 2. Download the sources archive and extract it to some folder or perform svn checkout.
 3. Open terminal/command line prompt and cd to the sources folder.
 4. Execute `lazbuild -B "transgui.lpi" --lazarusdir=/usr/lib/lazarus/default/` command to build the transgui.res file.
@@ -195,7 +207,8 @@ FromNow=1 {1=Shows the dates relatives to now , 0=Absolute Dates MM/DD/YY HH:MM:
 
 ## License
 
-Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
+Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.  
+Copyright (c) 2026 by Bogdanov Sergey.
 
 Transmission Remote GUI is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 

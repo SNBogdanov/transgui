@@ -166,11 +166,9 @@ Type
             Buffer := '';
             Repeat
               Stream.ReadBuffer(X, 1);
-              If Not ((X In ['0'..'9']) Or (X = 'e')) Then
-                InvalidInput;
               If X = 'e' Then
                 Begin
-                  If Buffer = '' Then
+                  If (Buffer = '') Or (Buffer = '-') Then
                     InvalidInput
                   Else
                     Begin
@@ -180,7 +178,10 @@ Type
                     End;
                 End
               Else
-                Buffer := Buffer + X;
+                If (X In ['0'..'9']) Or ((X = '-') And (Buffer = '')) Then
+                  Buffer := Buffer + X
+                Else
+                  InvalidInput;
             Until False;
           End
           // is it a list?

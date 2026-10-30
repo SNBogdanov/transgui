@@ -1,0 +1,66 @@
+inherited ArchiveViewForm: TArchiveViewForm
+  Left = 320
+  Height = 520
+  Top = 180
+  Width = 780
+  Caption = 'Torrent contents'
+  ClientHeight = 520
+  ClientWidth = 780
+  Constraints.MinHeight = 300
+  Constraints.MinWidth = 480
+  OnCreate = FormCreate
+  Position = poScreenCenter
+  object txName: TLabel
+    Left = 8
+    Height = 15
+    Top = 8
+    Width = 764
+    Anchors = [akTop, akLeft, akRight]
+    Caption = ''
+    ParentColor = False
+  end
+  object txInfo: TLabel
+    Left = 8
+    Height = 15
+    Top = 28
+    Width = 764
+    Anchors = [akTop, akLeft, akRight]
+    Caption = ''
+    ParentColor = False
+  end
+  object lvFiles: TVarGrid
+    Left = 0
+    Height = 430
+    Top = 48
+    Width = 780
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    Columns = <
+      item
+        ReadOnly = True
+        Title.Caption = 'File name'
+        Width = 660
+      end
+      item
+        ReadOnly = True
+        Title.Caption = 'Size'
+        Width = 100
+      end>
+    FixedCols = 0
+    Options = [goFixedVertLine, goFixedHorzLine, goColSizing, goRowSelect, goThumbTracking, goHeaderHotTracking, goHeaderPushedLook]
+    TabOrder = 0
+    SortColumn = 0
+    HideSelection = True
+  end
+  object btClose: TButton
+    Left = 684
+    Height = 25
+    Top = 487
+    Width = 88
+    Anchors = [akRight, akBottom]
+    Caption = 'Close'
+    Cancel = True
+    ModalResult = 2
+    TabOrder = 1
+  end
+end
+

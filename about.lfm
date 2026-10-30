@@ -491,9 +491,17 @@ inherited AboutForm: TAboutForm
         Top = 104
         Width = 307
         AutoSize = False
-        Caption = 'Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group'
+        Caption = 'Copyright (c) 2026 by Bogdanov Sergey.'
         ParentColor = False
         WordWrap = True
+      end
+      object txBuildInfo: TLabel
+        Left = 86
+        Height = 15
+        Top = 52
+        Width = 250
+        Caption = 'Build:'
+        ParentColor = False
       end
       object txVersion: TLabel
         Left = 86
@@ -516,13 +524,26 @@ inherited AboutForm: TAboutForm
         Left = 86
         Height = 15
         Top = 134
-        Width = 62
-        Caption = 'Home page'
+        Width = 96
+        Caption = 'GitHub repository'
         Font.Color = clBlue
         Font.Style = [fsUnderline]
         ParentColor = False
         ParentFont = False
         OnClick = txHomePageClick
+      end
+      object txFork: TLabel
+        Cursor = crHandPoint
+        Left = 86
+        Height = 15
+        Top = 154
+        Width = 300
+        Caption = 'Fork of the original Transmission Remote GUI'
+        Font.Color = clBlue
+        Font.Style = [fsUnderline]
+        ParentColor = False
+        ParentFont = False
+        OnClick = txForkClick
       end
       object txVersFPC: TLabel
         Left = 86

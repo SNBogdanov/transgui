@@ -63,6 +63,8 @@ Type
                                   integer; AState: TGridDrawState; Const R:
                                   TRect; Var ADefaultDrawing: boolean) Of object
     ;
+    TOnDrawHeaderEvent = Procedure (Sender: TVarGrid; ACol, ADataCol: integer;
+                                   AState: TGridDrawState; Const R: TRect) Of object;
     TOnSortColumnEvent = Procedure (Sender: TVarGrid; Var ASortCol: integer) Of 
                          object;
     TCellNotifyEvent = Procedure (Sender: TVarGrid; ACol, ARow, ADataCol:
@@ -95,6 +97,7 @@ Type
         FOnCellAttributes: TOnCellAttributes;
         FOnCheckBoxClick: TCellNotifyEvent;
         FOnDrawCell: TOnDrawCellEvent;
+        FOnDrawHeader: TOnDrawHeaderEvent;
         FOnEditorHide: TNotifyEvent;
         FOnEditorShow: TNotifyEvent;
         FOnQuickSearch: TOnQuickSearch;
@@ -102,6 +105,9 @@ Type
         FSelCount: integer;
         FAnchor: integer;
         FSortColumn: integer;
+        FSortArrowColumn: integer;
+        FSortArrowAscending: boolean;
+        FSkipNextHeaderSort: boolean;
         FOnSortColumn: TOnSortColumnEvent;
         FRow: integer;
         FHintCell: TPoint;
@@ -121,6 +127,8 @@ Type
         Procedure SetRowSelected(RowIndex: integer; Const AValue: boolean);
         Procedure SetRowVisible(RowIndex: integer; Const AValue: boolean);
         Procedure SetSortColumn(Const AValue: integer);
+        Procedure SetSortArrowColumn(Const AValue: integer);
+        Procedure SetSortArrowAscending(Const AValue: boolean);
         Procedure SetSortOrder(Const AValue: TSortOrder);
         Procedure UpdateColumnsMap;
         Procedure UpdateSelCount;
@@ -294,6 +302,12 @@ Type
                               default False;
         property SortColumn: integer read FSortColumn write SetSortColumn
                              default -1;
+        property SortArrowColumn: integer read FSortArrowColumn write SetSortArrowColumn
+                                default -1;
+        property SortArrowAscending: boolean read FSortArrowAscending
+                                       write SetSortArrowAscending default True;
+        property SkipNextHeaderSort: boolean read FSkipNextHeaderSort
+                                      write FSkipNextHeaderSort;
         property SortOrder: TSortOrder read GetSortOrder write SetSortOrder
                             default soAscending;
         property HideSelection: boolean read FHideSelection write
@@ -303,6 +317,8 @@ Type
                                    write FOnCellAttributes;
         property OnDrawCell: TOnDrawCellEvent read FOnDrawCell write FOnDrawCell
         ;
+        property OnDrawHeader: TOnDrawHeaderEvent read FOnDrawHeader write
+                                FOnDrawHeader;
         property OnSortColumn: TOnSortColumnEvent read FOnSortColumn write
                                FOnSortColumn;
         property OnAfterSort: TNotifyEvent read FOnAfterSort write FOnAfterSort;
@@ -512,6 +528,22 @@ Begin
   Else
     Options := Options - [goHeaderPushedLook, goHeaderHotTracking];
   Sort;
+End;
+
+Procedure TVarGrid.SetSortArrowColumn(Const AValue: integer);
+Begin
+  If FSortArrowColumn = AValue Then
+    exit;
+  FSortArrowColumn := AValue;
+  Invalidate;
+End;
+
+Procedure TVarGrid.SetSortArrowAscending(Const AValue: boolean);
+Begin
+  If FSortArrowAscending = AValue Then
+    exit;
+  FSortArrowAscending := AValue;
+  Invalidate;
 End;
 
 Procedure TVarGrid.SetSortOrder(Const AValue: TSortOrder);
@@ -1117,6 +1149,11 @@ Var
   i: integer;
 Begin
   inherited HeaderClick(IsColumn, index);
+  If FSkipNextHeaderSort Then
+  Begin
+    FSkipNextHeaderSort := False;
+    exit;
+  End;
   If FItems.Count = 0 Then
     exit;
   If IsColumn And (FSortColumn >= 0) Then
@@ -1188,11 +1225,13 @@ Procedure TVarGrid.DrawColumnText(aCol, aRow: Integer; aRect: TRect; aState:
 Var 
   R: TRect;
   i: integer;
+  Asc: boolean;
 Begin
   If (gdFixed In aState) And (aRow=0) And (aCol>=FirstGridColumn) Then
     Begin
       R := aRect;
-      If FSortColumn = ColToDataCol(aCol) Then
+      If (FSortColumn = ColToDataCol(aCol)) Or
+        (FSortArrowColumn = ColToDataCol(aCol)) Then
         Begin
           R.Right := R.Left + R.Bottom - R.Top;
           InflateRect(R, -5, -5);
@@ -1201,28 +1240,37 @@ Begin
           aRect.Left := R.Right + 2;
         End;
       inherited DrawColumnText(aCol, aRow, aRect, aState);
-      If FSortColumn = ColToDataCol(aCol) Then
-        With Canvas Do
-          Begin
-            Pen.Color := clGrayText;
-            i := (R.Left + R.Right ) Div 2;
-            If SortOrder = soAscending Then
-              Begin
-                MoveTo(i + (i - R.Left) - 1, R.Bottom - 1);
-                LineTo(i, R.Top - 1);
-                MoveTo(i, R.Top);
-                LineTo(i - (R.Right - i) + 1, R.Bottom);
-                LineTo(R.Right, R.Bottom);
-              End
-            Else
-              Begin
-                MoveTo(i + (i - R.Left) - 1, R.Top + 1);
-                LineTo(i, R.Bottom + 1);
-                MoveTo(i, R.Bottom);
-                LineTo(i - (R.Right - i) + 1, R.Top);
-                LineTo(R.Right, R.Top);
-              End;
-          End;
+      If (FSortColumn = ColToDataCol(aCol)) Or
+        (FSortArrowColumn = ColToDataCol(aCol)) Then
+        Begin
+          If FSortColumn = ColToDataCol(aCol) Then
+            Asc := SortOrder = soAscending
+          Else
+            Asc := FSortArrowAscending;
+          With Canvas Do
+            Begin
+              Pen.Color := clGrayText;
+              i := (R.Left + R.Right ) Div 2;
+              If Asc Then
+                Begin
+                  MoveTo(i + (i - R.Left) - 1, R.Bottom - 1);
+                  LineTo(i, R.Top - 1);
+                  MoveTo(i, R.Top);
+                  LineTo(i - (R.Right - i) + 1, R.Bottom);
+                  LineTo(R.Right, R.Bottom);
+                End
+              Else
+                Begin
+                  MoveTo(i + (i - R.Left) - 1, R.Top + 1);
+                  LineTo(i, R.Bottom + 1);
+                  MoveTo(i, R.Bottom);
+                  LineTo(i - (R.Right - i) + 1, R.Top);
+                  LineTo(R.Right, R.Top);
+                End;
+            End;
+        End;
+      If Assigned(FOnDrawHeader) Then
+        FOnDrawHeader(Self, aCol, ColToDataCol(aCol), aState, aRect);
     End;
 End;
 
@@ -1414,6 +1462,9 @@ Begin
   TitleStyle := tsNative;
   FAnchor := -1;
   FSortColumn := -1;
+  FSortArrowColumn := -1;
+  FSortArrowAscending := True;
+  FSkipNextHeaderSort := False;
   ShowHint := True;
   SetLength(FColumnsMap, 1);
   FColumnsMap[0] := 0;

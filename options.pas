@@ -39,8 +39,15 @@ Interface
 
 Uses
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-  ComCtrls, StdCtrls, Spin, Buttons, ButtonPanel, BaseForm,
-  ConnOptions;
+  ComCtrls, StdCtrls, Spin, Buttons, ButtonPanel, BaseForm;
+
+Resourcestring
+  SWhisparrSettingsRequired = 'Enter both the Whisparr URL and API key.';
+  SWhisparrConnectionOk = 'Connection to Whisparr succeeded. Version: %s.';
+  SWhisparrConnectionFailed = 'Connection to Whisparr failed: %s';
+  SWhisparrSaveAnyway = 'Whisparr connection check failed: %s' + LineEnding +
+    'Save the settings anyway?';
+  SWhisparrUnknownVersion = 'Unknown';
 
 Type
 
@@ -48,6 +55,10 @@ Type
 
   TOptionsForm = Class(TBaseForm)
     Buttons: TButtonPanel;
+    btEditFileMenu: TButton;
+    btEditTorrentMenu: TButton;
+    btWhisparrTest: TButton;
+    cbAskScriptParams: TCheckBox;
     cbDeleteTorrentFile: TCheckBox;
     cbLanguage: TComboBox;
     cbLangLeftRight: TComboBox;
@@ -61,17 +72,34 @@ Type
     cbRegExt: TCheckBox;
     cbRegMagnet: TCheckBox;
     cbTrayNotify: TCheckBox;
+    cbWhisparrVerifySsl: TCheckBox;
     edIntfScale: TSpinEdit;
     edCheckVersionDays: TSpinEdit;
     edRefreshInterval: TSpinEdit;
     edRefreshIntervalMin: TSpinEdit;
+    edArchivePageSize: TSpinEdit;
+    edWhisparrApiKey: TEdit;
+    edWhisparrUrl: TEdit;
+    gbArchive: TGroupBox;
+    gbFileMenu: TGroupBox;
+    gbTorrentMenu: TGroupBox;
     gbTray: TGroupBox;
+    gbWhisparr: TGroupBox;
     gbNewTorrent: TGroupBox;
     gbData: TGroupBox;
     gbSysInt: TGroupBox;
+    txArchivePageSize: TLabel;
     txDays: TLabel;
     tabGeneral: TTabSheet;
+    tabUserMenus: TTabSheet;
+    tabWhisparr: TTabSheet;
     txPerc: TLabel;
+    txTorrentMenu: TLabel;
+    txFileMenu: TLabel;
+    txUserMenuHint: TLabel;
+    txWhisparrApiKey: TLabel;
+    txWhisparrHint: TLabel;
+    txWhisparrUrl: TLabel;
     Page: TPageControl;
     tabAdvanced: TTabSheet;
     txLanguage: TLabel;
@@ -80,6 +108,9 @@ Type
     txRefreshIntervalMin: TLabel;
     txSeconds: TLabel;
     txSeconds2: TLabel;
+    Procedure btEditFileMenuClick(Sender: TObject);
+    Procedure btEditTorrentMenuClick(Sender: TObject);
+    Procedure btWhisparrTestClick(Sender: TObject);
     Procedure cbCheckNewVersionClick(Sender: TObject);
     Procedure cbLanguageEnter(Sender: TObject);
     Procedure cbLanguageMouseDown(Sender: TObject; Button: TMouseButton;
@@ -99,8 +130,7 @@ Type
     {$endif mswindows}
 
     Procedure FillLanguageItems;
-  Public
-    ConnForm: TConnOptionsForm;
+    Function TestWhisparr(Out Version, Error: String): Boolean;
   End;
 
 Implementation
@@ -109,14 +139,13 @@ Uses
   {$ifdef mswindows}
   registry,
   {$endif mswindows}
-  main, utils, ResTranslator, Math;
+  main, UserMenuForm, utils, ResTranslator, Math, WhisparrClient;
 
   { TOptionsForm }
 
 Procedure TOptionsForm.FormCreate(Sender: TObject);
 Var
   i: Integer;
-  pg: TTabSheet;
   {$ifdef mswindows}
   reg: TRegistry;
   s: String;
@@ -125,16 +154,6 @@ Begin
   bidiMode := GetBiDi();
   cbRegExt.Caption := Format(cbRegExt.Caption, [AppName]);
   cbRegMagnet.Caption := Format(cbRegMagnet.Caption, [AppName]);
-
-  ConnForm := TConnOptionsForm.Create(Self);
-  While ConnForm.Page.ControlCount > 0 Do
-  Begin
-    pg := ConnForm.Page.Pages[0];
-    pg.Parent := Page;
-    pg.TabVisible := True;
-  End;
-  ConnForm.Page.Free;
-  ConnForm.Page := Page;
 
   Page.ActivePageIndex := 0;
   Buttons.OKButton.ModalResult := mrNone;
@@ -148,6 +167,8 @@ Begin
   cbLangLeftRight.ItemIndex :=
     Ini.ReadInteger('Interface', 'IgnoreRightLeft', 0);
 
+  cbAskScriptParams.Checked :=
+    Ini.ReadBool('Interface', 'AskScriptParams', True);
   cbLanguage.Items.Add(FTranslationLanguage);
   cbLanguage.ItemIndex := 0;
   i := 80 * 100 Div (ScaleInt(100) * 100 Div IntfScale);
@@ -190,6 +211,73 @@ Begin
   cbRegExt.Checked := FRegExt;
   cbRegMagnet.Checked := FRegMagnet;
   {$endif mswindows}
+  {$ifndef mswindows}
+  tabUserMenus.TabVisible := False;
+  {$endif}
+End;
+
+Procedure TOptionsForm.btEditTorrentMenuClick(Sender: TObject);
+Begin
+  With TUserMenuForm.Create(Self) Do
+  Try
+    Section := 'UserTorrentMenu';
+    ShowParamType := False;
+    Caption := SUserTorrentMenuTitle;
+    ShowModal;
+  Finally
+    Free;
+  End;
+End;
+
+Procedure TOptionsForm.btEditFileMenuClick(Sender: TObject);
+Begin
+  With TUserMenuForm.Create(Self) Do
+  Try
+    Section := 'UserFileMenu';
+    ShowParamType := True;
+    Caption := SUserFileMenuTitle;
+    ShowModal;
+  Finally
+    Free;
+  End;
+End;
+
+Function TOptionsForm.TestWhisparr(Out Version, Error: String): Boolean;
+Var
+  Config: TWhisparrConfig;
+Begin
+  Version := '';
+  Config.Url := Trim(edWhisparrUrl.Text);
+  Config.ApiKey := Trim(edWhisparrApiKey.Text);
+  Config.VerifySsl := cbWhisparrVerifySsl.Checked;
+  If Not WhisparrConfigured(Config) Then
+  Begin
+    Error := SWhisparrSettingsRequired;
+    Result := False;
+    exit;
+  End;
+  AppBusy;
+  Try
+    Result := WhisparrTestConnection(Config, Version, Error);
+  Finally
+    AppNormal;
+  End;
+End;
+
+Procedure TOptionsForm.btWhisparrTestClick(Sender: TObject);
+Var
+  Version, Error: String;
+Begin
+  If TestWhisparr(Version, Error) Then
+  Begin
+    If Version = '' Then
+      Version := SWhisparrUnknownVersion;
+    MessageDlg('', Format(SWhisparrConnectionOk, [Version]),
+      mtInformation, [mbOK], 0);
+  End
+  Else
+    MessageDlg('', Format(SWhisparrConnectionFailed, [Error]),
+      mtError, [mbOK], 0);
 End;
 
 Procedure TOptionsForm.cbLanguageEnter(Sender: TObject);
@@ -263,27 +351,29 @@ End;
 
 Procedure TOptionsForm.FormShow(Sender: TObject);
 Begin
-  ConnForm.FormShow(nil);
-  If ConnForm.edHost.Text = '' Then
-  Begin
-    tabGeneral.Hide;
-    ActiveControl := ConnForm.edHost;
-  End;
 End;
 
 Procedure TOptionsForm.OKButtonClick(Sender: TObject);
 Var
-  s: String;
+  s, Version, Error: String;
   bd, idx: Integer;
   restart: Boolean;
   {$ifdef mswindows}
   reg: TRegistry;
   {$endif mswindows}
 Begin
-  ConnForm.ModalResult := mrNone;
-  ConnForm.btOKClick(nil);
-  If ConnForm.ModalResult = mrNone Then
-    exit;
+  If (Trim(edWhisparrUrl.Text) <> '') Or (Trim(edWhisparrApiKey.Text) <> '') Then
+  Begin
+    If (Trim(edWhisparrUrl.Text) = '') Or (Trim(edWhisparrApiKey.Text) = '') Then
+    Begin
+      MessageDlg('', SWhisparrSettingsRequired, mtError, [mbOK], 0);
+      exit;
+    End;
+    If Not TestWhisparr(Version, Error) Then
+      If MessageDlg('', Format(SWhisparrSaveAnyway, [Error]),
+        mtWarning, [mbYes, mbNo], 0) <> mrYes Then
+        exit;
+  End;
   restart := False;
   If cbLanguage.Text <> FTranslationLanguage Then
   Begin
@@ -294,6 +384,8 @@ Begin
     Ini.WriteString('Interface', 'TranslationFile', s);
     restart := True;
   End;
+
+  Ini.WriteBool('Interface', 'AskScriptParams', cbAskScriptParams.Checked);
 
   // bidi
   idx := cbLangLeftRight.ItemIndex;

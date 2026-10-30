@@ -1,5 +1,8 @@
 Transmission Remote GUI.
 Copyright (c) 2008-2019 by Yury Sidorov and Transmission Remote GUI working group.
+Copyright (c) 2026 by Bogdanov Sergey.
+
+This is a fork of Transmission Remote GUI maintained by Bogdanov Sergey.
 
 Transmission Remote GUI is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -33,9 +36,14 @@ Features:
  * View details about connected peers
  * Full information about each torrent
  * Per torrent options
+ * Torrent archive manager
+ * Server-side script runner integration
+ * Runtime and per-host script parameters
+ * Live script output
+ * Whisparr integration
 
 Project home:
-https://github.com/transmission-remote-gui/transgui
+https://github.com/SNBogdanov/transgui
 
 INSTALLATION
 
@@ -54,7 +62,7 @@ Harder way.
 
 Build the program by yourself.
 - Make sure you have working Lazarus and Free Pascal compiler installed.
-  * Free Pascal Compiler 2.6.2 and Lazarus 1.6 is used to develop Transmission Remote GUI. You may use different versions of FPC and Lazarus at your own risk.
+  * Free Pascal Compiler 3.2.2+ and a current Lazarus 2.x/3.x release are used to build this fork. You may use different versions of FPC and Lazarus at your own risk.
 - Download the sources archive and extract it to some folder or perform svn checkout.
 - Open terminal/command line prompt and cd to the sources folder;
 - Execute "make" command to build the application;

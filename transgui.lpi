@@ -21,7 +21,7 @@
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="5"/>
       <MinorVersionNr Value="19"/>
-      <StringTable CompanyName="Transmission Remote GUI working group" FileDescription="Transmission Remote GUI" InternalName="transgui" LegalCopyright="Copyright (c) 2008-2019 by Yury Sidorov &amp; Transmission Remote GUI working group" OriginalFilename="transgui.exe" ProductName="Transmission Remote GUI" ProductVersion="5.18.0"/>
+      <StringTable CompanyName="Bogdanov Sergey" FileDescription="Transmission Remote GUI" InternalName="transgui" LegalCopyright="Copyright (c) 2026 by Bogdanov Sergey" OriginalFilename="transgui.exe" ProductName="Transmission Remote GUI" ProductVersion="5.19.0"/>
     </VersionInfo>
     <BuildModes Count="3">
       <Item1 Name="default" Default="True"/>
@@ -156,7 +156,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="20">
+    <Units Count="27">
       <Unit0>
         <Filename Value="transgui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -293,6 +293,46 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit19>
+      <Unit20>
+        <Filename Value="ArchiveCommon.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="ArchiveSaveForm.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="ArchiveSaveForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="ArchiveForm.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="ArchiveForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="UserMenuForm.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="UserMenuForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="WhisparrClient.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="WhisparrRenameForm.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="WhisparrRenameForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="ScriptRunnerUI.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit26>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

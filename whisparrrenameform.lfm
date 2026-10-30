@@ -1,0 +1,63 @@
+inherited WhisparrRenameForm: TWhisparrRenameForm
+  Left = 350
+  Height = 430
+  Top = 180
+  Width = 780
+  AutoSize = False
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsDialog
+  Caption = 'Whisparr: rename torrents'
+  ClientHeight = 430
+  ClientWidth = 780
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnShow = FormShow
+  Position = poMainFormCenter
+  object gRename: TVarGrid
+    Left = 8
+    Height = 360
+    Top = 8
+    Width = 764
+    RowCount = 1
+    Columns = <
+      item
+        Title.Caption = 'Rename'
+        Width = 110
+      end
+      item
+        Title.Caption = 'Was'
+        Width = 320
+      end
+      item
+        Title.Caption = 'Will be'
+        Width = 330
+      end>
+    FixedCols = 0
+    FixedRows = 1
+    Options = [goFixedVertLine, goFixedHorzLine, goColSizing, goRowSelect, goThumbTracking, goDblClickAutoSize, goHeaderHotTracking, goHeaderPushedLook]
+    TabOrder = 0
+    OnCellAttributes = gRenameCellAttributes
+    OnCheckBoxClick = gRenameCheckBoxClick
+  end
+  object Buttons: TButtonPanel
+    Left = 8
+    Height = 40
+    Top = 382
+    Width = 764
+    BorderSpacing.Left = 8
+    BorderSpacing.Right = 8
+    BorderSpacing.Bottom = 8
+    BorderSpacing.Around = 0
+    OKButton.Name = 'OKButton'
+    OKButton.DefaultCaption = True
+    HelpButton.Name = 'HelpButton'
+    HelpButton.DefaultCaption = True
+    CloseButton.Name = 'CloseButton'
+    CloseButton.DefaultCaption = True
+    CancelButton.Name = 'CancelButton'
+    CancelButton.DefaultCaption = True
+    TabOrder = 1
+    Spacing = 8
+    ShowButtons = [pbOK, pbCancel]
+  end
+end

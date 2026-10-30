@@ -62,6 +62,12 @@ Type
     Page: TPageControl;
     tabGeneral: TTabSheet;
     tabAdvanced: TTabSheet;
+    tabIncompleteDir: TTabSheet;
+    txIncompleteDir: TLabel;
+    edIncompleteDir: TEdit;
+    btBrowseIncompleteDir: TButton;
+    cbMoveIncompleteDir: TCheckBox;
+    txIncompleteDirHint: TLabel;
     txKbs1: TLabel;
     txKbs2: TLabel;
     txMinutes: TLabel;
@@ -71,6 +77,7 @@ Type
     Procedure cbMaxDownClick(Sender: TObject);
     Procedure cbMaxUpClick(Sender: TObject);
     Procedure cbSeedRatioClick(Sender: TObject);
+    Procedure btBrowseIncompleteDirClick(Sender: TObject);
     Procedure FormCreate(Sender: TObject);
   Private
     { private declarations }
@@ -102,6 +109,16 @@ End;
 Procedure TTorrPropsForm.cbSeedRatioClick(Sender: TObject);
 Begin
   edSeedRatio.Enabled := cbSeedRatio.State = cbChecked;
+End;
+
+Procedure TTorrPropsForm.btBrowseIncompleteDirClick(Sender: TObject);
+Var
+  s: String;
+Begin
+  s := MainForm.SelectRemoteFolder(edIncompleteDir.Text,
+    'Select incomplete folder');
+  If s <> '' Then
+    edIncompleteDir.Text := s;
 End;
 
 Procedure TTorrPropsForm.FormCreate(Sender: TObject);

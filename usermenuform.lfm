@@ -1,0 +1,195 @@
+inherited UserMenuForm: TUserMenuForm
+  Left = 350
+  Height = 460
+  Top = 180
+  Width = 660
+  AutoSize = False
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsDialog
+  Caption = 'User menu'
+  ClientHeight = 460
+  ClientWidth = 660
+  OnCreate = FormCreate
+  OnShow = FormShow
+  Position = poMainFormCenter
+  object lbItems: TListBox
+    Left = 8
+    Height = 330
+    Top = 8
+    Width = 250
+    ItemHeight = 0
+    TabOrder = 0
+    OnSelectionChange = lbItemsSelectionChange
+  end
+  object txCaption: TLabel
+    Left = 264
+    Height = 15
+    Top = 12
+    Width = 55
+    Caption = 'Caption:'
+    ParentColor = False
+  end
+  object edCaption: TEdit
+    Left = 264
+    Height = 23
+    Top = 30
+    Width = 380
+    TabOrder = 1
+  end
+  object txExe: TLabel
+    Left = 264
+    Height = 15
+    Top = 62
+    Width = 55
+    Caption = 'Program:'
+    ParentColor = False
+  end
+  object edExe: TEdit
+    Left = 264
+    Height = 23
+    Top = 80
+    Width = 290
+    TabOrder = 2
+  end
+  object btBrowse: TButton
+    Left = 560
+    Height = 25
+    Top = 79
+    Width = 84
+    Caption = 'Browse...'
+    OnClick = btBrowseClick
+    TabOrder = 3
+  end
+  object txParams: TLabel
+    Left = 264
+    Height = 15
+    Top = 112
+    Width = 66
+    Caption = 'Parameters:'
+    ParentColor = False
+  end
+  object edParams: TEdit
+    Left = 264
+    Height = 23
+    Top = 130
+    Width = 380
+    TabOrder = 4
+  end
+  object txType: TLabel
+    Left = 264
+    Height = 15
+    Top = 162
+    Width = 34
+    Caption = 'Type:'
+    ParentColor = False
+  end
+  object cbType: TComboBox
+    Left = 264
+    Height = 23
+    Top = 180
+    Width = 120
+    ItemHeight = 0
+    Style = csDropDownList
+    TabOrder = 5
+  end
+  object txHint: TLabel
+    Left = 264
+    Height = 140
+    Top = 218
+    Width = 380
+    AutoSize = False
+    Caption = ''
+    ParentColor = False
+    WordWrap = True
+  end
+  object txInfo: TLabel
+    Left = 8
+    Height = 22
+    Top = 372
+    Width = 640
+    AutoSize = False
+    Caption = ''
+    ParentColor = False
+  end
+  object btNew: TButton
+    Left = 8
+    Height = 25
+    Top = 344
+    Width = 68
+    Caption = 'New item'
+    OnClick = btNewClick
+    TabOrder = 6
+  end
+  object btAdd: TButton
+    Left = 80
+    Height = 25
+    Top = 344
+    Width = 68
+    Caption = 'Add'
+    OnClick = btAddClick
+    TabOrder = 7
+  end
+  object btUpdate: TButton
+    Left = 152
+    Height = 25
+    Top = 344
+    Width = 68
+    Caption = 'Apply'
+    OnClick = btUpdateClick
+    TabOrder = 8
+  end
+  object btDelete: TButton
+    Left = 224
+    Height = 25
+    Top = 344
+    Width = 68
+    Caption = 'Delete'
+    OnClick = btDeleteClick
+    TabOrder = 9
+  end
+  object btUp: TButton
+    Left = 296
+    Height = 25
+    Top = 344
+    Width = 40
+    Caption = 'Up'
+    OnClick = btUpClick
+    TabOrder = 10
+  end
+  object btDown: TButton
+    Left = 340
+    Height = 25
+    Top = 344
+    Width = 48
+    Caption = 'Down'
+    OnClick = btDownClick
+    TabOrder = 11
+  end
+  object Buttons: TButtonPanel
+    Left = 8
+    Height = 40
+    Top = 400
+    Width = 644
+    BorderSpacing.Left = 8
+    BorderSpacing.Right = 8
+    BorderSpacing.Bottom = 8
+    BorderSpacing.Around = 0
+    OKButton.Name = 'OKButton'
+    OKButton.DefaultCaption = True
+    HelpButton.Name = 'HelpButton'
+    HelpButton.DefaultCaption = True
+    CloseButton.Name = 'CloseButton'
+    CloseButton.DefaultCaption = True
+    CancelButton.Name = 'CancelButton'
+    CancelButton.DefaultCaption = True
+    TabOrder = 12
+    Spacing = 8
+    ShowButtons = [pbOK, pbCancel]
+  end
+  object OpenDialog1: TOpenDialog
+    Filter = 'Programs (*.exe)|*.exe|All files (*.*)|*.*'
+    Options = [ofFileMustExist, ofEnableSizing]
+    Left = 8
+    Top = 8
+  end
+end
