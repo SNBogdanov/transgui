@@ -24,12 +24,12 @@ file, but you are not obligated to do so. If you do not wish to do so, delete
 this exception statement from your version.
 *********************************************************************************
 
-Transmission Remote GUI is feature rich cross platform front-end to remotely control Transmission daemon via its RPC protocol. It is faster and has more functionality than builtin Transmission web interface.
+Transmission Remote GUI is a feature rich Windows front-end to remotely control Transmission daemon via its RPC protocol. It is faster and has more functionality than builtin Transmission web interface.
 
 Transmission Remote GUI is developed using Lazarus RAD and Free Pascal compiler.
 
 Features:
- * Native application for Windows, Linux and MacOS X
+ * Native application for Windows
  * uTorrent-like interface
  * Select files to download
  * Choose files priority
@@ -47,26 +47,23 @@ https://github.com/SNBogdanov/transgui
 
 INSTALLATION
 
-LINUX:
+WINDOWS:
 
-Easy way (recommended).
+Portable zip tarball (recommended).
 
-There are precompiled program's binaries for i386 and x86_64 Linux architectures.
-- Download a .zip archive for your architecture.
-- Unzip it to your home dir.
-- Create a desktop or menu shortcut to the transgui executable.
-  * (If needed, change the transgui file permissions to executable).
-- Run the program using the created shortcut.
+- Download the zip tarball from the GitHub Releases page.
+- Extract it to any folder.
+- Run transgui.exe or create a shortcut for it.
+- If SSL/TLS support is needed, install the Visual C++ Redistributable Package and OpenSSL libraries.
 
-Harder way.
+Installer.
 
-Build the program by yourself.
-- Make sure you have working Lazarus and Free Pascal compiler installed.
-  * Free Pascal Compiler 3.2.2+ and a current Lazarus 2.x/3.x release are used to build this fork. You may use different versions of FPC and Lazarus at your own risk.
-- Download the sources archive and extract it to some folder or perform svn checkout.
-- Open terminal/command line prompt and cd to the sources folder;
-- Execute "make" command to build the application;
-- Execute "make zipdist" command to create a release .zip archive in the "Release" sub-folder.
+- Download the installer from the GitHub Releases page.
+- Run the installer and follow the installation steps.
+
+Using Chocolatey.
+
+Run "cinst transgui" to install the latest version of Transmission Remote GUI.
 
 COMMAND LINE PARAMETERS
 
@@ -106,10 +103,6 @@ and https://github.com/transmission-remote-gui/transgui/issues/1070  (.torrent A
 [Interface]
 ; Maximum number of elements in the folder history list
 MaxFoldersHistory=10
-
-[Interface]
-;In Linux/MacOs Only if "Open Container Folder" give you error
-FileOpenDoc=0
 
 [Interface]
 ;Alternate File Manager (Windows Only)

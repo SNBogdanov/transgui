@@ -13,16 +13,10 @@
 
 - [Introduction](#introduction)
 - [Installation](#installation)
-  - [Linux](#linux)
-    - [Easy way (recommended)](#easy-way-recommended)
-    - [Harder way](#harder-way)
   - [Windows](#windows)
     - [Portable zip tarball (recommended)](#portable-zip-tarball-recommended)
     - [Installer](#installer)
     - [Using Chocolatey](#using-chocolatey)
-  - [macOS](#macos)
-    - [Without a package manager](#without-a-package-manager)
-    - [Homebrew](#homebrew)
 - [Command line parameters](#command-line-parameters)
 - [Portable mode](#portable-mode)
 - [Fixed hotkeys](#fixed-hotkeys)
@@ -33,13 +27,13 @@
 
 ## Introduction
 
-Transmission Remote GUI is feature rich cross platform front-end to remotely control Transmission daemon via its RPC protocol. It is faster and has more functionality than builtin Transmission web interface.
+Transmission Remote GUI is a feature rich Windows front-end to remotely control Transmission daemon via its RPC protocol. It is faster and has more functionality than builtin Transmission web interface.
 
 Transmission Remote GUI is developed using Lazarus RAD and Free Pascal compiler.
 
 Features:
 
-- Native application for Windows, Linux and macOS
+- Native application for Windows
 - uTorrent-like interface
 - Select files to download
 - Choose files priority
@@ -58,31 +52,7 @@ Features:
 
 ## Installation
 
-The installers are listed on the GitHub [Releases](https://github.com/SNBogdanov/transgui/releases/latest) page, and the installation instructions for different platform are listed as below :arrow_down:
-
-### Linux
-
-#### Easy way (recommended)
-
-There are precompiled program's binaries for i386 and x86_64 Linux architectures.
-
-- Download and extract the release for your architecture.
-
-Now you can execute the `transgui` binary. *(Change the `transgui` file permissions to executable if needed)*
-
-Additionally, you can create a desktop or menu shortcut to the transgui executable, and run the program using the created shortcut.
-
-#### Harder way
-
-Build the program by yourself.
-
-1. Make sure you have working Lazarus and Free Pascal compiler installed.
-  - Free Pascal Compiler 3.2.2+ and a current Lazarus 2.x/3.x release are used to build this fork.
-2. Download the sources archive and extract it to some folder or perform svn checkout.
-3. Open terminal/command line prompt and cd to the sources folder.
-4. Execute `lazbuild -B "transgui.lpi" --lazarusdir=/usr/lib/lazarus/default/` command to build the transgui.res file.
-5. Execute `make` command to build the application.
-6. Execute `make zipdist` command to create a release .zip archive in the `Release` sub-folder.
+The installer is listed on the GitHub [Releases](https://github.com/SNBogdanov/transgui/releases/latest) page. Windows installation instructions are below :arrow_down:
 
 ### Windows
 
@@ -102,22 +72,6 @@ This installer has additional installation wizard and includes static OpenSSL li
 #### Using [Chocolatey](https://chocolatey.org)
 
 Run `cinst transgui` to install the latest version of Transmission Remote GUI.
-
-### macOS
-
-#### Without a package manager
-
-This method needs no additional pre-requirement or dependency, just:
-
-1. Download the app image from release page.
-2. Open the image file to mount the image.
-3. Directly run the application or drag the app icon to your disk / Application folder.
-
-#### Homebrew
-
-You need to have [Homebrew](https://brew.sh/) installed. Execute this command to install Transmission Remote Gui:
-
-- `brew install --cask transmission-remote-gui`
 
 ## Command line parameters
 
@@ -155,10 +109,6 @@ More info on: [#924](https://github.com/transmission-remote-gui/transgui/issues/
 [Interface]
 ; Maximum number of elements in the folder history list
 MaxFoldersHistory=10
-
-[Interface]
-;In Linux/MacOs Only if "Open Container Folder" give you error
-FileOpenDoc=0
 
 [Interface]
 ;Alternate File Manager (Windows Only)
