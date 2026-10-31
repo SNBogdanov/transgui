@@ -83,12 +83,15 @@ type
     FMemo: TMemo;
     FButtons: TButtonPanel;
     FRunning: Boolean;
+    FCancelRequested: Boolean;
     procedure FormClose(Sender: TObject; Var ACloseAction: TCloseAction);
     procedure OKClick(Sender: TObject);
+    procedure CancelClick(Sender: TObject);
   public
     constructor Create(AOwner: TComponent); override;
     procedure SetOutput(Const AText: String; AFollow: Boolean = False);
     procedure SetRunning(AValue: Boolean);
+    property CancelRequested: Boolean read FCancelRequested;
   end;
 
   TScriptSettingsFrame = class(TPanel)
@@ -1068,13 +1071,15 @@ begin
   FButtons := TButtonPanel.Create(Self);
   FButtons.Parent := Self;
   FButtons.Align := alBottom;
-  FButtons.ShowButtons := [pbOK];
+  FButtons.ShowButtons := [pbOK, pbCancel];
   FButtons.ShowBevel := False;
   FButtons.BorderSpacing.Left := 8;
   FButtons.BorderSpacing.Right := 8;
   FButtons.BorderSpacing.Bottom := 8;
   FButtons.OKButton.ModalResult := mrNone;
   FButtons.OKButton.OnClick := @OKClick;
+  FButtons.CancelButton.ModalResult := mrNone;
+  FButtons.CancelButton.OnClick := @CancelClick;
   OnClose := @FormClose;
 
   FMemo := TMemo.Create(Self);
@@ -1115,13 +1120,25 @@ end;
 procedure TScriptResultForm.SetRunning(AValue: Boolean);
 begin
   FRunning := AValue;
+  If AValue Then
+    FCancelRequested := False;
   FButtons.OKButton.Enabled := Not AValue;
+  FButtons.CancelButton.Enabled := AValue;
 end;
 
 procedure TScriptResultForm.OKClick(Sender: TObject);
 begin
   If Not FRunning Then
     Close;
+end;
+
+procedure TScriptResultForm.CancelClick(Sender: TObject);
+begin
+  If FRunning Then
+  Begin
+    FCancelRequested := True;
+    FButtons.CancelButton.Enabled := False;
+  End;
 end;
 
 procedure TScriptResultForm.FormClose(Sender: TObject;

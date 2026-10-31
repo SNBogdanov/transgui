@@ -7734,8 +7734,10 @@ Var
   Obj, Item: TJSONObject;
   Id, ScriptName, JobId, JobToken, State, OutText, ErrText, ResultText: String;
   Req, Args, Payload, Params, Selection, Res, SReq, SArgs, SRes: TJSONObject;
+  CReq, CArgs, CRes: TJSONObject;
   Saved: TJSONObject;
   Chunk, ErrChunk: String;
+  CancelSent: Boolean;
   StdoutOffset, StderrOffset, StoredStdout, StoredStderr: Int64;
   ResultForm: TScriptResultForm;
   Hashes, Files: TJSONArray;
@@ -7899,12 +7901,28 @@ Begin
   StderrOffset := 0;
   StoredStdout := 0;
   StoredStderr := 0;
-  AppBusy;
-  Try
-    For i := 1 To 3000 Do
-    Begin
+  CancelSent := False;
+  For i := 1 To 3000 Do
+  Begin
       Sleep(200);
       Application.ProcessMessages;
+      If ResultForm.CancelRequested And Not CancelSent Then
+      Begin
+        CancelSent := True;
+        CRes := nil;
+        CReq := TJSONObject.Create;
+        Try
+          CReq.Add('method', 'script_cancel');
+          CArgs := TJSONObject.Create;
+          CReq.Add('arguments', CArgs);
+          CArgs.Add('job_id', JobId);
+          CArgs.Add('job_token', JobToken);
+          CRes := RpcObj.SendRequest(CReq);
+        Finally
+          CReq.Free;
+          CRes.Free;
+        End;
+      End;
       SRes := nil;
       SReq := TJSONObject.Create;
       Try
@@ -7952,9 +7970,6 @@ Begin
         (StdoutOffset >= StoredStdout) And
         (StderrOffset >= StoredStderr) Then
         break;
-    End;
-  Finally
-    AppNormal;
   End;
 
   ResultForm.SetRunning(False);

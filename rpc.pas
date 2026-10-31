@@ -65,7 +65,9 @@ Type
   Private
     ResultData: TJSONData;
     FRpc: TRpc;
+    FGeneration: Integer;
 
+    Function IsCurrent: Boolean;
     Function GetAdvInfo: TAdvInfoType;
     Function GetCurTorrentId: Cardinal;
     Function GetRefreshInterval: TDateTime;
@@ -108,6 +110,8 @@ Type
     FStatus: String;
     FInfoStatus: String;
     FConnected: Boolean;
+    FGeneration: Integer;
+    FMainThreadRequestActive: Boolean;
     FTorrentFields: String;
     FRPCVersion: Integer;
     FForkFeatures: TStringList;
@@ -125,6 +129,8 @@ Type
     Procedure SetStatus(Const AValue: String);
     Procedure SetTorrentFields(Const AValue: String);
     Procedure CreateHttp;
+    Function SendRequestRaw(req: TJSONObject; ReturnArguments: Boolean;
+      ATimeOut: Integer): TJSONObject;
   Public
     Http: THTTPSend;
     HttpLock: TCriticalSection;
@@ -385,11 +391,15 @@ End;
 
 Procedure TRpcThread.DoFillTorrentsList;
 Begin
+  If Not IsCurrent Then
+    exit;
   MainForm.FillTorrentsList(ResultData As TJSONArray);
 End;
 
 Procedure TRpcThread.DoFillPeersList;
 Begin
+  If Not IsCurrent Then
+    exit;
   MainForm.FillPeersList(ResultData As TJSONArray);
 End;
 
@@ -398,6 +408,8 @@ Var
   t: TJSONObject;
   dir: WideString;
 Begin
+  If Not IsCurrent Then
+    exit;
   If ResultData = nil Then
   Begin
     MainForm.ClearDetailsInfo;
@@ -414,21 +426,29 @@ End;
 
 Procedure TRpcThread.DoFillInfo;
 Begin
+  If Not IsCurrent Then
+    exit;
   MainForm.FillGeneralInfo(ResultData As TJSONObject);
 End;
 
 Procedure TRpcThread.DoFillTrackersList;
 Begin
+  If Not IsCurrent Then
+    exit;
   MainForm.FillTrackersList(ResultData As TJSONObject);
 End;
 
 Procedure TRpcThread.DoFillStats;
 Begin
+  If Not IsCurrent Then
+    exit;
   MainForm.FillStatistics(ResultData As TJSONObject);
 End;
 
 Procedure TRpcThread.DoFillSessionInfo;
 Begin
+  If Not IsCurrent Then
+    exit;
   MainForm.FillSessionInfo(ResultData As TJSONObject);
 End;
 
@@ -440,6 +460,7 @@ End;
 
 Procedure TRpcThread.CheckStatusHandler(Data: PtrInt);
 Begin
+  If Not IsCurrent Then exit;
   If csDestroying In MainForm.ComponentState Then exit;
   MainForm.CheckStatus(True);
 End;
@@ -727,6 +748,12 @@ Begin
   End;
 End;
 
+Function TRpcThread.IsCurrent: Boolean;
+Begin
+  Result := Assigned(FRpc) And (FRpc.RpcThread = Self) And
+    (FGeneration = FRpc.FGeneration) And Not Terminated;
+End;
+
 Function TRpcThread.GetAdvInfo: TAdvInfoType;
 Begin
   FRpc.Lock;
@@ -763,6 +790,77 @@ Begin
 End;
 
 { TRpc }
+
+Type
+  TAsyncRpcRequest = Class(TThread)
+  Private
+    FRpc: TRpc;
+    FReq: TJSONObject;
+    FReturnArguments: Boolean;
+    FTimeOut: Integer;
+    FResult: TJSONObject;
+  Protected
+    Procedure Execute; Override;
+  Public
+    Constructor Create(ARpc: TRpc; AReq: TJSONObject;
+      AReturnArguments: Boolean; ATimeOut: Integer);
+    Destructor Destroy; Override;
+  End;
+
+Constructor TAsyncRpcRequest.Create(ARpc: TRpc; AReq: TJSONObject;
+  AReturnArguments: Boolean; ATimeOut: Integer);
+Begin
+  FRpc := ARpc;
+  FReq := AReq;
+  FReturnArguments := AReturnArguments;
+  FTimeOut := ATimeOut;
+  Inherited Create(False);
+End;
+
+Destructor TAsyncRpcRequest.Destroy;
+Begin
+  FResult.Free;
+  Inherited Destroy;
+End;
+
+Procedure TAsyncRpcRequest.Execute;
+Begin
+  Try
+    FResult := FRpc.SendRequestRaw(FReq, FReturnArguments, FTimeOut);
+  Except
+    FResult := nil;
+  End;
+End;
+
+Function TRpc.SendRequest(req: TJSONObject; ReturnArguments: Boolean;
+  ATimeOut: Integer): TJSONObject;
+Var
+  T: TAsyncRpcRequest;
+Begin
+  If GetCurrentThreadId <> FMainThreadId Then
+    Exit(SendRequestRaw(req, ReturnArguments, ATimeOut));
+  If FMainThreadRequestActive Then
+  Begin
+    Status := 'Request already in progress';
+    Exit(nil);
+  End;
+
+  FMainThreadRequestActive := True;
+  T := TAsyncRpcRequest.Create(Self, req, ReturnArguments, ATimeOut);
+  Try
+    While Not T.Finished Do
+    Begin
+      Application.ProcessMessages;
+      Sleep(10);
+    End;
+    T.WaitFor;
+    Result := T.FResult;
+    T.FResult := nil;
+  Finally
+    FMainThreadRequestActive := False;
+    T.Free;
+  End;
+End;
 
 Constructor TRpc.Create;
 Begin
@@ -903,7 +1001,7 @@ Begin
   End;
 End;
 
-Function TRpc.SendRequest(req: TJSONObject; ReturnArguments: Boolean;
+Function TRpc.SendRequestRaw(req: TJSONObject; ReturnArguments: Boolean;
   ATimeOut: Integer): TJSONObject;
 Var
   obj: TJSONData;
@@ -1543,11 +1641,13 @@ Begin
   RequestFullInfo := True;
   ReconnectAllowed := False;
   RefreshNow := [];
+  Inc(FGeneration);
   RpcThread := TRpcThread.Create;
   With RpcThread Do
   Begin
     FreeOnTerminate := True;
     FRpc := Self;
+    FGeneration := FRpc.FGeneration;
     Suspended := False;
   End;
 End;
@@ -1556,6 +1656,7 @@ Procedure TRpc.Disconnect;
 Var
   retry, i: Integer;
 Begin
+  Inc(FGeneration);
   If Assigned(RpcThread) Then
   Begin
     RpcThread.Terminate;

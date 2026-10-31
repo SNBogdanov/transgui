@@ -61,10 +61,6 @@ Installer.
 - Download the installer from the GitHub Releases page.
 - Run the installer and follow the installation steps.
 
-Using Chocolatey.
-
-Run "cinst transgui" to install the latest version of Transmission Remote GUI.
-
 COMMAND LINE PARAMETERS
 
 You can specify path to a .torrent file or a magnet link as a command line parameter. The program will add the specified torrent.

@@ -65,7 +65,6 @@
             </CompilerMessages>
             <CustomOptions Value="-Sa
 -CX
--XX
 -gl"/>
             <CompilerPath Value=" $(CompPath)"/>
             <ExecuteBefore>
@@ -101,8 +100,8 @@
           </CodeGeneration>
           <Linking>
             <Debugging>
+              <GenerateDebugInfo Value="False"/>
               <RunWithoutDebug Value="True"/>
-              <UseExternalDbgSyms Value="True"/>
             </Debugging>
             <LinkSmart Value="True"/>
           </Linking>
@@ -115,8 +114,7 @@
             </CompilerMessages>
             <CustomOptions Value="-Sa
 -CX
--XX
--gl"/>
+-XX"/>
             <CompilerPath Value=" $(CompPath)"/>
             <ExecuteBefore>
               <ShowAllMessages Value="True"/>
@@ -367,8 +365,7 @@
       </CompilerMessages>
       <CustomOptions Value="-Sa
 -CX
--XX
--gl"/>
+-XX"/>
       <CompilerPath Value=" $(CompPath)"/>
       <ExecuteBefore>
         <ShowAllMessages Value="True"/>
