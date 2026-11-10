@@ -48,6 +48,9 @@ Resourcestring
   sEncryptionDisabled = 'Encryption disabled';
   sEncryptionEnabled = 'Encryption enabled';
   sEncryptionRequired = 'Encryption required';
+  sAutoPriorityFileOrder = 'File order';
+  sAutoPriorityFileName = 'File name';
+  sAutoPriorityFileSize = 'File size';
   SNoDownloadDir = 'The downloads directory was not specified.';
   SNoIncompleteDir = 'The directory for incomplete files was not specified.';
   // SNoBlocklistURL = 'The blocklist URL was not specified.';
@@ -86,6 +89,15 @@ Type
     edDownQueue: TSpinEdit;
     edUpQueue: TSpinEdit;
     edStalledTime: TSpinEdit;
+    cbMoveToEnd: TCheckBox;
+    edMoveToEndTime: TSpinEdit;
+    txMinutes2: TLabel;
+    gbAutoPriority: TGroupBox;
+    cbAutoPriorityEnabled: TCheckBox;
+    txAutoPriorityMaxHigh: TLabel;
+    edAutoPriorityMaxHigh: TSpinEdit;
+    txAutoPrioritySort: TLabel;
+    cbAutoPrioritySort: TComboBox;
     tabQueue: TTabSheet;
     tabFreeSpace: TTabSheet;
     txMinFreeSpace: TLabel;
@@ -155,11 +167,13 @@ Type
     Procedure FormDestroy(Sender: TObject);
     Procedure cbScriptEnabledClick(Sender: TObject);
     Procedure cbAutoAltClick(Sender: TObject);
+    Procedure cbAutoPriorityEnabledClick(Sender: TObject);
     Procedure cbBlocklistClick(Sender: TObject);
     Procedure cbIdleSeedLimitClick(Sender: TObject);
     Procedure cbIncompleteDirClick(Sender: TObject);
     Procedure cbMaxDownClick(Sender: TObject);
     Procedure cbMaxUpClick(Sender: TObject);
+    Procedure cbMoveToEndClick(Sender: TObject);
     Procedure cbRandomPortClick(Sender: TObject);
     Procedure cbSeedRatioClick(Sender: TObject);
     Procedure FormCreate(Sender: TObject);
@@ -565,6 +579,14 @@ Begin
       cbAutoAlt.Checked;
 End;
 
+Procedure TDaemonOptionsForm.cbAutoPriorityEnabledClick(Sender: TObject);
+Begin
+  edAutoPriorityMaxHigh.Enabled := cbAutoPriorityEnabled.Checked;
+  cbAutoPrioritySort.Enabled := cbAutoPriorityEnabled.Checked;
+  txAutoPriorityMaxHigh.Enabled := cbAutoPriorityEnabled.Checked;
+  txAutoPrioritySort.Enabled := cbAutoPriorityEnabled.Checked;
+End;
+
 Procedure TDaemonOptionsForm.cbBlocklistClick(Sender: TObject);
 Begin
   If Not edBlocklistURL.Visible Then
@@ -636,6 +658,12 @@ End;
 Procedure TDaemonOptionsForm.cbMaxUpClick(Sender: TObject);
 Begin
   edMaxUp.Enabled := cbMaxUp.Checked;
+End;
+
+Procedure TDaemonOptionsForm.cbMoveToEndClick(Sender: TObject);
+Begin
+  edMoveToEndTime.Enabled := cbMoveToEnd.Checked;
+  txMinutes2.Enabled := cbMoveToEnd.Checked;
 End;
 
 Procedure TDaemonOptionsForm.cbRandomPortClick(Sender: TObject);
@@ -851,6 +879,10 @@ Begin
   cbEncryption.Items.Add(sEncryptionDisabled);
   cbEncryption.Items.Add(sEncryptionEnabled);
   cbEncryption.Items.Add(sEncryptionRequired);
+  cbAutoPrioritySort.Items.Add(sAutoPriorityFileOrder);
+  cbAutoPrioritySort.Items.Add(sAutoPriorityFileName);
+  cbAutoPrioritySort.Items.Add(sAutoPriorityFileSize);
+  cbAutoPrioritySort.ItemIndex := 0;
   cbFreeSpaceMarginUnit.Items.Add(sByte);
   cbFreeSpaceMarginUnit.Items.Add(sKByte);
   cbFreeSpaceMarginUnit.Items.Add(sMByte);

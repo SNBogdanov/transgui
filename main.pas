@@ -69,6 +69,8 @@ Resourcestring
   sStopped = 'Stopped';
   sSpacePaused = 'Paused: not enough free space';
   sPendingMove = 'Waiting for space to move';
+  sScriptRunning = 'Script is running';
+  sMoving = 'Moving data';
   sUnknown = 'Unknown';
   sCompleted = 'Completed';
   sConnected = 'connected';
@@ -795,6 +797,7 @@ Type
     FPendingTorrents: TStringList;
     FLinksFromClipboard: Boolean;
     FLastClipboardLink: String;
+    FSuppressDialogs: Integer;
     FLinuxOpenDoc: Integer;
     // no del!
     FFromNow: Boolean;
@@ -949,9 +952,12 @@ Type
     Procedure FillTrackersList(TrackersData: TJSONObject);
     Procedure FillSessionInfo(s: TJSONObject);
     Procedure FillStatistics(s: TJSONObject);
-    Procedure CheckStatus(Fatal: Boolean = True);
+    Procedure CheckStatus(Fatal: Boolean = True; ShowError: Boolean = True);
+    Procedure SuppressErrorDialogs;
+    Procedure RestoreErrorDialogs;
+    Procedure CheckStatusAsync(Data: PtrInt);
     Function TorrentAction(Const TorrentIds: Variant; Const AAction: String;
-      args: TJSONObject = nil): Boolean;
+      args: TJSONObject = nil; ReportErrors: Boolean = True): Boolean;
     Function SetFilePriority(TorrentId: Integer; Const Files: Array Of Integer;
       Const APriority: String): Boolean;
     Function SetCurrentFilePriority(Const APriority: String): Boolean;
@@ -1169,6 +1175,10 @@ Const
   // Paused: not enough free space
   TR_STATUS_PENDING_MOVE_2 = 8;
   // Waiting for space to move to the download directory
+  TR_STATUS_SCRIPT_RUNNING_2 = 9;
+  // Running the torrent-done script
+  TR_STATUS_MOVING_2 = 10;
+  // Moving data to the download directory
 
   TR_STATUS_FINISHED = $100;
   // Torrent is finished (pseudo status)
@@ -1193,7 +1203,8 @@ Const
 Var
   TR_STATUS_STOPPED, TR_STATUS_CHECK_WAIT, TR_STATUS_CHECK,
   TR_STATUS_DOWNLOAD_WAIT, TR_STATUS_DOWNLOAD, TR_STATUS_SEED_WAIT,
-  TR_STATUS_SEED, TR_STATUS_SPACE_PAUSED, TR_STATUS_PENDING_MOVE: Integer;
+  TR_STATUS_SEED, TR_STATUS_SPACE_PAUSED, TR_STATUS_PENDING_MOVE,
+  TR_STATUS_SCRIPT_RUNNING, TR_STATUS_MOVING: Integer;
 
 
 {$ifdef windows}
@@ -4159,10 +4170,16 @@ Begin
                   If i = TR_STATUS_PENDING_MOVE Then
                     Result := sPendingMove
                   Else
-                    If i = TR_STATUS_FINISHED Then
-                      Result := sFinished
+                    If i = TR_STATUS_SCRIPT_RUNNING Then
+                      Result := sScriptRunning
                     Else
-                      Result := sUnknown;
+                      If i = TR_STATUS_MOVING Then
+                        Result := sMoving
+                      Else
+                        If i = TR_STATUS_FINISHED Then
+                          Result := sFinished
+                        Else
+                          Result := sUnknown;
 End;
 
 Function TMainForm.GetSeedsText(Seeds, SeedsTotal: Integer): String;
@@ -4527,9 +4544,49 @@ Begin
           cbStalled.Checked :=
             args.Integers['queue-stalled-enabled'] <> 0;
           edStalledTime.Value := args.Integers['queue-stalled-minutes'];
+          If args.IndexOfName('queue_move_to_end_enabled') >= 0 Then
+          Begin
+            cbMoveToEnd.Visible := True;
+            edMoveToEndTime.Visible := True;
+            txMinutes2.Visible := True;
+            cbMoveToEnd.Checked := args.Booleans['queue_move_to_end_enabled'];
+            edMoveToEndTime.Value := args.Integers['queue_move_to_end_minutes'];
+          End
+          Else
+          Begin
+            cbMoveToEnd.Visible := False;
+            edMoveToEndTime.Visible := False;
+            txMinutes2.Visible := False;
+          End;
+          cbMoveToEndClick(nil);
         End
         Else
           tabQueue.TabVisible := False;
+
+        If RpcObj.HasForkFeature('auto_priority') Then
+        Begin
+          gbAutoPriority.Visible := True;
+          d := args.Find('auto_priority_enabled');
+          If d <> nil Then
+            cbAutoPriorityEnabled.Checked := d.AsBoolean;
+          d := args.Find('auto_priority_max_high');
+          If d <> nil Then
+            edAutoPriorityMaxHigh.Value := d.AsInteger;
+          d := args.Find('auto_priority_sort');
+          If d <> nil Then
+          Begin
+            s := d.AsString;
+            If s = 'name' Then
+              cbAutoPrioritySort.ItemIndex := 1
+            Else If s = 'size' Then
+              cbAutoPrioritySort.ItemIndex := 2
+            Else
+              cbAutoPrioritySort.ItemIndex := 0;
+          End;
+          cbAutoPriorityEnabledClick(nil);
+        End
+        Else
+          gbAutoPriority.Visible := False;
 
         cbPortForwarding.Checked :=
           args.Integers['port-forwarding-enabled'] <> 0;
@@ -4771,10 +4828,27 @@ Begin
           args.Add('seed-queue-size', edUpQueue.Value);
           args.Add('queue-stalled-enabled', Integer(cbStalled.Checked) And 1);
           args.Add('queue-stalled-minutes', edStalledTime.Value);
+          If cbMoveToEnd.Visible Then
+          Begin
+            args.Add('queue_move_to_end_enabled', cbMoveToEnd.Checked);
+            args.Add('queue_move_to_end_minutes', edMoveToEndTime.Value);
+          End;
         End;
         If RpcObj.RPCVersion >= 18 Then
         Begin
           args.Add('sequential_download', Integer(cbSequentialDownload.Checked) And 1);
+        End;
+        If gbAutoPriority.Visible And RpcObj.HasForkFeature('auto_priority') Then
+        Begin
+          args.Add('auto_priority_enabled', cbAutoPriorityEnabled.Checked);
+          args.Add('auto_priority_max_high', edAutoPriorityMaxHigh.Value);
+          Case cbAutoPrioritySort.ItemIndex Of
+            1: s := 'name';
+            2: s := 'size';
+            Else
+              s := 'id';
+          End;
+          args.Add('auto_priority_sort', s);
         End;
         If tabScripts.TabVisible Then
         Begin
@@ -5498,10 +5572,11 @@ Begin
       exit;
     End;
     args := RpcObj.RequestInfos(TorrentIds, ['downloadLimit',
-      'sequential_download', 'sequentialDownload', 'downloadLimitMode',
-      'downloadLimited', 'uploadLimit', 'uploadLimitMode', 'uploadLimited',
-      'name', 'maxConnectedPeers', 'seedRatioMode', 'seedRatioLimit',
-      'seedIdleLimit', 'seedIdleMode', 'trackers', 'incomplete-dir']);
+      'sequential_download', 'sequentialDownload', 'auto_priority',
+      'downloadLimitMode', 'downloadLimited', 'uploadLimit', 'uploadLimitMode',
+      'uploadLimited', 'name', 'maxConnectedPeers', 'seedRatioMode',
+      'seedRatioLimit', 'seedIdleLimit', 'seedIdleMode', 'trackers',
+      'incomplete-dir']);
     If args = nil Then
     Begin
       CheckStatus(True);
@@ -5701,6 +5776,37 @@ Begin
       End
       Else
         cbSequentialDownload.Visible := False;
+      If RpcObj.HasForkFeature('auto_priority') Then
+      Begin
+        cbAutoPriority.Visible := True;
+        c1 := 0;
+        c2 := 0;
+        For i := 0 To args.Arrays['torrents'].Count - 1 Do
+        Begin
+          tr := args.Arrays['torrents'].Objects[i];
+          If tr.Find('auto_priority') = nil Then
+          Begin
+            c2 := c2 + 1;
+            continue;
+          End;
+          If tr.Booleans['auto_priority'] Then
+            c1 := c1 + 1
+          Else
+            c2 := c2 + 1;
+        End;
+        cbAutoPriority.AllowGrayed := False;
+        If (c1 <> 0) And (c2 = 0) Then
+          cbAutoPriority.State := cbChecked
+        Else If (c2 <> 0) And (c1 = 0) Then
+          cbAutoPriority.State := cbUnChecked
+        Else
+        Begin
+          cbAutoPriority.AllowGrayed := True;
+          cbAutoPriority.State := cbGrayed;
+        End;
+      End
+      Else
+        cbAutoPriority.Visible := False;
       edPeerLimit.Value := t.Integers['maxConnectedPeers'];
     Finally
       args.Free;
@@ -5738,6 +5844,9 @@ Begin
           Finally
           End;
         End;
+        If RpcObj.HasForkFeature('auto_priority') And cbAutoPriority.Visible Then
+          If cbAutoPriority.State <> cbGrayed Then
+            args.Add('auto_priority', cbAutoPriority.Checked);
         If RpcObj.RPCVersion < 5 Then
         Begin
           // RPC versions prior to v5
@@ -8764,7 +8873,13 @@ Begin
                         StateImg := imgWaiting
                       Else
                         If j = TR_STATUS_PENDING_MOVE Then
-                          StateImg := imgWaiting;
+                          StateImg := imgWaiting
+                        Else
+                          If j = TR_STATUS_SCRIPT_RUNNING Then
+                            StateImg := imgWaiting
+                          Else
+                            If j = TR_STATUS_MOVING Then
+                              StateImg := imgWaiting;
 
         //If GetTorrentError(t, j) <> '' Then
         //  If t.Strings['errorString'] <> '' Then
@@ -8774,7 +8889,8 @@ Begin
         //      Inc(StateImg, 2);
 
         If Not (j In [TR_STATUS_STOPPED, TR_STATUS_CHECK, TR_STATUS_CHECK_WAIT,
-          TR_STATUS_SPACE_PAUSED, TR_STATUS_PENDING_MOVE]) Then
+          TR_STATUS_SPACE_PAUSED, TR_STATUS_PENDING_MOVE,
+          TR_STATUS_SCRIPT_RUNNING, TR_STATUS_MOVING]) Then
         Begin
           s := GetTorrentError(t, j);
           If (t.IndexOfName('error') >= 0) And
@@ -9192,7 +9308,9 @@ Begin
             (j = TR_STATUS_DOWNLOAD_WAIT) Or
             (j = TR_STATUS_SEED_WAIT) Or
             (j = TR_STATUS_SPACE_PAUSED) Or
-            (j = TR_STATUS_PENDING_MOVE) Then
+            (j = TR_STATUS_PENDING_MOVE) Or
+            (j = TR_STATUS_SCRIPT_RUNNING) Or
+            (j = TR_STATUS_MOVING) Then
           Begin
             Inc(WaitingCnt);
             //WaitingSize := WaitingSize + FTorrents[idxSize, i];
@@ -9295,7 +9413,9 @@ Begin
                 (FTorrents[idxStatus, i] <> TR_STATUS_CHECK_WAIT) And
                 (FTorrents[idxStatus, i] <> TR_STATUS_DOWNLOAD_WAIT) And
                 (FTorrents[idxStatus, i] <> TR_STATUS_SPACE_PAUSED) And
-                (FTorrents[idxStatus, i] <> TR_STATUS_PENDING_MOVE) Then
+                (FTorrents[idxStatus, i] <> TR_STATUS_PENDING_MOVE) And
+                (FTorrents[idxStatus, i] <> TR_STATUS_SCRIPT_RUNNING) And
+                (FTorrents[idxStatus, i] <> TR_STATUS_MOVING) Then
                 continue;
           End;
 
@@ -10303,6 +10423,8 @@ Begin
     TR_STATUS_SEED := TR_STATUS_SEED_1;
     TR_STATUS_SPACE_PAUSED := -1;
     TR_STATUS_PENDING_MOVE := -1;
+    TR_STATUS_SCRIPT_RUNNING := -1;
+    TR_STATUS_MOVING := -1;
   End
   Else
   Begin
@@ -10317,11 +10439,15 @@ Begin
     Begin
       TR_STATUS_SPACE_PAUSED := TR_STATUS_SPACE_PAUSED_2;
       TR_STATUS_PENDING_MOVE := TR_STATUS_PENDING_MOVE_2;
+      TR_STATUS_SCRIPT_RUNNING := TR_STATUS_SCRIPT_RUNNING_2;
+      TR_STATUS_MOVING := TR_STATUS_MOVING_2;
     End
     Else
     Begin
       TR_STATUS_SPACE_PAUSED := -1;
       TR_STATUS_PENDING_MOVE := -1;
+      TR_STATUS_SCRIPT_RUNNING := -1;
+      TR_STATUS_MOVING := -1;
     End;
   End;
 
@@ -10430,11 +10556,36 @@ Begin
   DetailsUpdated;
 End;
 
-Procedure TMainForm.CheckStatus(Fatal: Boolean);
+Procedure TMainForm.CheckStatusAsync(Data: PtrInt);
+Begin
+  If Not Assigned(RpcObj) Then
+    exit;
+  If Data <> RpcObj.Generation Then
+    exit;
+  If csDestroying In ComponentState Then
+    exit;
+  CheckStatus(True);
+End;
+
+Procedure TMainForm.SuppressErrorDialogs;
+Begin
+  Inc(FSuppressDialogs);
+End;
+
+Procedure TMainForm.RestoreErrorDialogs;
+Begin
+  Dec(FSuppressDialogs);
+  If FSuppressDialogs < 0 Then
+    FSuppressDialogs := 0;
+End;
+
+Procedure TMainForm.CheckStatus(Fatal: Boolean; ShowError: Boolean);
 Var
   s: String;
   i: Integer;
 Begin
+  If FSuppressDialogs > 0 Then
+    ShowError := False;
   With MainForm Do
   Begin
     s := TranslateString(RpcObj.Status, True);
@@ -10445,7 +10596,7 @@ Begin
       If Fatal Then
         DoDisconnect;
       ForceAppNormal;
-      If Fatal //and not RpcObj.Connected
+      If Fatal And (FSuppressDialogs = 0) //and not RpcObj.Connected
         And RpcObj.ReconnectAllowed And (FReconnectTimeOut <> -1) Then
       Begin
         FReconnectWaitStart := Now;
@@ -10465,7 +10616,7 @@ Begin
         panReconnectFrame.Show;
         CenterReconnectWindow;
       End
-      Else //if not RpcObj.Connected then
+      Else If ShowError Then //if not RpcObj.Connected then
         MessageDlg(s, mtError, [mbOK], 0);
     End;
 
@@ -10484,7 +10635,7 @@ Begin
 End;
 
 Function TMainForm.TorrentAction(Const TorrentIds: Variant;
-  Const AAction: String; args: TJSONObject): Boolean;
+  Const AAction: String; args: TJSONObject; ReportErrors: Boolean): Boolean;
 Var
   req: TJSONObject;
   ids: TJSONArray;
@@ -10524,7 +10675,7 @@ Begin
     req.Free;
   End;
   If Not Result Then
-    CheckStatus(False)
+    CheckStatus(False, ReportErrors)
   Else
     DoRefresh(True);
   AppNormal;

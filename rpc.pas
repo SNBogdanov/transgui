@@ -91,7 +91,6 @@ Type
     Procedure DoFillStats;
     Procedure DoFillSessionInfo;
     Procedure NotifyCheckStatus;
-    Procedure CheckStatusHandler(Data: PtrInt);
   Protected
     Procedure Execute; Override;
   Public
@@ -177,6 +176,7 @@ Type
     Property Connecting: Boolean read GetConnecting;
     Property TorrentFields: String read GetTorrentFields write SetTorrentFields;
     Property RPCVersion: Integer read FRPCVersion;
+    Property Generation: Integer read FGeneration;
     Property RpcPath: String read FRpcPath write FRpcPath;
   End;
 
@@ -228,8 +228,15 @@ Begin
       GetSessionInfo;
       NotifyCheckStatus;
     Except
-      OutputDebugString(LPCSTR(Exception(ExceptObject).Message +
-        '(GetSessionInfo)'));
+      On E: Exception Do
+      Begin
+        OutputDebugString(LPCSTR(E.Message + '(GetSessionInfo)'));
+        If Status = '' Then
+          Status := E.Message;
+        If Status = '' Then
+          Status := 'Connection failed.';
+        FRpc.ReconnectAllowed := True;
+      End;
     End;
     If Not FRpc.FConnected Then
       Terminate;
@@ -338,6 +345,10 @@ Begin
     FRpc.FConnected := False;
     FRpc.FRPCVersion := 0;
     FRpc.ResetForkFeatures;
+    // A failed connection attempt terminates the thread immediately. Report the
+    // error after the thread state is cleared so the reconnect logic still runs.
+    If FRpc.Status <> '' Then
+      Application.QueueAsyncCall(@MainForm.CheckStatusAsync, FGeneration);
   End;
   Sleep(20);
 End;
@@ -454,15 +465,7 @@ End;
 
 Procedure TRpcThread.NotifyCheckStatus;
 Begin
-  If Not Terminated Then
-    Application.QueueAsyncCall(@CheckStatusHandler, 0);
-End;
-
-Procedure TRpcThread.CheckStatusHandler(Data: PtrInt);
-Begin
-  If Not IsCurrent Then exit;
-  If csDestroying In MainForm.ComponentState Then exit;
-  MainForm.CheckStatus(True);
+  Application.QueueAsyncCall(@MainForm.CheckStatusAsync, FGeneration);
 End;
 
 Procedure TRpcThread.GetSessionInfo;

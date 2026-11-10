@@ -198,6 +198,15 @@ inherited TorrPropsForm: TTorrPropsForm
         Caption = 'Sequential Download'
         TabOrder = 9
       end
+      object cbAutoPriority: TCheckBox
+        Left = 200
+        Height = 17
+        Top = 193
+        Width = 100
+        AllowGrayed = False
+        Caption = 'Auto priority'
+        TabOrder = 10
+      end
     end
     object tabAdvanced: TTabSheet
       Caption = 'Advanced'

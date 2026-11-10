@@ -20,9 +20,11 @@ Function WhisparrTestConnection(Const Config: TWhisparrConfig;
 Function WhisparrParseSeriesName(Const Config: TWhisparrConfig;
   Const Title: String; Out SeriesName: String; Out Error: String): Boolean;
 Function WhisparrParseEpisode(Const Config: TWhisparrConfig;
-  Const Title: String; Out EpisodeName: String; Out Error: String): Boolean;
+  Const Title: String; Out EpisodeName: String; Out Error: String;
+  Const SeriesNameHint: String = ''; IncludeQuality: Boolean = True): Boolean;
 Function WhisparrSuggestArchiveName(Const Config: TWhisparrConfig;
   TorrentNames: TStrings; Out ArchiveName: String; Out Error: String): Boolean;
+Function WhisparrIsMediaFile(Const FileName: String): Boolean;
 Function WhisparrCleanPathName(Const Value: String): String;
 
 Implementation
@@ -321,6 +323,28 @@ Begin
   End;
 End;
 
+Function WhisparrIsMediaFile(Const FileName: String): Boolean;
+Const
+  MediaExts: Array [0..21] Of String = (
+    '.3gp', '.avi', '.divx', '.flv', '.m2ts', '.m4v', '.mkv', '.mov',
+    '.mp4', '.mpeg', '.mpg', '.mts', '.ogm', '.ogg', '.rm', '.rmvb', '.ts',
+    '.vob', '.webm', '.wmv', '.asf', '.f4v');
+Var
+  Ext: String;
+  i: Integer;
+Begin
+  Result := False;
+  If Trim(FileName) = '' Then
+    exit;
+  Ext := UTF8LowerCase(ExtractFileExt(FileName));
+  For i := Low(MediaExts) To High(MediaExts) Do
+    If Ext = MediaExts[i] Then
+    Begin
+      Result := True;
+      break;
+    End;
+End;
+
 Function WhisparrCleanPathName(Const Value: String): String;
 Var
   i: Integer;
@@ -342,7 +366,8 @@ Begin
 End;
 
 Function WhisparrParseEpisode(Const Config: TWhisparrConfig;
-  Const Title: String; Out EpisodeName: String; Out Error: String): Boolean;
+  Const Title: String; Out EpisodeName: String; Out Error: String;
+  Const SeriesNameHint: String; IncludeQuality: Boolean): Boolean;
 Var
   Data: TJSONData;
   Obj, Series, Episode, ParsedInfo, Quality, QualityValue, FormatObj: TJSONObject;
@@ -376,6 +401,8 @@ Begin
     SeriesTitle := FindString(Series, 'title');
     If SeriesTitle = '' Then
       SeriesTitle := FindString(ParsedInfo, 'seriesTitle');
+    If SeriesTitle = '' Then
+      SeriesTitle := SeriesNameHint;
     SeasonNumber := -1;
     EpisodeNumber := -1;
     AirDate := '';
@@ -418,28 +445,31 @@ Begin
       s := s + ' - ' + AirDate;
     If EpisodeTitle <> '' Then
       s := s + ' - ' + EpisodeTitle;
-    Quality := FindObject(ParsedInfo, 'quality');
-    QualityValue := FindObject(Quality, 'quality');
-    QualityName := FindString(QualityValue, 'name');
-    If (QualityName <> '') And (QualityName <> 'Unknown') Then
-      s := s + ' [' + QualityName + ']';
-    FormatNames := TStringList.Create;
-    Try
-      Formats := FindArray(Obj, 'customFormats');
-      If Formats <> nil Then
-        For i := 0 To Formats.Count - 1 Do
-        Begin
-          FormatObj := Formats.Objects[i];
-          If FormatObj = nil Then
-            continue;
-          QualityName := FindString(FormatObj, 'name');
-          If QualityName <> '' Then
-            FormatNames.Add(QualityName);
-        End;
-      For i := 0 To FormatNames.Count - 1 Do
-        s := s + ' ' + FormatNames[i];
-    Finally
-      FormatNames.Free;
+    If IncludeQuality Then
+    Begin
+      Quality := FindObject(ParsedInfo, 'quality');
+      QualityValue := FindObject(Quality, 'quality');
+      QualityName := FindString(QualityValue, 'name');
+      If (QualityName <> '') And (QualityName <> 'Unknown') Then
+        s := s + ' [' + QualityName + ']';
+      FormatNames := TStringList.Create;
+      Try
+        Formats := FindArray(Obj, 'customFormats');
+        If Formats <> nil Then
+          For i := 0 To Formats.Count - 1 Do
+          Begin
+            FormatObj := Formats.Objects[i];
+            If FormatObj = nil Then
+              continue;
+            QualityName := FindString(FormatObj, 'name');
+            If QualityName <> '' Then
+              FormatNames.Add(QualityName);
+          End;
+        For i := 0 To FormatNames.Count - 1 Do
+          s := s + ' ' + FormatNames[i];
+      Finally
+        FormatNames.Free;
+      End;
     End;
     EpisodeName := WhisparrCleanPathName(s);
     Result := EpisodeName <> '';

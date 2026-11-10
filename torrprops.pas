@@ -49,6 +49,7 @@ Type
     Buttons: TButtonPanel;
     cbIdleSeedLimit: TCheckBox;
     cbSequentialDownload: TCheckBox;
+    cbAutoPriority: TCheckBox;
     cbMaxDown: TCheckBox;
     cbMaxUp: TCheckBox;
     cbSeedRatio: TCheckBox;
