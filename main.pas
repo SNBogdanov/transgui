@@ -5349,7 +5349,7 @@ Begin
       exit;
     Value := '';
     If Not InputQuery(TranslateString('Add labels'),
-      TranslateString('Enter labels to add'), Value) Then
+      TranslateString('Enter labels to add:'), Value) Then
       exit;
     Labels := TStringList.Create;
     Try
@@ -5383,7 +5383,7 @@ Begin
       exit;
     Value := '';
     If Not InputQuery(TranslateString('Remove labels'),
-      TranslateString('Enter labels to remove'), Value)
+      TranslateString('Enter labels to remove:'), Value)
       Then
       exit;
     Labels := TStringList.Create;
@@ -7493,7 +7493,8 @@ Begin
   FTopicLabel.Left := txLabelsLabel.Left;
   FTopicLabel.Width := txLabelsLabel.Width;
   FTopicLabel.Top := txIncompleteDirLabel.Top;
-  FTopicLabel.Caption := sTopicLabel;
+  FTopicLabel.Height := RowHeight;
+  FTopicLabel.Caption := TranslateString('Topic:');
   FTopicLabel.ParentColor := True;
   FTopicLabel.Visible := False;
 
@@ -7504,6 +7505,7 @@ Begin
   FTopicValue.Left := txLabels.Left;
   FTopicValue.Width := txLabels.Width;
   FTopicValue.Top := FTopicLabel.Top;
+  FTopicValue.Height := RowHeight;
   FTopicValue.ShowAccelChar := False;
   FTopicValue.ParentColor := True;
   FTopicValue.ParentFont := False;
@@ -10866,8 +10868,11 @@ Begin
         FTopicValue.Caption := TopicName
       Else
         FTopicValue.Caption := TopicUrl;
-      FTopicValue.Hint := TopicUrl;
-      FTopicValue.ShowHint := TopicUrl <> '';
+      If TopicName <> '' Then
+        FTopicValue.Hint := TopicName
+      Else
+        FTopicValue.Hint := TopicUrl;
+      FTopicValue.ShowHint := FTopicValue.Hint <> '';
       If TopicUrl <> '' Then
       Begin
         FTopicValue.ParentFont := False;
