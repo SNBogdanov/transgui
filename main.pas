@@ -72,6 +72,14 @@ Resourcestring
   sScriptRunning = 'Script is running';
   sMoving = 'Moving data';
   sUnknown = 'Unknown';
+  sLabelsMenu = 'Labels';
+  sTopicLabel = 'Topic:';
+  sAddLabels = 'Add labels...';
+  sRemoveLabels = 'Remove labels...';
+  sAddLabelsTitle = 'Add labels';
+  sAddLabelsPrompt = 'Enter labels to add, separated by commas:';
+  sRemoveLabelsTitle = 'Remove labels';
+  sRemoveLabelsPrompt = 'Enter labels to remove, separated by commas:';
   sCompleted = 'Completed';
   sConnected = 'connected';
   sActiveDown = 'Active download';
@@ -303,6 +311,8 @@ Type
     acMenuShow: TAction;
     acBigToolbar: TAction;
     acSetLabels: TAction;
+    acAddLabels: TAction;
+    acRemoveLabels: TAction;
     acLabelGrouping: TAction;
     acFilterTorrentProps: TAction;
     ActionList2: TActionList;
@@ -661,6 +671,11 @@ Type
     Procedure acSetNormalPriorityExecute(Sender: TObject);
     Procedure acSetNotDownloadExecute(Sender: TObject);
     Procedure acSetLabelsExecute(Sender: TObject);
+    Procedure acAddLabelsExecute(Sender: TObject);
+    Procedure acRemoveLabelsExecute(Sender: TObject);
+    Procedure SetupLabelMenus;
+    Procedure ParseLabelList(Const Value: String; Labels: TStringList);
+    Procedure ModifyLabels(Ids: Variant; Labels: TStringList; AddMode: Boolean);
     Procedure acSetupColumnsExecute(Sender: TObject);
     Procedure acShowAppExecute(Sender: TObject);
     Procedure acShowCountryFlagExecute(Sender: TObject);
@@ -798,6 +813,12 @@ Type
     FLinksFromClipboard: Boolean;
     FLastClipboardLink: String;
     FSuppressDialogs: Integer;
+    FCommentPanel: TScrollBox;
+    FCommentLink: TLabel;
+    FTopicLabel: TLabel;
+    FTopicValue: TLabel;
+    FTopicUrl: String;
+    FCommentPanelLayout: Boolean;
     FLinuxOpenDoc: Integer;
     // no del!
     FFromNow: Boolean;
@@ -847,6 +868,8 @@ Type
     FScriptRunnerLoaded: Boolean;
     FScriptMenuImageIndex: Integer;
     FWhisparrMenuImageIndex: Integer;
+    FLabelAddImageIndex: Integer;
+    FLabelRemoveImageIndex: Integer;
     Procedure ClearScriptMenus;
     Procedure LoadScriptRunner(AData: TJSONData = nil);
     Procedure UpdateScriptRunner(AData: TJSONData);
@@ -909,6 +932,11 @@ Type
       RemoveLocalData: Boolean);
     Function IncludeProperTrailingPathDelimiter(Const s: String): String;
     Procedure UrlLabelClick(Sender: TObject);
+    Procedure TopicLabelClick(Sender: TObject);
+    Procedure ApplyInfoColumnWidths;
+    Procedure InitCommentPanel;
+    Procedure UpdateCommentLayout;
+    Procedure CommentPanelResize(Sender: TObject);
     Procedure CenterReconnectWindow;
     Procedure ProcessPieces(Const Pieces: String; PieceCount: Integer;
       Const Done: Double);
@@ -953,6 +981,7 @@ Type
     Procedure FillSessionInfo(s: TJSONObject);
     Procedure FillStatistics(s: TJSONObject);
     Procedure CheckStatus(Fatal: Boolean = True; ShowError: Boolean = True);
+    Procedure ReloadInfoLayout;
     Procedure SuppressErrorDialogs;
     Procedure RestoreErrorDialogs;
     Procedure CheckStatusAsync(Data: PtrInt);
@@ -1830,7 +1859,10 @@ RegisterURLHandler(@AddTorrentFile);
   FScriptMenuImageIndex := -1;
   FWhisparrMenuImageIndex := -1;
   FRestartDaemonImageIndex := -1;
+  FLabelAddImageIndex := -1;
+  FLabelRemoveImageIndex := -1;
   AddArchiveIcons;
+  SetupLabelMenus;
   RpcObj := TRpc.Create;
   FTorrents := TVarList.Create(gTorrents.Columns.Count, 0);
   FTorrents.ExtraColumns := TorrentsExtraColumns;
@@ -2226,6 +2258,7 @@ FLinuxOpenDoc := Ini.ReadInteger('Interface','FileOpenDoc',0);
   {$IF LCL_FULLVERSION >= 1080000}
   PageInfo.Options := PageInfo.Options + [nboDoChangeOnSetIndex];
   {$ENDIF}
+  InitCommentPanel;
 End;
 
 Procedure TMainForm.FormDestroy(Sender: TObject);
@@ -3019,7 +3052,8 @@ End;
 
 Procedure TMainForm.AddArchiveIcons;
 
-  Function LoadIcon(Const ResNames: array Of String; Images: TImageList): Integer;
+  Function LoadIcon(Const ResNames: array Of String; Images: TImageList;
+    UseAllResolutions: Boolean = False): Integer;
   Var
     Pics: Array Of TCustomBitmap;
     i, n, j: Integer;
@@ -3059,7 +3093,7 @@ Procedure TMainForm.AddArchiveIcons;
       exit;
     SetLength(Pics, n);
     Try
-      If Images.ResolutionCount > 1 Then
+      If (UseAllResolutions Or (Images.ResolutionCount > 1)) And (n > 1) Then
         Result := Images.AddMultipleResolutions(Pics)
       Else
       Begin
@@ -3078,7 +3112,17 @@ Procedure TMainForm.AddArchiveIcons;
     End;
   End;
 
+Var
+  i: Integer;
+
 Begin
+  ImageList16.Clear;
+  ImageList16.Resolution[32];
+  ImageList16.Resolution[48];
+  For i := 0 To 64 Do
+    LoadIcon([Format('Main16_%.2d', [i]), Format('Main16_%.2d_32', [i]),
+      Format('Main16_%.2d_48', [i])], ImageList16, True);
+
   acArchiveSave.ImageIndex := LoadIcon(
     ['ArchiveSave16', 'ArchiveSave32', 'ArchiveSave48'], ImageList16);
   acArchiveManager.ImageIndex := LoadIcon(
@@ -3095,6 +3139,12 @@ Begin
   FRestartDaemonImageIndex := LoadIcon(
     ['Restart16', 'Restart32', 'Restart48'], ImageList16);
   LoadIcon(['Restart16', 'Restart32', 'Restart48'], ImageList32);
+  FLabelAddImageIndex := LoadIcon(
+    ['LabelAdd16', 'LabelAdd32', 'LabelAdd48'], ImageList16);
+  LoadIcon(['LabelAdd16', 'LabelAdd32', 'LabelAdd48'], ImageList32);
+  FLabelRemoveImageIndex := LoadIcon(
+    ['LabelRemove16', 'LabelRemove32', 'LabelRemove48'], ImageList16);
+  LoadIcon(['LabelRemove16', 'LabelRemove32', 'LabelRemove48'], ImageList32);
   acWhisparrRename.ImageIndex := FWhisparrMenuImageIndex;
   MenuItemWhisparrRename.ImageIndex := FWhisparrMenuImageIndex;
 End;
@@ -3147,6 +3197,26 @@ Begin
   Else
     MainToolBar.ButtonWidth := 23;
   ScaleImageList(ImageList16, CurImageList, MainToolBar.ButtonWidth);
+  If FSlowResponse <> nil Then
+  Begin
+    FSlowResponse.Images := CurImageList;
+    If CurImageList.Width > ScaleInt(24) Then
+      FSlowResponse.Width := CurImageList.Width
+    Else
+      FSlowResponse.Width := ScaleInt(24);
+  End;
+  If FDetailsWait <> nil Then
+  Begin
+    FDetailsWait.Images := CurImageList;
+    If CurImageList.Width * 2 > ScaleInt(32) Then
+      FDetailsWait.Width := CurImageList.Width * 2
+    Else
+      FDetailsWait.Width := ScaleInt(32);
+    FDetailsWait.Height := FDetailsWait.Width;
+    panDetailsWait.Width := FDetailsWait.Width;
+    panDetailsWait.Height := FDetailsWait.Height;
+    CenterDetailsWait;
+  End;
   MainToolBar.ButtonHeight := MainToolBar.ButtonWidth;
   edSearch.Height := MainToolBar.ButtonWidth;
   panSearch.Height := MainToolBar.ButtonWidth;
@@ -5072,9 +5142,9 @@ Begin
   End;
   args.Free;
   input := s;
-  If InputQuery('Set tags', 'This will overwrite any existing tags.' +
-    sLineBreak + 'You can set multiple tags separated by a comma or leave empty to clear tags.'
-    , input) Then
+  If InputQuery(TranslateString('Set labels'),
+    TranslateString('Existing labels will be replaced. Enter labels separated by commas, or leave empty to clear labels.'),
+    input) Then
   Begin
     Application.ProcessMessages;
     AppBusy;
@@ -5120,6 +5190,259 @@ Begin
 
   End;
   gTorrents.Tag := 0;
+End;
+
+Procedure TMainForm.ParseLabelList(Const Value: String; Labels: TStringList);
+Var
+  tmp: TStringList;
+  i: Integer;
+  s: String;
+Begin
+  Labels.Clear;
+  Labels.CaseSensitive := True;
+  tmp := TStringList.Create;
+  Try
+    SplitRegExpr(',', Value, tmp);
+    For i := 0 To tmp.Count - 1 Do
+    Begin
+      s := Trim(tmp[i]);
+      If (s <> '') And (Labels.IndexOf(s) < 0) Then
+        Labels.Add(s);
+    End;
+  Finally
+    tmp.Free;
+  End;
+End;
+
+Procedure TMainForm.ModifyLabels(Ids: Variant; Labels: TStringList;
+  AddMode: Boolean);
+Var
+  req, args, t: TJSONObject;
+  torrents, a, aids: TJSONArray;
+  i, j, k: Integer;
+  cur: TStringList;
+  TorrentChanged, AnyChanged: Boolean;
+  setReq, setArgs, resp: TJSONObject;
+  setIds, setLabels: TJSONArray;
+Begin
+  If Labels.Count = 0 Then
+    exit;
+  AnyChanged := False;
+  AppBusy;
+  Try
+    req := TJSONObject.Create;
+    Try
+      args := TJSONObject.Create;
+      aids := TJSONArray.Create;
+      For i := VarArrayLowBound(Ids, 1) To VarArrayHighBound(Ids, 1) Do
+        aids.Add(Integer(Ids[i]));
+      args.Add('ids', aids);
+      args.Add('fields', TJSONArray.Create(['id', 'labels']));
+      req.Add('method', 'torrent-get');
+      req.Add('arguments', args);
+      args := RpcObj.SendRequest(req);
+    Finally
+      req.Free;
+    End;
+    If args = nil Then
+    Begin
+      CheckStatus(False);
+      exit;
+    End;
+    Try
+      torrents := args.Arrays['torrents'];
+      For i := 0 To torrents.Count - 1 Do
+      Begin
+        t := torrents.Objects[i];
+        If t = nil Then
+          continue;
+        cur := TStringList.Create;
+        Try
+          cur.CaseSensitive := True;
+          a := nil;
+          If t.Find('labels') Is TJSONArray Then
+            a := TJSONArray(t.Find('labels'));
+          If a <> nil Then
+            For j := 0 To a.Count - 1 Do
+              cur.Add(UTF8Encode(WideString(a.Strings[j])));
+          TorrentChanged := False;
+          For j := 0 To Labels.Count - 1 Do
+          Begin
+            k := cur.IndexOf(Labels[j]);
+            If AddMode Then
+            Begin
+              If k < 0 Then
+              Begin
+                cur.Add(Labels[j]);
+                TorrentChanged := True;
+              End;
+            End
+            Else
+              If k >= 0 Then
+              Begin
+                cur.Delete(k);
+                TorrentChanged := True;
+              End;
+          End;
+          If TorrentChanged Then
+          Begin
+            AnyChanged := True;
+            setReq := TJSONObject.Create;
+            Try
+              setArgs := TJSONObject.Create;
+              setIds := TJSONArray.Create;
+              setIds.Add(t.Integers['id']);
+              setArgs.Add('ids', setIds);
+              setLabels := TJSONArray.Create;
+              For j := 0 To cur.Count - 1 Do
+                setLabels.Add(cur[j]);
+              setArgs.Add('labels', setLabels);
+              setReq.Add('method', 'torrent-set');
+              setReq.Add('arguments', setArgs);
+              resp := RpcObj.SendRequest(setReq, False);
+            Finally
+              setReq.Free;
+            End;
+            If resp = nil Then
+            Begin
+              CheckStatus(False);
+              break;
+            End;
+            resp.Free;
+          End;
+        Finally
+          cur.Free;
+        End;
+      End;
+    Finally
+      args.Free;
+    End;
+  Finally
+    AppNormal;
+  End;
+  If AnyChanged Then
+  Begin
+    RpcObj.RequestFullInfo := True;
+    DoRefresh(True);
+    RpcObj.ForceRequest := 2;
+    Sleep(200);
+    Application.ProcessMessages;
+  End;
+End;
+
+Procedure TMainForm.acAddLabelsExecute(Sender: TObject);
+Var
+  Ids: Variant;
+  Labels: TStringList;
+  Value: String;
+Begin
+  If gTorrents.Items.Count = 0 Then
+    exit;
+  Application.ProcessMessages;
+  gTorrents.Tag := 1;
+  Try
+    gTorrents.EnsureSelectionVisible;
+    If gTorrents.SelCount = 0 Then
+      gTorrents.RowSelected[gTorrents.Row] := True;
+    Ids := GetSelectedTorrents;
+    If VarIsEmpty(Ids) Then
+      exit;
+    Value := '';
+    If Not InputQuery(TranslateString('Add labels'),
+      TranslateString('Enter labels to add'), Value) Then
+      exit;
+    Labels := TStringList.Create;
+    Try
+      ParseLabelList(Value, Labels);
+      If Labels.Count > 0 Then
+        ModifyLabels(Ids, Labels, True);
+    Finally
+      Labels.Free;
+    End;
+  Finally
+    gTorrents.Tag := 0;
+  End;
+End;
+
+Procedure TMainForm.acRemoveLabelsExecute(Sender: TObject);
+Var
+  Ids: Variant;
+  Labels: TStringList;
+  Value: String;
+Begin
+  If gTorrents.Items.Count = 0 Then
+    exit;
+  Application.ProcessMessages;
+  gTorrents.Tag := 1;
+  Try
+    gTorrents.EnsureSelectionVisible;
+    If gTorrents.SelCount = 0 Then
+      gTorrents.RowSelected[gTorrents.Row] := True;
+    Ids := GetSelectedTorrents;
+    If VarIsEmpty(Ids) Then
+      exit;
+    Value := '';
+    If Not InputQuery(TranslateString('Remove labels'),
+      TranslateString('Enter labels to remove'), Value)
+      Then
+      exit;
+    Labels := TStringList.Create;
+    Try
+      ParseLabelList(Value, Labels);
+      If Labels.Count > 0 Then
+        ModifyLabels(Ids, Labels, False);
+    Finally
+      Labels.Free;
+    End;
+  Finally
+    gTorrents.Tag := 0;
+  End;
+End;
+
+Procedure TMainForm.SetupLabelMenus;
+
+  Procedure SetupMenu(MI: TMenuItem);
+  Var
+    Item: TMenuItem;
+  Begin
+    If MI = nil Then
+      exit;
+    MI.Action := nil;
+    MI.OnClick := nil;
+    MI.ShortCut := 0;
+    MI.Caption := sLabelsMenu;
+    MI.ImageIndex := 44;
+    MI.Clear;
+    Item := TMenuItem.Create(MI);
+    Item.Action := acSetLabels;
+    MI.Add(Item);
+    Item := TMenuItem.Create(MI);
+    Item.Action := acAddLabels;
+    MI.Add(Item);
+    Item := TMenuItem.Create(MI);
+    Item.Action := acRemoveLabels;
+    MI.Add(Item);
+  End;
+
+Begin
+  If acAddLabels = nil Then
+  Begin
+    acAddLabels := TAction.Create(ActionList);
+    acAddLabels.Name := 'acAddLabels';
+    acAddLabels.Caption := sAddLabels;
+    acAddLabels.OnExecute := @acAddLabelsExecute;
+  End;
+  If acRemoveLabels = nil Then
+  Begin
+    acRemoveLabels := TAction.Create(ActionList);
+    acRemoveLabels.Name := 'acRemoveLabels';
+    acRemoveLabels.Caption := sRemoveLabels;
+    acRemoveLabels.OnExecute := @acRemoveLabelsExecute;
+  End;
+  acAddLabels.ImageIndex := FLabelAddImageIndex;
+  acRemoveLabels.ImageIndex := FLabelRemoveImageIndex;
+  SetupMenu(MenuItem104);
+  SetupMenu(MenuItem105);
 End;
 
 Procedure TMainForm.acSetupColumnsExecute(Sender: TObject);
@@ -6342,6 +6665,14 @@ Begin
     If acStatusBarSizes.Checked Then StatusBarSizes;
   End;
 
+  If sbGenInfo <> nil Then
+  Begin
+    sbGenInfo.VertScrollBar.Position := 0;
+    sbGenInfo.HorzScrollBar.Position := 0;
+  End;
+  If FCommentPanel <> nil Then
+    FCommentPanel.VertScrollBar.Position := 0;
+
   //  ClearDetailsInfo(GetPageInfoType(PageInfo.ActivePage));
   If PageInfo.ActivePage <> tabFiles Then
     ClearDetailsInfo(GetPageInfoType(PageInfo.ActivePage))
@@ -6792,7 +7123,7 @@ Type
 
 Procedure TMainForm.TickTimerTimer(Sender: TObject);
 Var
-  i: Integer;
+  i, j: Integer;
 Begin
   TickTimer.Enabled := False;
   Try
@@ -6812,8 +7143,13 @@ Begin
         ClientHeight := Controls[ControlCount - 1].BoundsRect.Bottom +
           ChildSizing.TopBottomSpacing;
       With panGeneralInfo Do
-        ClientHeight := Controls[ControlCount - 1].BoundsRect.Bottom +
-          ChildSizing.TopBottomSpacing;
+      Begin
+        j := 0;
+        For i := 0 To ControlCount - 1 Do
+          If Controls[i].Top + Controls[i].Height > j Then
+            j := Controls[i].Top + Controls[i].Height;
+        ClientHeight := j + ChildSizing.TopBottomSpacing;
+      End;
       panSearch.AutoSize := False;
 
       If Ini.ReadBool('MainForm', 'FirstRun', True) Then
@@ -7001,11 +7337,275 @@ Begin
   {$endif windows}
 End;
 
+Procedure TMainForm.ApplyInfoColumnWidths;
+Const
+  IniSection = 'GeneralInfo';
+Var
+  ColGap, Col1Left, Col1Width, Col2Width, Col3Width, Col4Width: Integer;
+  i, Col, L: Integer;
+  C: TControl;
+  NeedSave: Boolean;
+
+  Procedure EnsureKey(Const AName: String; ADefault: Integer);
+  Begin
+    If Not Ini.ValueExists(IniSection, AName) Then
+    Begin
+      Ini.WriteInteger(IniSection, AName, ADefault);
+      NeedSave := True;
+    End;
+  End;
+
+Begin
+  If panGeneralInfo = nil Then
+    exit;
+  NeedSave := False;
+  EnsureKey('ColGap', 16);
+  EnsureKey('Col1Left', 4);
+  EnsureKey('Col1Width', 200);
+  EnsureKey('Col2Width', 719);
+  EnsureKey('Col3Width', 459);
+  EnsureKey('Col4Width', 464);
+  If NeedSave Then
+    Ini.UpdateFile;
+  ColGap := Ini.ReadInteger(IniSection, 'ColGap', 16);
+  Col1Left := Ini.ReadInteger(IniSection, 'Col1Left', 4);
+  Col1Width := Ini.ReadInteger(IniSection, 'Col1Width', 200);
+  Col2Width := Ini.ReadInteger(IniSection, 'Col2Width', 719);
+  Col3Width := Ini.ReadInteger(IniSection, 'Col3Width', 459);
+  Col4Width := Ini.ReadInteger(IniSection, 'Col4Width', 464);
+  If ColGap < 0 Then ColGap := 0;
+  If Col1Left < 0 Then Col1Left := 0;
+  If Col1Width < 20 Then Col1Width := 20;
+  If Col2Width < 20 Then Col2Width := 20;
+  If Col3Width < 20 Then Col3Width := 20;
+  If Col4Width < 20 Then Col4Width := 20;
+  For i := 0 To panGeneralInfo.ControlCount - 1 Do
+  Begin
+    C := panGeneralInfo.Controls[i];
+    Col := i Mod 4;
+    Case Col Of
+      0: L := Col1Left;
+      1: L := Col1Left + Col1Width + ColGap;
+      2: L := Col1Left + Col1Width + ColGap + Col2Width + ColGap;
+      Else
+        L := Col1Left + Col1Width + ColGap + Col2Width + ColGap +
+          Col3Width + ColGap;
+    End;
+    C.AutoSize := False;
+    C.Left := L;
+    Case Col Of
+      0: C.Width := Col1Width;
+      1: C.Width := Col2Width;
+      2: C.Width := Col3Width;
+      Else
+        C.Width := Col4Width;
+    End;
+  End;
+End;
+
+Procedure TMainForm.ReloadInfoLayout;
+Var
+  i, MaxBottom: Integer;
+Begin
+  If (panGeneralInfo = nil) Or (FCommentPanel = nil) Then
+    exit;
+  ApplyInfoColumnWidths;
+  MaxBottom := 0;
+  For i := 0 To panGeneralInfo.ControlCount - 1 Do
+    If panGeneralInfo.Controls[i].Top + panGeneralInfo.Controls[i].Height >
+      MaxBottom Then
+      MaxBottom := panGeneralInfo.Controls[i].Top +
+        panGeneralInfo.Controls[i].Height;
+  panGeneralInfo.ClientHeight := MaxBottom +
+    panGeneralInfo.ChildSizing.TopBottomSpacing;
+  UpdateCommentLayout;
+End;
+
+Procedure TMainForm.InitCommentPanel;
+Var
+  Idx, RowTop, RowLeft, RowWidth, RowHeight, i, MaxBottom: Integer;
+  CommentHeight: Integer;
+Begin
+  If FCommentPanel <> nil Then
+    exit;
+  If (panGeneralInfo = nil) Or (txComment = nil) Then
+    exit;
+
+  panGeneralInfo.ChildSizing.Layout := cclNone;
+  ApplyInfoColumnWidths;
+  RowTop := txComment.Top;
+  RowLeft := txComment.Left;
+  RowWidth := txComment.Width;
+  RowHeight := txComment.Height;
+  CommentHeight := RowHeight;
+
+  FCommentPanel := TScrollBox.Create(Self);
+  FCommentPanel.Name := 'panCommentValue';
+  FCommentPanel.BorderStyle := bsNone;
+  FCommentPanel.ParentColor := True;
+  FCommentPanel.AutoScroll := False;
+  FCommentPanel.HorzScrollBar.Visible := False;
+  FCommentPanel.Left := RowLeft;
+  FCommentPanel.Top := RowTop;
+  FCommentPanel.Width := RowWidth;
+  FCommentPanel.Height := CommentHeight;
+  FCommentPanel.Parent := panGeneralInfo;
+  Idx := panGeneralInfo.GetControlIndex(txComment);
+  If Idx >= 0 Then
+    panGeneralInfo.SetControlIndex(FCommentPanel, Idx);
+
+  FCommentLink := TLabel.Create(Self);
+  FCommentLink.Name := 'txCommentLink';
+  FCommentLink.Parent := FCommentPanel;
+  FCommentLink.Left := 0;
+  FCommentLink.Top := 0;
+  FCommentLink.AutoSize := False;
+  FCommentLink.Width := FCommentPanel.Width;
+  FCommentLink.Height := RowHeight;
+  FCommentLink.ShowAccelChar := False;
+  FCommentLink.Cursor := crHandPoint;
+  FCommentLink.ParentFont := False;
+  FCommentLink.Font.Assign(txComment.Font);
+  FCommentLink.Font.Color := clBlue;
+  FCommentLink.Font.Style := [fsUnderline];
+  FCommentLink.OnClick := @UrlLabelClick;
+  FCommentLink.Visible := False;
+
+  txComment.Parent := FCommentPanel;
+  txComment.Align := alNone;
+  txComment.Left := 0;
+  txComment.Top := 0;
+  txComment.Width := FCommentPanel.Width;
+  txComment.Height := RowHeight;
+  txComment.AutoSize := False;
+  txComment.WordWrap := False;
+  txComment.Anchors := [akLeft, akRight, akTop];
+  txComment.OnClick := nil;
+  txComment.Cursor := crDefault;
+  txComment.ParentFont := True;
+
+  FCommentPanel.OnResize := @CommentPanelResize;
+
+  FTopicLabel := TLabel.Create(Self);
+  FTopicLabel.Name := 'txTopicLabel';
+  FTopicLabel.Parent := panGeneralInfo;
+  FTopicLabel.AutoSize := False;
+  FTopicLabel.Left := txLabelsLabel.Left;
+  FTopicLabel.Width := txLabelsLabel.Width;
+  FTopicLabel.Top := txIncompleteDirLabel.Top;
+  FTopicLabel.Caption := sTopicLabel;
+  FTopicLabel.ParentColor := True;
+  FTopicLabel.Visible := False;
+
+  FTopicValue := TLabel.Create(Self);
+  FTopicValue.Name := 'txTopicValue';
+  FTopicValue.Parent := panGeneralInfo;
+  FTopicValue.AutoSize := False;
+  FTopicValue.Left := txLabels.Left;
+  FTopicValue.Width := txLabels.Width;
+  FTopicValue.Top := FTopicLabel.Top;
+  FTopicValue.ShowAccelChar := False;
+  FTopicValue.ParentColor := True;
+  FTopicValue.ParentFont := False;
+  FTopicValue.Font.Assign(txLabels.Font);
+  FTopicValue.Font.Color := clBlue;
+  FTopicValue.Font.Style := [fsUnderline];
+  FTopicValue.Cursor := crHandPoint;
+  FTopicValue.OnClick := @TopicLabelClick;
+  FTopicValue.Visible := False;
+
+  MaxBottom := 0;
+  For i := 0 To panGeneralInfo.ControlCount - 1 Do
+    If panGeneralInfo.Controls[i].Top + panGeneralInfo.Controls[i].Height >
+      MaxBottom Then
+      MaxBottom := panGeneralInfo.Controls[i].Top +
+        panGeneralInfo.Controls[i].Height;
+  panGeneralInfo.ClientHeight := MaxBottom +
+    panGeneralInfo.ChildSizing.TopBottomSpacing;
+
+  UpdateCommentLayout;
+End;
+
+Procedure TMainForm.UpdateCommentLayout;
+Var
+  LinkH, ContentH: Integer;
+  NeedScroll: Boolean;
+
+  Procedure LayoutChildren;
+  Var
+    W: Integer;
+  Begin
+    W := FCommentPanel.ClientWidth;
+    If W < 1 Then
+      W := FCommentPanel.Width;
+    If W < 1 Then
+      W := 464;
+    If FCommentLink <> nil Then
+    Begin
+      FCommentLink.Left := 0;
+      FCommentLink.Top := 0;
+      FCommentLink.Width := W;
+    End;
+    txComment.Left := 0;
+    txComment.Width := W;
+    txComment.Top := LinkH;
+    ContentH := LinkH;
+    If txComment.Caption <> '' Then
+      Inc(ContentH, txComment.Height);
+  End;
+
+Begin
+  If FCommentPanelLayout Or (FCommentPanel = nil) Or (txComment = nil) Then
+    exit;
+  FCommentPanelLayout := True;
+  Try
+    LinkH := 0;
+    If (FCommentLink <> nil) And FCommentLink.Visible Then
+      LinkH := FCommentLink.Height;
+    LayoutChildren;
+    NeedScroll := ContentH > FCommentPanel.ClientHeight;
+    If FCommentPanel.VertScrollBar.Visible <> NeedScroll Then
+      FCommentPanel.VertScrollBar.Visible := NeedScroll;
+    LayoutChildren;
+    If ContentH > FCommentPanel.ClientHeight Then
+    Begin
+      FCommentPanel.VertScrollBar.Visible := True;
+      FCommentPanel.VertScrollBar.Page := FCommentPanel.ClientHeight;
+      FCommentPanel.VertScrollBar.Range := ContentH;
+    End
+    Else
+    Begin
+      FCommentPanel.VertScrollBar.Visible := False;
+      FCommentPanel.VertScrollBar.Range := 0;
+      FCommentPanel.VertScrollBar.Position := 0;
+    End;
+  Finally
+    FCommentPanelLayout := False;
+  End;
+End;
+
+Procedure TMainForm.CommentPanelResize(Sender: TObject);
+Begin
+  UpdateCommentLayout;
+End;
+
 Procedure TMainForm.UrlLabelClick(Sender: TObject);
 Begin
   AppBusy;
   OpenURL((Sender As TLabel).Caption);
   AppNormal;
+End;
+
+Procedure TMainForm.TopicLabelClick(Sender: TObject);
+Begin
+  If Trim(FTopicUrl) = '' Then
+    exit;
+  AppBusy;
+  Try
+    OpenURL(FTopicUrl);
+  Finally
+    AppNormal;
+  End;
 End;
 
 Procedure TMainForm.CenterReconnectWindow;
@@ -8292,6 +8892,14 @@ Begin
   acArchiveManager.Enabled := e And RpcObj.HasForkFeature('torrent_archive');
   UpdateWhisparrAction;
   acSetLabels.Enabled := acVerifyTorrent.Enabled And (RpcObj.RPCVersion >= 16);
+  If acAddLabels <> nil Then
+    acAddLabels.Enabled := acSetLabels.Enabled;
+  If acRemoveLabels <> nil Then
+    acRemoveLabels.Enabled := acSetLabels.Enabled;
+  If MenuItem104 <> nil Then
+    MenuItem104.Enabled := acSetLabels.Enabled;
+  If MenuItem105 <> nil Then
+    MenuItem105.Enabled := acSetLabels.Enabled;
   acTorrentProps.Enabled := acVerifyTorrent.Enabled;
   acOpenContainingFolder.Enabled :=
     acTorrentProps.Enabled And (RpcObj.RPCVersion >= 4);
@@ -9949,6 +10557,9 @@ Var
   i, j, idx: Integer;
   s: String;
   tr: String;
+  CommentText, CommentLink: String;
+  TopicName, TopicUrl: String;
+  HasTopic: Boolean;
   f: Double;
   alabels: TStringList;
   ja: TJSONArray;
@@ -10197,27 +10808,81 @@ Begin
   End;
 
   txHash.Caption := t.Strings['hashString'];
-  txComment.Caption := UTF8Encode(t.Strings['comment']);
-  If (AnsiCompareText(Copy(txComment.Caption, 1, 7), 'http://') = 0) Or
-    (AnsiCompareText(Copy(txComment.Caption, 1, 8), 'https://') = 0) Then
-  Begin
-    If Not Assigned(txComment.OnClick) Then
-    Begin
-      txComment.OnClick := @UrlLabelClick;
-      txComment.Cursor := crHandPoint;
-      txComment.Font.Color := clBlue;
-      txComment.Font.Style := [fsUnderline];
-    End;
-  End
+  CommentText := UTF8Encode(t.Strings['comment']);
+  CommentLink := CommentText;
+  i := Pos(#13, CommentLink);
+  j := Pos(#10, CommentLink);
+  If (i = 0) Or ((j > 0) And (j < i)) Then
+    i := j;
+  If i > 0 Then
+    CommentLink := Copy(CommentLink, 1, i - 1);
+  CommentLink := Trim(CommentLink);
+  i := Pos('[topic-name]', CommentLink);
+  If i > 1 Then
+    CommentLink := Trim(Copy(CommentLink, 1, i - 1));
+  If (FCommentLink = nil) Then
+    txComment.Caption := CommentLink
   Else
-  Begin
-    If Assigned(txComment.OnClick) Then
+    If (AnsiCompareText(Copy(CommentLink, 1, 7), 'http://') = 0) Or
+      (AnsiCompareText(Copy(CommentLink, 1, 8), 'https://') = 0) Then
     Begin
-      txComment.OnClick := nil;
-      txComment.Cursor := crDefault;
-      txComment.ParentFont := True;
+      FCommentLink.Caption := CommentLink;
+      FCommentLink.Hint := CommentLink;
+      FCommentLink.ShowHint := True;
+      FCommentLink.Visible := True;
+      txComment.Caption := '';
+    End
+    Else
+    Begin
+      FCommentLink.Visible := False;
+      txComment.Caption := CommentLink;
+    End;
+  If FCommentPanel <> nil Then
+    FCommentPanel.VertScrollBar.Position := 0;
+
+  TopicName := '';
+  TopicUrl := '';
+  HasTopic := False;
+  If t.Find('topic_name') <> nil Then
+  Begin
+    TopicName := t.Strings['topic_name'];
+    HasTopic := True;
+  End;
+  If t.Find('topic_url') <> nil Then
+  Begin
+    TopicUrl := t.Strings['topic_url'];
+    HasTopic := True;
+  End;
+  If (TopicName = '') And (TopicUrl = '') Then
+    HasTopic := False;
+  If FTopicLabel <> nil Then
+  Begin
+    FTopicLabel.Visible := HasTopic;
+    FTopicValue.Visible := HasTopic;
+    If HasTopic Then
+    Begin
+      FTopicUrl := TopicUrl;
+      If TopicName <> '' Then
+        FTopicValue.Caption := TopicName
+      Else
+        FTopicValue.Caption := TopicUrl;
+      FTopicValue.Hint := TopicUrl;
+      FTopicValue.ShowHint := TopicUrl <> '';
+      If TopicUrl <> '' Then
+      Begin
+        FTopicValue.ParentFont := False;
+        FTopicValue.Font.Color := clBlue;
+        FTopicValue.Font.Style := [fsUnderline];
+        FTopicValue.Cursor := crHandPoint;
+      End
+      Else
+      Begin
+        FTopicValue.ParentFont := True;
+        FTopicValue.Cursor := crDefault;
+      End;
     End;
   End;
+  UpdateCommentLayout;
   txAddedOn.Caption := TorrentDateTimeToString(Trunc(t.Floats['addedDate']),
     FFromNow);
   txAddedOn.Hint := TorrentDateTimeToString(Trunc(t.Floats['addedDate']),
@@ -12183,8 +12848,7 @@ End;
 
 Initialization
   {$I main.lrs}
-  {$I archiveicons.lrs}
-  {$I scripticons.lrs}
+  {$I icons.lrs}
 
 
 Finalization

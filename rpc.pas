@@ -727,7 +727,7 @@ Begin
     'doneDate', 'activityDate', 'downloadLimited', 'uploadLimited',
     'downloadDir', 'incomplete_dir', 'incomplete-dir', 'id', 'pieces',
     'trackerStats', 'secondsDownloading', 'secondsSeeding', 'magnetLink',
-    'isPrivate', 'labels', 'sequentialDownload']);
+    'isPrivate', 'labels', 'sequentialDownload', 'topic_name', 'topic_url']);
   Try
     If args <> nil Then
     Begin

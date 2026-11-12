@@ -8,7 +8,7 @@ description: |
   to remotely control Transmission daemon via its RPC protocol.
   It is faster and has more functionality than builtin Transmission
   web interface.
-icon: transgui.png
+icon: icons/transgui.png
 grade: stable
 confinement: strict
 
@@ -27,10 +27,10 @@ parts:
       - transgui.desktop
       - README.md
       - history.txt
-      - transgui.png
+      - icons/transgui.png
     override-build: |
       snapcraftctl build
-      sed -i 's|Icon=transgui|Icon=${SNAP}/transgui.png|' ${SNAPCRAFT_PART_INSTALL}/transgui.desktop
+      sed -i 's|Icon=transgui|Icon=${SNAP}/icons/transgui.png|' ${SNAPCRAFT_PART_INSTALL}/transgui.desktop
     build-packages:
       - git
       - make

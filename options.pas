@@ -39,7 +39,7 @@ Interface
 
 Uses
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-  ComCtrls, StdCtrls, Spin, Buttons, ButtonPanel, BaseForm;
+  ComCtrls, StdCtrls, Spin, Buttons, ButtonPanel, Grids, BaseForm;
 
 Resourcestring
   SWhisparrSettingsRequired = 'Enter both the Whisparr URL and API key.';
@@ -48,6 +48,16 @@ Resourcestring
   SWhisparrSaveAnyway = 'Whisparr connection check failed: %s' + LineEnding +
     'Save the settings anyway?';
   SWhisparrUnknownVersion = 'Unknown';
+  SWindowSizesTab = 'Window size settings';
+  SFieldColumn = 'Field';
+  SWidthColumn = 'Width';
+  SInfoColGap = 'Column gap';
+  SInfoCol1Left = 'Left offset';
+  SInfoCol1Width = 'Label 1 width';
+  SInfoCol2Width = 'Value 1 width';
+  SInfoCol3Width = 'Label 2 width';
+  SInfoCol4Width = 'Value 2 width';
+  SStatusBarPanel = 'Status bar panel %d';
 
 Type
 
@@ -124,6 +134,9 @@ Type
     Procedure OKButtonClick(Sender: TObject);
   Private
     FLangList: TStringList;
+    FWhisparrDirty: Boolean;
+    FWidthsTab: TTabSheet;
+    FWidthsGrid: TStringGrid;
     {$ifdef mswindows}
     FRegExt: Boolean;
     FRegMagnet: Boolean;
@@ -131,6 +144,14 @@ Type
 
     Procedure FillLanguageItems;
     Function TestWhisparr(Out Version, Error: String): Boolean;
+    Procedure WhisparrChanged(Sender: TObject);
+    Procedure InitWindowSizesTab;
+    Procedure LoadWindowSizes;
+    Procedure SaveWindowSizes;
+    Procedure WidthsSelectEditor(Sender: TObject; ACol, ARow: Integer;
+      Var Editor: TWinControl);
+    Procedure WidthsEditingDone(Sender: TObject);
+    Procedure ApplyWidthsRow(ARow: Integer);
   End;
 
 Implementation
@@ -142,6 +163,12 @@ Uses
   main, UserMenuForm, utils, ResTranslator, Math, WhisparrClient;
 
   { TOptionsForm }
+
+Const
+  WindowSizesInfoKeys: Array[0..5] Of String = (
+    'ColGap', 'Col1Left', 'Col1Width', 'Col2Width', 'Col3Width', 'Col4Width');
+  WindowSizesInfoDefaults: Array[0..5] Of Integer = (
+    16, 4, 200, 719, 459, 464);
 
 Procedure TOptionsForm.FormCreate(Sender: TObject);
 Var
@@ -214,6 +241,197 @@ Begin
   {$ifndef mswindows}
   tabUserMenus.TabVisible := False;
   {$endif}
+
+  edWhisparrUrl.OnChange := @WhisparrChanged;
+  edWhisparrApiKey.OnChange := @WhisparrChanged;
+  cbWhisparrVerifySsl.OnClick := @WhisparrChanged;
+  InitWindowSizesTab;
+End;
+
+Procedure TOptionsForm.WhisparrChanged(Sender: TObject);
+Begin
+  FWhisparrDirty := True;
+End;
+
+Procedure TOptionsForm.WidthsSelectEditor(Sender: TObject; ACol, ARow: Integer;
+  Var Editor: TWinControl);
+Begin
+  If (ACol = 0) Or (ARow = 0) Then
+    Editor := nil;
+End;
+
+Procedure TOptionsForm.WidthsEditingDone(Sender: TObject);
+Begin
+  If (FWidthsGrid <> nil) And (FWidthsGrid.Col = 1) And (FWidthsGrid.Row > 0)
+    Then
+    ApplyWidthsRow(FWidthsGrid.Row);
+End;
+
+Procedure TOptionsForm.ApplyWidthsRow(ARow: Integer);
+Var
+  i, W, Def: Integer;
+Begin
+  If (FWidthsGrid = nil) Or (MainForm = nil) Or (ARow <= 0) Then
+    exit;
+  If ARow <= High(WindowSizesInfoKeys) + 1 Then
+  Begin
+    i := ARow - 1;
+    Def := Ini.ReadInteger('GeneralInfo', WindowSizesInfoKeys[i],
+      WindowSizesInfoDefaults[i]);
+    W := StrToIntDef(Trim(FWidthsGrid.Cells[1, ARow]), Def);
+    If (WindowSizesInfoKeys[i] = 'ColGap') Or
+      (WindowSizesInfoKeys[i] = 'Col1Left') Then
+    Begin
+      If W < 0 Then W := 0;
+    End
+    Else If W < 20 Then
+      W := 20;
+    FWidthsGrid.Cells[1, ARow] := IntToStr(W);
+    Ini.WriteInteger('GeneralInfo', WindowSizesInfoKeys[i], W);
+    MainForm.ReloadInfoLayout;
+  End
+  Else
+  Begin
+    i := ARow - 1 - Length(WindowSizesInfoKeys);
+    If (MainForm.StatusBar = nil) Or (i < 0) Or
+      (i >= MainForm.StatusBar.Panels.Count) Then
+      exit;
+    Def := MainForm.StatusBar.Panels[i].Width;
+    W := StrToIntDef(Trim(FWidthsGrid.Cells[1, ARow]), Def);
+    If W < 1 Then
+      W := Def;
+    If W < 1 Then
+      W := 20;
+    FWidthsGrid.Cells[1, ARow] := IntToStr(W);
+    Ini.WriteInteger('StatusBarPanels', IntToStr(i), W);
+    Ini.WriteInteger('StatusBarPanels', 'ScreenWidth', Screen.Width);
+    MainForm.StatusBar.Panels[i].Width := W;
+    MainForm.StatusBar.Update;
+  End;
+End;
+
+Procedure TOptionsForm.InitWindowSizesTab;
+Var
+  PanelCount: Integer;
+Begin
+  If FWidthsTab <> nil Then
+    exit;
+  FWidthsTab := TTabSheet.Create(Page);
+  FWidthsTab.PageControl := Page;
+  FWidthsTab.Caption := SWindowSizesTab;
+
+  FWidthsGrid := TStringGrid.Create(FWidthsTab);
+  FWidthsGrid.Parent := FWidthsTab;
+  FWidthsGrid.Align := alClient;
+  FWidthsGrid.BorderSpacing.Around := 8;
+  FWidthsGrid.ColCount := 2;
+  FWidthsGrid.FixedCols := 1;
+  FWidthsGrid.FixedRows := 1;
+  FWidthsGrid.Options := [goFixedVertLine, goFixedHorzLine, goVertLine,
+    goHorzLine, goColSizing, goEditing, goTabs, goThumbTracking];
+  FWidthsGrid.Cells[0, 0] := SFieldColumn;
+  FWidthsGrid.Cells[1, 0] := SWidthColumn;
+  FWidthsGrid.ColWidths[0] := 360;
+  FWidthsGrid.ColWidths[1] := 120;
+  FWidthsGrid.OnSelectEditor := @WidthsSelectEditor;
+  FWidthsGrid.OnEditingDone := @WidthsEditingDone;
+
+  If (MainForm <> nil) And (MainForm.StatusBar <> nil) Then
+    PanelCount := MainForm.StatusBar.Panels.Count
+  Else
+    PanelCount := 8;
+  FWidthsGrid.RowCount := 1 + Length(WindowSizesInfoKeys) + PanelCount;
+  LoadWindowSizes;
+End;
+
+Procedure TOptionsForm.LoadWindowSizes;
+Var
+  i, Row, PanelCount, W: Integer;
+
+  Function InfoCaption(Const Key: String): String;
+  Begin
+    If Key = 'ColGap' Then
+      Result := SInfoColGap
+    Else If Key = 'Col1Left' Then
+      Result := SInfoCol1Left
+    Else If Key = 'Col1Width' Then
+      Result := SInfoCol1Width
+    Else If Key = 'Col2Width' Then
+      Result := SInfoCol2Width
+    Else If Key = 'Col3Width' Then
+      Result := SInfoCol3Width
+    Else If Key = 'Col4Width' Then
+      Result := SInfoCol4Width
+    Else
+      Result := 'GeneralInfo.' + Key;
+  End;
+
+Begin
+  If (FWidthsGrid = nil) Or (MainForm = nil) Or (MainForm.StatusBar = nil) Then
+    exit;
+  Row := 1;
+  For i := Low(WindowSizesInfoKeys) To High(WindowSizesInfoKeys) Do
+  Begin
+    FWidthsGrid.Cells[0, Row] := InfoCaption(WindowSizesInfoKeys[i]);
+    FWidthsGrid.Cells[1, Row] := IntToStr(
+      Ini.ReadInteger('GeneralInfo', WindowSizesInfoKeys[i],
+      WindowSizesInfoDefaults[i]));
+    Inc(Row);
+  End;
+  PanelCount := MainForm.StatusBar.Panels.Count;
+  For i := 0 To PanelCount - 1 Do
+  Begin
+    FWidthsGrid.Cells[0, Row] := Format(SStatusBarPanel, [i]);
+    W := Ini.ReadInteger('StatusBarPanels', IntToStr(i),
+      MainForm.StatusBar.Panels[i].Width);
+    If W <= 0 Then
+      W := MainForm.StatusBar.Panels[i].Width;
+    FWidthsGrid.Cells[1, Row] := IntToStr(W);
+    Inc(Row);
+  End;
+End;
+
+Procedure TOptionsForm.SaveWindowSizes;
+Var
+  i, Row, PanelCount, W, Def: Integer;
+Begin
+  If FWidthsGrid <> nil Then
+    FWidthsGrid.EditorMode := False;
+  If (FWidthsGrid = nil) Or (MainForm = nil) Or (MainForm.StatusBar = nil) Then
+    exit;
+  Row := 1;
+  For i := Low(WindowSizesInfoKeys) To High(WindowSizesInfoKeys) Do
+  Begin
+    Def := Ini.ReadInteger('GeneralInfo', WindowSizesInfoKeys[i],
+      WindowSizesInfoDefaults[i]);
+    W := StrToIntDef(Trim(FWidthsGrid.Cells[1, Row]), Def);
+    If (WindowSizesInfoKeys[i] = 'ColGap') Or
+      (WindowSizesInfoKeys[i] = 'Col1Left') Then
+    Begin
+      If W < 0 Then W := 0;
+    End
+    Else If W < 20 Then
+      W := 20;
+    Ini.WriteInteger('GeneralInfo', WindowSizesInfoKeys[i], W);
+    Inc(Row);
+  End;
+
+  PanelCount := MainForm.StatusBar.Panels.Count;
+  Ini.WriteInteger('StatusBarPanels', 'ScreenWidth', Screen.Width);
+  For i := 0 To PanelCount - 1 Do
+  Begin
+    Def := MainForm.StatusBar.Panels[i].Width;
+    W := StrToIntDef(Trim(FWidthsGrid.Cells[1, Row]), Def);
+    If W < 1 Then
+      W := Def;
+    If W < 1 Then
+      W := 20;
+    Ini.WriteInteger('StatusBarPanels', IntToStr(i), W);
+    MainForm.StatusBar.Panels[i].Width := W;
+    Inc(Row);
+  End;
+  MainForm.ReloadInfoLayout;
+  MainForm.StatusBar.Update;
 End;
 
 Procedure TOptionsForm.btEditTorrentMenuClick(Sender: TObject);
@@ -270,14 +488,18 @@ Var
 Begin
   If TestWhisparr(Version, Error) Then
   Begin
+    FWhisparrDirty := False;
     If Version = '' Then
       Version := SWhisparrUnknownVersion;
     MessageDlg('', Format(SWhisparrConnectionOk, [Version]),
       mtInformation, [mbOK], 0);
   End
   Else
+  Begin
+    FWhisparrDirty := True;
     MessageDlg('', Format(SWhisparrConnectionFailed, [Error]),
       mtError, [mbOK], 0);
+  End;
 End;
 
 Procedure TOptionsForm.cbLanguageEnter(Sender: TObject);
@@ -351,6 +573,7 @@ End;
 
 Procedure TOptionsForm.FormShow(Sender: TObject);
 Begin
+  FWhisparrDirty := False;
 End;
 
 Procedure TOptionsForm.OKButtonClick(Sender: TObject);
@@ -369,10 +592,11 @@ Begin
       MessageDlg('', SWhisparrSettingsRequired, mtError, [mbOK], 0);
       exit;
     End;
-    If Not TestWhisparr(Version, Error) Then
-      If MessageDlg('', Format(SWhisparrSaveAnyway, [Error]),
-        mtWarning, [mbYes, mbNo], 0) <> mrYes Then
-        exit;
+    If FWhisparrDirty Then
+      If Not TestWhisparr(Version, Error) Then
+        If MessageDlg('', Format(SWhisparrSaveAnyway, [Error]),
+          mtWarning, [mbYes, mbNo], 0) <> mrYes Then
+          exit;
   End;
   restart := False;
   If cbLanguage.Text <> FTranslationLanguage Then
@@ -474,6 +698,8 @@ Begin
 
   If edIntfScale.Value <> IntfScale Then
     restart := True;
+
+  SaveWindowSizes;
 
   If restart Then
     MessageDlg(sRestartRequired, mtInformation, [mbOK], 0);

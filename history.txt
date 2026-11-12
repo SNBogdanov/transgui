@@ -1,3 +1,16 @@
+Unreleased
+ - Add topic name and topic URL fields to the torrent information panel
+ - Restore single-line torrent comment with clickable URL
+ - Add label submenu: set, add and remove labels for selected torrents
+ - Add window size settings tab with editable column and status bar widths
+ - Move icon sources to the icons folder and embed generated icon resources
+ - Add Whisparr package rename support and topic-name fallback
+ - Keep quality and custom formats in Whisparr rename results
+ - Suppress per-file dialogs during batch rename and show one summary
+ - Add fork torrent statuses: script running and moving data
+ - Add auto-priority and inactive-download queue settings
+ - Update English, Russian and template translations
+
 5.19.0 (Oct 30, 2026)
  - Fork maintained by Bogdanov Sergey
  - Add torrent archive manager: save, restore, view, delete and browse archives
